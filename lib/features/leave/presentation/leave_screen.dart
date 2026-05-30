@@ -1,0 +1,675 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
+
+import '../../../core/network/api_exception.dart';
+import '../../../core/theme/app_colors.dart';
+import '../../../core/theme/app_dimens.dart';
+import '../../../shared/widgets/brand_button.dart';
+import '../application/leave_controller.dart';
+import '../domain/models.dart';
+
+final _dateFmt = DateFormat('d MMM yyyy');
+final _dateShort = DateFormat('d MMM');
+
+class LeaveScreen extends ConsumerWidget {
+  const LeaveScreen({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(leaveControllerProvider);
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: AppColors.surfaceContainerLowest,
+        title: const Text('Leave'),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            icon: const Icon(Icons.refresh, color: AppColors.primary),
+            onPressed: () => ref.read(leaveControllerProvider.notifier).reload(),
+          ),
+        ],
+      ),
+      body: async.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => _Error(
+          msg: e is ApiException ? e.message : 'Could not load leave.',
+          onRetry: () => ref.read(leaveControllerProvider.notifier).reload(),
+        ),
+        data: (ctx) => RefreshIndicator(
+          onRefresh: () => ref.read(leaveControllerProvider.notifier).reload(),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(
+                AppDimens.screenPadding,
+                AppDimens.md,
+                AppDimens.screenPadding,
+                AppDimens.xl),
+            children: [
+              _HeaderSection(ctx: ctx),
+              const SizedBox(height: AppDimens.lg),
+              if (ctx.balances.isEmpty)
+                _EmptyBalances()
+              else
+                _BalancesGrid(balances: ctx.balances),
+              const SizedBox(height: AppDimens.lg),
+              _MyRequestsSection(applications: ctx.applications),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _HeaderSection extends ConsumerWidget {
+  const _HeaderSection({required this.ctx});
+  final LeaveContext ctx;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Leave Balances',
+            style: Theme.of(context).textTheme.displaySmall),
+        const SizedBox(height: 4),
+        Text('Manage your time off efficiently.',
+            style: Theme.of(context).textTheme.bodyMedium),
+        const SizedBox(height: AppDimens.md),
+        SizedBox(
+          width: double.infinity,
+          child: FilledButton.icon(
+            onPressed: ctx.leaveTypes.isEmpty
+                ? null
+                : () => _openApplySheet(context, ref, ctx),
+            style: FilledButton.styleFrom(
+              backgroundColor: AppColors.secondaryContainer,
+              foregroundColor: AppColors.onSecondaryContainer,
+            ),
+            icon: const Icon(Icons.add),
+            label: const Text('Apply for Leave'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _openApplySheet(
+      BuildContext context, WidgetRef ref, LeaveContext ctx) async {
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surfaceContainerLowest,
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppDimens.radius3xl)),
+      ),
+      builder: (_) => _ApplyLeaveSheet(leaveTypes: ctx.leaveTypes),
+    );
+    if (ok == true && context.mounted) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(
+            content: Text('Leave request submitted for approval.')));
+    }
+  }
+}
+
+class _BalancesGrid extends StatelessWidget {
+  const _BalancesGrid({required this.balances});
+  final List<LeaveBalance> balances;
+
+  @override
+  Widget build(BuildContext context) {
+    final wide = MediaQuery.sizeOf(context).width >= 600;
+    final cards = balances.map((b) => _BalanceCard(balance: b)).toList();
+    if (wide) {
+      return GridView.count(
+        crossAxisCount: 3,
+        crossAxisSpacing: AppDimens.md,
+        mainAxisSpacing: AppDimens.md,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        childAspectRatio: 1.5,
+        children: cards,
+      );
+    }
+    return Column(
+      children: [
+        for (var i = 0; i < cards.length; i++) ...[
+          if (i > 0) const SizedBox(height: AppDimens.md),
+          cards[i],
+        ],
+      ],
+    );
+  }
+}
+
+class _BalanceCard extends StatelessWidget {
+  const _BalanceCard({required this.balance});
+  final LeaveBalance balance;
+
+  @override
+  Widget build(BuildContext context) {
+    final spec = _specFor(balance.leaveType);
+    final pct = balance.total > 0
+        ? (balance.remaining / balance.total).clamp(0, 1).toDouble()
+        : 0.0;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimens.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  width: 10,
+                  height: 10,
+                  decoration: BoxDecoration(
+                    color: spec.color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(balance.leaveType,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: AppColors.onSurface,
+                          fontWeight: FontWeight.w600)),
+                ),
+                Icon(spec.icon,
+                    color: AppColors.onSurfaceVariant.withValues(alpha: 0.55),
+                    size: 20),
+              ],
+            ),
+            const SizedBox(height: AppDimens.md),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.baseline,
+                        textBaseline: TextBaseline.alphabetic,
+                        children: [
+                          Text(_n(balance.remaining),
+                              style: Theme.of(context).textTheme.headlineLarge),
+                          const SizedBox(width: 4),
+                          Text('days',
+                              style: Theme.of(context).textTheme.bodyMedium),
+                        ],
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Available out of ${_n(balance.total)}',
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(
+                  width: 48,
+                  height: 48,
+                  child: Stack(
+                    children: [
+                      SizedBox(
+                        width: 48,
+                        height: 48,
+                        child: CircularProgressIndicator(
+                          value: pct,
+                          strokeWidth: 4,
+                          backgroundColor: AppColors.surfaceContainerHigh,
+                          valueColor: AlwaysStoppedAnimation(spec.color),
+                        ),
+                      ),
+                      Positioned.fill(
+                        child: Center(
+                          child: Text(
+                            '${(pct * 100).round()}%',
+                            style: Theme.of(context)
+                                .textTheme
+                                .labelSmall
+                                ?.copyWith(color: AppColors.onSurface),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _n(double v) =>
+      v == v.roundToDouble() ? v.toInt().toString() : v.toString();
+
+  ({IconData icon, Color color}) _specFor(String type) {
+    final t = type.toLowerCase();
+    if (t.contains('sick')) {
+      return (icon: Icons.medical_services_outlined, color: AppColors.error);
+    }
+    if (t.contains('casual')) {
+      return (icon: Icons.coffee_outlined, color: AppColors.tertiaryFixedDim);
+    }
+    if (t.contains('compensatory') || t.contains('comp')) {
+      return (icon: Icons.savings_outlined, color: AppColors.tertiaryFixedDim);
+    }
+    if (t.contains('without') || t.contains('lwp')) {
+      return (icon: Icons.event_busy_outlined, color: AppColors.outline);
+    }
+    return (icon: Icons.flight_takeoff_outlined, color: AppColors.secondaryContainer);
+  }
+}
+
+class _EmptyBalances extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimens.lg),
+        child: Row(
+          children: [
+            const Icon(Icons.info_outline,
+                color: AppColors.onSurfaceVariant),
+            const SizedBox(width: AppDimens.md),
+            Expanded(
+              child: Text(
+                'No leave balances allocated yet. You can still apply for Leave Without Pay.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _MyRequestsSection extends StatelessWidget {
+  const _MyRequestsSection({required this.applications});
+  final List<LeaveApplication> applications;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+                AppDimens.md, AppDimens.md, AppDimens.md, AppDimens.sm),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text('My Requests',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600)),
+                ),
+              ],
+            ),
+          ),
+          if (applications.isEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                  AppDimens.md, 0, AppDimens.md, AppDimens.md),
+              child: Text('You haven\'t applied for leave yet.',
+                  style: Theme.of(context).textTheme.bodyMedium),
+            )
+          else
+            for (var i = 0; i < applications.length; i++) ...[
+              if (i > 0)
+                const Divider(height: 1, indent: 64, color: AppColors.outlineVariant),
+              _RequestRow(app: applications[i]),
+            ],
+        ],
+      ),
+    );
+  }
+}
+
+class _RequestRow extends StatelessWidget {
+  const _RequestRow({required this.app});
+  final LeaveApplication app;
+
+  @override
+  Widget build(BuildContext context) {
+    final icon = _iconFor(app.leaveType);
+    final range = app.fromDate == app.toDate
+        ? _dateFmt.format(app.fromDate)
+        : '${_dateShort.format(app.fromDate)} – ${_dateFmt.format(app.toDate)}';
+    final days = app.totalLeaveDays;
+    final dStr = days == days.roundToDouble()
+        ? days.toInt().toString()
+        : days.toString();
+    return Padding(
+      padding: const EdgeInsets.all(AppDimens.md),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceContainerHigh,
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: Icon(icon, color: AppColors.onSurface, size: 20),
+          ),
+          const SizedBox(width: AppDimens.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(app.leaveType,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: AppColors.onSurface,
+                        fontWeight: FontWeight.w600)),
+                const SizedBox(height: 2),
+                Text(
+                  '$range · $dStr day${dStr == "1" ? "" : "s"}'
+                  '${app.halfDay ? " · half day" : ""}',
+                  style: Theme.of(context).textTheme.bodySmall,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+          _StatusChip(status: app.status),
+        ],
+      ),
+    );
+  }
+
+  IconData _iconFor(String type) {
+    final t = type.toLowerCase();
+    if (t.contains('sick')) return Icons.medical_services_outlined;
+    if (t.contains('casual')) return Icons.coffee_outlined;
+    if (t.contains('without') || t.contains('lwp')) return Icons.event_busy_outlined;
+    if (t.contains('compensatory')) return Icons.savings_outlined;
+    return Icons.flight_takeoff_outlined;
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip({required this.status});
+  final LeaveStatus status;
+
+  @override
+  Widget build(BuildContext context) {
+    final spec = _spec(status);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: spec.bg,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 6,
+            height: 6,
+            decoration: BoxDecoration(color: spec.fg, shape: BoxShape.circle),
+          ),
+          const SizedBox(width: 6),
+          Text(spec.label,
+              style: TextStyle(
+                  color: spec.fg,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 11)),
+        ],
+      ),
+    );
+  }
+
+  ({Color bg, Color fg, String label}) _spec(LeaveStatus s) {
+    switch (s) {
+      case LeaveStatus.approved:
+        return (
+          bg: AppColors.tertiaryFixed,
+          fg: AppColors.onTertiaryFixedVariant,
+          label: 'Approved'
+        );
+      case LeaveStatus.rejected:
+        return (
+          bg: AppColors.errorContainer,
+          fg: AppColors.onErrorContainer,
+          label: 'Rejected'
+        );
+      case LeaveStatus.cancelled:
+        return (
+          bg: AppColors.surfaceContainerHigh,
+          fg: AppColors.onSurfaceVariant,
+          label: 'Cancelled'
+        );
+      case LeaveStatus.open:
+        return (
+          bg: const Color(0xFFFFF3E0),
+          fg: const Color(0xFFE65100),
+          label: 'Pending'
+        );
+    }
+  }
+}
+
+class _Error extends StatelessWidget {
+  const _Error({required this.msg, required this.onRetry});
+  final String msg;
+  final VoidCallback onRetry;
+  @override
+  Widget build(BuildContext context) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppDimens.xl),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            const Icon(Icons.error_outline, size: 40, color: AppColors.error),
+            const SizedBox(height: AppDimens.md),
+            Text(msg, textAlign: TextAlign.center),
+            const SizedBox(height: AppDimens.lg),
+            OutlinedButton(onPressed: onRetry, child: const Text('Retry')),
+          ]),
+        ),
+      );
+}
+
+// ---- Apply sheet (kept compatible with the previous implementation) ----
+
+class _ApplyLeaveSheet extends ConsumerStatefulWidget {
+  const _ApplyLeaveSheet({required this.leaveTypes});
+  final List<String> leaveTypes;
+  @override
+  ConsumerState<_ApplyLeaveSheet> createState() => _ApplyLeaveSheetState();
+}
+
+class _ApplyLeaveSheetState extends ConsumerState<_ApplyLeaveSheet> {
+  String? _type;
+  DateTime? _from;
+  DateTime? _to;
+  bool _halfDay = false;
+  final _reason = TextEditingController();
+  bool _submitting = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _reason.dispose();
+    super.dispose();
+  }
+
+  bool get _singleDay => _from != null && _to != null && _from == _to;
+
+  Future<void> _pickDate({required bool isFrom}) async {
+    final now = DateTime.now();
+    final initial = (isFrom ? _from : _to) ?? now;
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial,
+      firstDate: DateTime(now.year, now.month, now.day),
+      lastDate: DateTime(now.year + 1, 12, 31),
+    );
+    if (picked == null) return;
+    setState(() {
+      if (isFrom) {
+        _from = picked;
+        if (_to == null || _to!.isBefore(picked)) _to = picked;
+      } else {
+        _to = picked;
+      }
+      if (!_singleDay) _halfDay = false;
+    });
+  }
+
+  Future<void> _submit() async {
+    setState(() => _error = null);
+    if (_type == null) {
+      setState(() => _error = 'Select a leave type.');
+      return;
+    }
+    if (_from == null || _to == null) {
+      setState(() => _error = 'Select the leave dates.');
+      return;
+    }
+    if (_to!.isBefore(_from!)) {
+      setState(() => _error = 'End date cannot be before start date.');
+      return;
+    }
+    setState(() => _submitting = true);
+    try {
+      await ref.read(leaveControllerProvider.notifier).apply(
+            LeaveRequest(
+              leaveType: _type!,
+              fromDate: _from!,
+              toDate: _to!,
+              halfDay: _halfDay && _singleDay,
+              halfDayDate: _halfDay && _singleDay ? _from : null,
+              description: _reason.text.trim(),
+            ),
+          );
+      if (mounted) Navigator.pop(context, true);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Could not submit. Please try again.');
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          AppDimens.xl, AppDimens.xl, AppDimens.xl, AppDimens.xl + bottom),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Text('Apply for leave',
+                  style: Theme.of(context).textTheme.titleLarge),
+            ),
+            const SizedBox(height: AppDimens.xl),
+            DropdownButtonFormField<String>(
+              initialValue: _type,
+              decoration: const InputDecoration(labelText: 'Leave type'),
+              items: widget.leaveTypes
+                  .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                  .toList(),
+              onChanged: (v) => setState(() => _type = v),
+            ),
+            const SizedBox(height: AppDimens.lg),
+            Row(
+              children: [
+                Expanded(
+                  child: _DateField(
+                    label: 'From',
+                    value: _from,
+                    onTap: () => _pickDate(isFrom: true),
+                  ),
+                ),
+                const SizedBox(width: AppDimens.md),
+                Expanded(
+                  child: _DateField(
+                    label: 'To',
+                    value: _to,
+                    onTap: () => _pickDate(isFrom: false),
+                  ),
+                ),
+              ],
+            ),
+            if (_singleDay) ...[
+              const SizedBox(height: AppDimens.sm),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Half day'),
+                value: _halfDay,
+                activeThumbColor: AppColors.secondary,
+                onChanged: (v) => setState(() => _halfDay = v),
+              ),
+            ],
+            const SizedBox(height: AppDimens.lg),
+            TextField(
+              controller: _reason,
+              minLines: 2,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                labelText: 'Reason (optional)',
+                alignLabelWithHint: true,
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: AppDimens.md),
+              Text(_error!,
+                  style: const TextStyle(color: AppColors.error, fontSize: 13)),
+            ],
+            const SizedBox(height: AppDimens.xl),
+            BrandButton(
+              label: 'Submit request',
+              loading: _submitting,
+              onPressed: _submit,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DateField extends StatelessWidget {
+  const _DateField({required this.label, required this.value, required this.onTap});
+  final String label;
+  final DateTime? value;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: label,
+          suffixIcon: const Icon(Icons.calendar_today_outlined, size: 18),
+        ),
+        child: Text(
+          value == null ? 'Select' : _dateFmt.format(value!),
+          style: TextStyle(
+            color: value == null ? AppColors.outline : AppColors.onSurface,
+          ),
+        ),
+      ),
+    );
+  }
+}
