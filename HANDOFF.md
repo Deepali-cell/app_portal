@@ -7,7 +7,28 @@ Last working session: **2026-05-30 (evening)**. The user is pausing and will res
 - Mobile app (this repo): **`tcbinfotechpvtltd/tcb_portal_app`** — https://github.com/tcbinfotechpvtltd/tcb_portal_app
 - ERPNext custom app: **`tcbinfotechpvtltd/tcb_portal_erp`** (renamed from `office_tcb`) — https://github.com/tcbinfotechpvtltd/tcb_portal_erp
 
-The Frappe app inside `tcb_portal_erp` is still called `tcb_inside` (folder name, hooks, doctype prefixes, every `tcb_inside.api.*` endpoint). Don't rename the inner Frappe app — only the GitHub container is rebranded. A future SaaS rename of the app itself would need a full DB migration.
+> **⚠️ FIRST THING TOMORROW — repo correction needed.**
+> The current contents of `tcb_portal_erp` are **wrong**. We pushed the entire `tcb_inside` Frappe app (which also contains TCB's internal `accounts_customizations`, `hr_customizations` (beyond the geofence DocType), `projects_customizations`, `purchase_customizations`, invoice approval workflow, recurring invoice templates, etc.). That's TCB's private internal customisations and should not be in the SaaS-rebranded mobile-companion repo.
+>
+> **What the repo should contain** (only the mobile-app dependencies):
+> - A standalone Frappe custom app — proposal: **app name `tcb_portal_api`** (since the GitHub repo is already `tcb_portal_erp`, the *app* needs a single-word snake_case name distinct from the repo).
+> - `<app>/api/` — exactly the modules under `tcb_inside.api.*` today: `auth, attendance, leave, expense, payslip, task, timesheet, leads, deals, directory, invoices, notifications` + the CRM-collab set (`notes, crm_tasks, comments, attachments, assignments, crm_calls, emails, events, timeline`).
+> - `<app>/doctype/tcb_device_token/` — FCM/APNs token registration.
+> - `<app>/doctype/tcb_office_location/` — geofence reference data (move here from `hr_customizations`).
+> - `hooks.py` — only the entries the mobile depends on: `doc_events["Notification Log"]["after_insert"] = "<app>.api.notifications.on_notification_log"`. Nothing else.
+>
+> **Tomorrow's plan, concrete steps:**
+> 1. `bench new-app tcb_portal_api` (or whatever app name we settle on — confirm with user).
+> 2. Copy the relevant files out of `apps/tcb_inside/tcb_inside/api/` into the new app's `api/` dir. Copy `tcb_device_token` and `tcb_office_location` DocTypes too.
+> 3. Bulk-rename every `tcb_inside.api.` → `<new_app>.api.` inside the new app's files. Bulk-rename every `tcb_inside.api.` → `<new_app>.api.` in the mobile app's `lib/core/network/api_paths.dart`.
+> 4. Leave `tcb_inside` alone on the bench — TCB's existing customisations keep running from there. The two apps will coexist (both installed on `tcb.local`); the mobile API endpoints just move to the new namespace.
+> 5. **Force-reset the `tcb_portal_erp` repo on GitHub.** Either delete and recreate, or `git push --force` an orphan branch over `main`. The current commit on the repo (sha after the rename) is wrong content and should not be in history.
+> 6. Push the new clean app to `tcb_portal_erp`.
+> 7. Re-test on the sim — should still work because the endpoint payloads are identical, only the dotted path changes.
+>
+> The `tcb_inside` repo (the existing TCB internal app) stays on its own; it does NOT need its own GitHub repo unless TCB wants to back it up — confirm with the user.
+
+The Frappe app inside `tcb_portal_erp` *should* (after tomorrow's correction) be a brand-new app like `tcb_portal_api`, not `tcb_inside`. Today the repo wrongly contains `tcb_inside` in full — fix first thing tomorrow.
 
 ---
 
