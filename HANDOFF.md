@@ -7,8 +7,11 @@ Last working session: **2026-05-30 (evening)**. The user is pausing and will res
 - Mobile app (this repo): **`tcbinfotechpvtltd/tcb_portal_app`** — https://github.com/tcbinfotechpvtltd/tcb_portal_app
 - ERPNext custom app: **`tcbinfotechpvtltd/tcb_portal_erp`** (renamed from `office_tcb`) — https://github.com/tcbinfotechpvtltd/tcb_portal_erp
 
-> **⚠️ FIRST THING TOMORROW — repo correction needed.**
-> The current contents of `tcb_portal_erp` are **wrong**. We pushed the entire `tcb_inside` Frappe app (which also contains TCB's internal `accounts_customizations`, `hr_customizations` (beyond the geofence DocType), `projects_customizations`, `purchase_customizations`, invoice approval workflow, recurring invoice templates, etc.). That's TCB's private internal customisations and should not be in the SaaS-rebranded mobile-companion repo.
+> **✅ Repo correction completed 2026-06-02.**
+> `tcb_portal_erp` GitHub repo has been force-replaced with a brand-new standalone Frappe custom app `tcb_portal_erp` containing only the mobile-app dependencies (everything previously listed below). The old `tcb_inside` Frappe app stays on the bench for TCB's internal accounts/HR/projects/purchase customisations. The two apps coexist on `tcb.local`. Mobile endpoint paths were bulk-renamed from `tcb_inside.api.*` → `tcb_portal_erp.api.*` in [api_paths.dart](lib/core/network/api_paths.dart) (71 changes).
+>
+> **⚠️ Previously planned (now done) — repo correction.**
+> Earlier session pushed the entire `tcb_inside` Frappe app (which also contains TCB's internal `accounts_customizations`, `hr_customizations` (beyond the geofence DocType), `projects_customizations`, `purchase_customizations`, invoice approval workflow, recurring invoice templates, etc.). That's TCB's private internal customisations and should not be in the SaaS-rebranded mobile-companion repo.
 >
 > **What the repo should contain** (only the mobile-app dependencies):
 > - A standalone Frappe custom app — proposal: **app name `tcb_portal_api`** (since the GitHub repo is already `tcb_portal_erp`, the *app* needs a single-word snake_case name distinct from the repo).
