@@ -43,11 +43,11 @@ dependencies:
   local_auth: ^3.0.1
   connectivity_plus: ^7.1.1
   intl: ^0.20.2
-  package_info_plus: ^10.1.0
+  package_info_plus: ^9.0.1
   geolocator: ^14.0.1
   image_picker: ^1.2.2
   url_launcher: ^6.3.2
-  file_picker: ^3.0.4
+  file_picker: ^10.0.0
   google_fonts: ^8.1.0
   material_symbols_icons: ^4.2928.1
 
