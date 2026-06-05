@@ -38,6 +38,28 @@ class LeaveRepository {
     }
   }
 
+  /// Submits a Compensatory Leave Request — claims comp-off for a holiday /
+  /// weekend the employee worked. HR approves on the desk; ERPNext then adds
+  /// the days to the employee's leave allocation. Throws [ApiException] for
+  /// the UI to surface (e.g. date wasn't a holiday, no comp leave type set up).
+  Future<void> applyCompOff(CompOffRequest req) async {
+    final payload = <String, dynamic>{
+      'work_from_date': _ymd(req.workFromDate),
+      'reason': req.reason,
+    };
+    if (req.workEndDate != null) {
+      payload['work_end_date'] = _ymd(req.workEndDate!);
+    }
+    if (req.leaveType != null && req.leaveType!.isNotEmpty) {
+      payload['leave_type'] = req.leaveType;
+    }
+    try {
+      await _dio.post(ApiPaths.compOffApply, data: payload);
+    } on DioException catch (e) {
+      throw _asApiException(e);
+    }
+  }
+
   String _ymd(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-'
       '${d.month.toString().padLeft(2, '0')}-'

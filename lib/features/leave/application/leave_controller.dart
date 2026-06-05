@@ -27,4 +27,11 @@ class LeaveController extends AsyncNotifier<LeaveContext> {
     await ref.read(leaveRepositoryProvider).apply(request);
     await reload();
   }
+
+  /// Submits a Compensatory Leave Request (comp-off claim) then refreshes.
+  /// Throws [ApiException] on rejection.
+  Future<void> applyCompOff(CompOffRequest request) async {
+    await ref.read(leaveRepositoryProvider).applyCompOff(request);
+    await reload();
+  }
 }

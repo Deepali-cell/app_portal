@@ -81,6 +81,7 @@ class LeaveContext {
     required this.balances,
     required this.applications,
     required this.leaveTypes,
+    required this.compensatoryLeaveTypes,
     this.leaveApprover,
   });
 
@@ -89,6 +90,12 @@ class LeaveContext {
   final List<LeaveBalance> balances;
   final List<LeaveApplication> applications;
   final List<String> leaveTypes;
+
+  /// Subset of leave types where `is_compensatory=1`. Empty when comp-off
+  /// isn't configured on the site; the mobile hides the Apply CTA in that case.
+  final List<String> compensatoryLeaveTypes;
+
+  bool get supportsCompOff => compensatoryLeaveTypes.isNotEmpty;
 
   factory LeaveContext.fromJson(Map<String, dynamic> j) => LeaveContext(
         employee: j['employee'] as String,
@@ -102,7 +109,26 @@ class LeaveContext {
         leaveTypes: ((j['leave_types'] as List?) ?? [])
             .map((e) => e.toString())
             .toList(),
+        compensatoryLeaveTypes:
+            ((j['compensatory_leave_types'] as List?) ?? [])
+                .map((e) => e.toString())
+                .toList(),
       );
+}
+
+/// Form payload for an Apply-for-Comp-Off request.
+@immutable
+class CompOffRequest {
+  const CompOffRequest({
+    required this.workFromDate,
+    required this.reason,
+    this.workEndDate,
+    this.leaveType,
+  });
+  final DateTime workFromDate;
+  final DateTime? workEndDate;
+  final String reason;
+  final String? leaveType;
 }
 
 /// Form payload for a new leave request.

@@ -77,19 +77,37 @@ class _HeaderSection extends ConsumerWidget {
         Text('Manage your time off efficiently.',
             style: Theme.of(context).textTheme.bodyMedium),
         const SizedBox(height: AppDimens.md),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            onPressed: ctx.leaveTypes.isEmpty
-                ? null
-                : () => _openApplySheet(context, ref, ctx),
-            style: FilledButton.styleFrom(
-              backgroundColor: AppColors.secondaryContainer,
-              foregroundColor: AppColors.onSecondaryContainer,
+        Row(
+          children: [
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: ctx.leaveTypes.isEmpty
+                    ? null
+                    : () => _openApplySheet(context, ref, ctx),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.secondaryContainer,
+                  foregroundColor: AppColors.onSecondaryContainer,
+                ),
+                icon: const Icon(Icons.add),
+                label: const Text('Apply for Leave'),
+              ),
             ),
-            icon: const Icon(Icons.add),
-            label: const Text('Apply for Leave'),
-          ),
+            if (ctx.supportsCompOff) ...[
+              const SizedBox(width: AppDimens.md),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _openCompOffSheet(context, ref, ctx),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppColors.primary),
+                    foregroundColor: AppColors.primary,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  icon: const Icon(Icons.event_repeat, size: 18),
+                  label: const Text('Apply for Comp-Off'),
+                ),
+              ),
+            ],
+          ],
         ),
       ],
     );
@@ -112,6 +130,28 @@ class _HeaderSection extends ConsumerWidget {
         ..hideCurrentSnackBar()
         ..showSnackBar(const SnackBar(
             content: Text('Leave request submitted for approval.')));
+    }
+  }
+
+  Future<void> _openCompOffSheet(
+      BuildContext context, WidgetRef ref, LeaveContext ctx) async {
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surfaceContainerLowest,
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppDimens.radius3xl)),
+      ),
+      builder: (_) => _ApplyCompOffSheet(
+          compensatoryLeaveTypes: ctx.compensatoryLeaveTypes),
+    );
+    if (ok == true && context.mounted) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(
+            content: Text(
+                'Comp-Off request submitted. HR will review on the desk.')));
     }
   }
 }
@@ -668,6 +708,200 @@ class _DateField extends StatelessWidget {
           style: TextStyle(
             color: value == null ? AppColors.outline : AppColors.onSurface,
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Apply for Comp-Off — claim a comp-off day for a holiday/weekend the
+/// employee worked. Submitted as a Compensatory Leave Request; HR approves
+/// on the desk → ERPNext auto-adds days to the employee's leave allocation.
+class _ApplyCompOffSheet extends ConsumerStatefulWidget {
+  const _ApplyCompOffSheet({required this.compensatoryLeaveTypes});
+  final List<String> compensatoryLeaveTypes;
+  @override
+  ConsumerState<_ApplyCompOffSheet> createState() =>
+      _ApplyCompOffSheetState();
+}
+
+class _ApplyCompOffSheetState extends ConsumerState<_ApplyCompOffSheet> {
+  late String? _leaveType =
+      widget.compensatoryLeaveTypes.isNotEmpty ? widget.compensatoryLeaveTypes.first : null;
+  DateTime? _workFrom;
+  DateTime? _workTo;
+  final _reason = TextEditingController();
+  bool _submitting = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _reason.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickWorkFrom() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _workFrom ?? now,
+      firstDate: DateTime(now.year - 1),
+      lastDate: now,
+    );
+    if (picked != null) setState(() => _workFrom = picked);
+  }
+
+  Future<void> _pickWorkTo() async {
+    final base = _workFrom ?? DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _workTo ?? base,
+      firstDate: base,
+      lastDate: DateTime.now(),
+    );
+    if (picked != null) setState(() => _workTo = picked);
+  }
+
+  Future<void> _submit() async {
+    setState(() => _error = null);
+    if (_workFrom == null) {
+      setState(() => _error = 'Pick the date you worked.');
+      return;
+    }
+    final r = _reason.text.trim();
+    if (r.length < 4) {
+      setState(() => _error =
+          'Tell HR why you worked that day (at least 4 characters).');
+      return;
+    }
+    setState(() => _submitting = true);
+    try {
+      await ref.read(leaveControllerProvider.notifier).applyCompOff(
+            CompOffRequest(
+              workFromDate: _workFrom!,
+              workEndDate: _workTo,
+              reason: r,
+              leaveType: _leaveType,
+            ),
+          );
+      if (mounted) Navigator.pop(context, true);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Could not submit. Please try again.');
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          AppDimens.xl, AppDimens.xl, AppDimens.xl, AppDimens.xl + bottom),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+                child: Text('Apply for Comp-Off',
+                    style: Theme.of(context).textTheme.titleLarge)),
+            const SizedBox(height: AppDimens.sm),
+            Text(
+              'Claim a comp-off day for a holiday/weekend you worked. HR will '
+              'review and add the day(s) to your leave balance once approved.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: AppDimens.xl),
+
+            if (widget.compensatoryLeaveTypes.length > 1)
+              DropdownButtonFormField<String>(
+                initialValue: _leaveType,
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'Leave type'),
+                items: widget.compensatoryLeaveTypes
+                    .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+                    .toList(),
+                onChanged: (v) => setState(() => _leaveType = v),
+              )
+            else if (widget.compensatoryLeaveTypes.isNotEmpty)
+              InputDecorator(
+                decoration: const InputDecoration(labelText: 'Leave type'),
+                child: Text(widget.compensatoryLeaveTypes.first,
+                    style: const TextStyle(color: AppColors.onSurface)),
+              ),
+            const SizedBox(height: AppDimens.lg),
+
+            Row(children: [
+              Expanded(
+                child: InkWell(
+                  onTap: _pickWorkFrom,
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Work date',
+                      suffixIcon:
+                          Icon(Icons.calendar_today_outlined, size: 18),
+                    ),
+                    child: Text(
+                        _workFrom == null
+                            ? 'Pick the date you worked'
+                            : _dateFmt.format(_workFrom!),
+                        style: TextStyle(
+                            color: _workFrom == null
+                                ? AppColors.outline
+                                : AppColors.onSurface)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppDimens.md),
+              Expanded(
+                child: InkWell(
+                  onTap: _workFrom == null ? null : _pickWorkTo,
+                  child: InputDecorator(
+                    decoration: const InputDecoration(
+                      labelText: 'Last day (optional)',
+                      suffixIcon: Icon(Icons.event_outlined, size: 18),
+                    ),
+                    child: Text(
+                        _workTo == null
+                            ? 'Same as work date'
+                            : _dateFmt.format(_workTo!),
+                        style: TextStyle(
+                            color: _workTo == null
+                                ? AppColors.outline
+                                : AppColors.onSurface)),
+                  ),
+                ),
+              ),
+            ]),
+            const SizedBox(height: AppDimens.lg),
+
+            TextField(
+              controller: _reason,
+              minLines: 2,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                labelText: 'Why did you work that day?',
+                alignLabelWithHint: true,
+                hintText: 'Required — at least 4 characters',
+              ),
+            ),
+
+            if (_error != null) ...[
+              const SizedBox(height: AppDimens.md),
+              Text(_error!,
+                  style:
+                      const TextStyle(color: AppColors.error, fontSize: 13)),
+            ],
+            const SizedBox(height: AppDimens.xl),
+            BrandButton(
+              label: 'Submit Comp-Off',
+              loading: _submitting,
+              onPressed: _submit,
+            ),
+          ],
         ),
       ),
     );

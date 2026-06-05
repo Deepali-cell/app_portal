@@ -50,6 +50,8 @@ class ApiPaths {
   static const String leaveContext =
       '/api/method/tcb_portal_erp.api.leave.get_context';
   static const String leaveApply = '/api/method/tcb_portal_erp.api.leave.apply';
+  static const String compOffApply =
+      '/api/method/tcb_portal_erp.api.leave.apply_comp_off';
 
   // Expenses
   static const String expenseContext =
