@@ -164,7 +164,8 @@ class _TaskRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return InkWell(
-      onTap: () => _changeStatus(context, ref),
+      onTap: () => _openEditSheet(context, ref),
+      onLongPress: () => _changeStatus(context, ref),
       child: Padding(
         padding: const EdgeInsets.all(AppDimens.md),
         child: Row(
@@ -203,10 +204,31 @@ class _TaskRow extends ConsumerWidget {
               ),
             ),
             _StatusChip.task(task.status),
+            const SizedBox(width: 4),
+            const Icon(Icons.chevron_right, color: AppColors.outline),
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _openEditSheet(BuildContext context, WidgetRef ref) async {
+    final ctx = ref.read(taskControllerProvider).value;
+    if (ctx == null) return;
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surfaceContainerLowest,
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppDimens.radiusXl)),
+      ),
+      builder: (_) => _EditTaskSheet(ctx: ctx, taskName: task.name),
+    );
+    if (ok == true && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Task updated.')));
+    }
   }
 
   Future<void> _changeStatus(BuildContext context, WidgetRef ref) async {
@@ -491,4 +513,234 @@ class _Err extends StatelessWidget {
           ]),
         ),
       );
+}
+
+/// Edit-task sheet. Pre-fills from taskDetailProvider so we get fields the
+/// list row doesn't carry (description, assignees). Calls
+/// taskController.update on Save; permissions enforced server-side.
+class _EditTaskSheet extends ConsumerStatefulWidget {
+  const _EditTaskSheet({required this.ctx, required this.taskName});
+  final TaskContext ctx;
+  final String taskName;
+  @override
+  ConsumerState<_EditTaskSheet> createState() => _EditTaskSheetState();
+}
+
+class _EditTaskSheetState extends ConsumerState<_EditTaskSheet> {
+  final _subject = TextEditingController();
+  final _description = TextEditingController();
+  String? _priority;
+  String? _project;
+  String? _status;
+  DateTime? _due;
+  bool _hydrated = false;
+  bool _submitting = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _subject.dispose();
+    _description.dispose();
+    super.dispose();
+  }
+
+  void _hydrate(TaskDetail d) {
+    if (_hydrated) return;
+    _subject.text = d.subject;
+    _description.text = d.description ?? '';
+    _priority = d.priority;
+    _project = d.project;
+    _status = d.status;
+    _due = d.expEndDate;
+    _hydrated = true;
+  }
+
+  Future<void> _save(TaskDetail d) async {
+    if (_subject.text.trim().isEmpty) {
+      setState(() => _error = 'Subject can\'t be blank.');
+      return;
+    }
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    try {
+      await ref.read(taskControllerProvider.notifier).saveTask(
+            name: widget.taskName,
+            subject: _subject.text.trim() != d.subject
+                ? _subject.text.trim()
+                : null,
+            description: _description.text.trim() != (d.description ?? '')
+                ? _description.text.trim()
+                : null,
+            priority: _priority != null && _priority != d.priority ? _priority : null,
+            project: _project != d.project ? _project : null,
+            clearProject: _project == null && d.project != null,
+            expEndDate: _due,
+            clearExpEndDate: _due == null && d.expEndDate != null,
+            status: _status != null && _status != d.status ? _status : null,
+          );
+      if (mounted) Navigator.pop(context, true);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Could not save. Try again.');
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final async = ref.watch(taskDetailProvider(widget.taskName));
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          AppDimens.xl, AppDimens.xl, AppDimens.xl, AppDimens.xl + bottom),
+      child: async.when(
+        loading: () => const SizedBox(
+            height: 220,
+            child: Center(child: CircularProgressIndicator())),
+        error: (e, _) => SizedBox(
+          height: 160,
+          child: Center(
+            child: Text(
+                e is ApiException ? e.message : 'Could not load task.',
+                style: const TextStyle(color: AppColors.error)),
+          ),
+        ),
+        data: (d) {
+          _hydrate(d);
+          return SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: Text('Edit task',
+                      style: Theme.of(context).textTheme.titleLarge),
+                ),
+                const SizedBox(height: 2),
+                Center(
+                  child: Text(widget.taskName,
+                      style: Theme.of(context).textTheme.bodySmall),
+                ),
+                const SizedBox(height: AppDimens.xl),
+                TextField(
+                  controller: _subject,
+                  decoration: const InputDecoration(labelText: 'Subject'),
+                ),
+                const SizedBox(height: AppDimens.lg),
+                Row(children: [
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _status,
+                      isExpanded: true,
+                      decoration: const InputDecoration(labelText: 'Status'),
+                      items: widget.ctx.statuses
+                          .map((s) =>
+                              DropdownMenuItem(value: s, child: Text(s)))
+                          .toList(),
+                      onChanged: (v) => setState(() => _status = v),
+                    ),
+                  ),
+                  const SizedBox(width: AppDimens.md),
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      initialValue: _priority,
+                      isExpanded: true,
+                      decoration: const InputDecoration(labelText: 'Priority'),
+                      items: widget.ctx.priorities
+                          .map((p) =>
+                              DropdownMenuItem(value: p, child: Text(p)))
+                          .toList(),
+                      onChanged: (v) => setState(() => _priority = v),
+                    ),
+                  ),
+                ]),
+                const SizedBox(height: AppDimens.lg),
+                if (widget.ctx.projects.isNotEmpty)
+                  DropdownButtonFormField<String?>(
+                    initialValue: _project,
+                    isExpanded: true,
+                    decoration:
+                        const InputDecoration(labelText: 'Project'),
+                    items: [
+                      const DropdownMenuItem<String?>(
+                          value: null, child: Text('— None —')),
+                      ...widget.ctx.projects.map((p) =>
+                          DropdownMenuItem<String?>(
+                              value: p.name, child: Text(p.label))),
+                    ],
+                    onChanged: (v) => setState(() => _project = v),
+                  ),
+                const SizedBox(height: AppDimens.lg),
+                Row(children: [
+                  Expanded(
+                    child: InkWell(
+                      onTap: () async {
+                        final now = DateTime.now();
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: _due ?? now,
+                          firstDate: DateTime(now.year - 1),
+                          lastDate: DateTime(now.year + 2),
+                        );
+                        if (picked != null) setState(() => _due = picked);
+                      },
+                      child: InputDecorator(
+                        decoration: const InputDecoration(
+                          labelText: 'Due date',
+                          suffixIcon: Icon(Icons.calendar_today_outlined,
+                              size: 18),
+                        ),
+                        child: Text(
+                          _due == null ? 'No due date' : _dateFmt.format(_due!),
+                          style: TextStyle(
+                              color: _due == null
+                                  ? AppColors.outline
+                                  : AppColors.onSurface),
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (_due != null) ...[
+                    const SizedBox(width: 4),
+                    IconButton(
+                      tooltip: 'Clear',
+                      onPressed: () => setState(() => _due = null),
+                      icon: const Icon(Icons.close,
+                          color: AppColors.onSurfaceVariant),
+                    ),
+                  ],
+                ]),
+                const SizedBox(height: AppDimens.lg),
+                TextField(
+                  controller: _description,
+                  minLines: 2,
+                  maxLines: 4,
+                  decoration: const InputDecoration(
+                    labelText: 'Description (optional)',
+                    alignLabelWithHint: true,
+                  ),
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: AppDimens.md),
+                  Text(_error!,
+                      style: const TextStyle(
+                          color: AppColors.error, fontSize: 13)),
+                ],
+                const SizedBox(height: AppDimens.xl),
+                BrandButton(
+                  label: 'Save changes',
+                  loading: _submitting,
+                  onPressed: () => _save(d),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
 }

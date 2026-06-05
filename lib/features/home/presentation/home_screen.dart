@@ -13,6 +13,7 @@ import '../../auth/application/auth_controller.dart';
 import '../../auth/domain/profile.dart';
 import '../../leave/application/leave_controller.dart';
 import '../../leave/domain/models.dart';
+import '../../notifications/application/notifications_controller.dart';
 import '../../payslips/application/payslip_controller.dart';
 
 class HomeScreen extends ConsumerWidget {
@@ -87,21 +88,48 @@ class _HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
         ],
       ),
       actions: [
-        IconButton(
-          onPressed: () {},
-          tooltip: 'Notifications',
-          icon: Stack(
-            clipBehavior: Clip.none,
-            children: const [
-              Icon(Icons.notifications_outlined, color: AppColors.primary),
-              Positioned(
-                right: -1,
-                top: -1,
-                child: _Dot(),
-              ),
-            ],
-          ),
-        ),
+        Consumer(builder: (context, ref, _) {
+          final unread = ref.watch(unreadCountProvider).value ?? 0;
+          return IconButton(
+            onPressed: () => context.push(Routes.notifications),
+            tooltip: 'Notifications',
+            icon: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                const Icon(Icons.notifications_outlined,
+                    color: AppColors.primary),
+                if (unread > 0)
+                  Positioned(
+                    right: -4,
+                    top: -3,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 4, vertical: 1),
+                      constraints: const BoxConstraints(
+                          minWidth: 16, minHeight: 16),
+                      decoration: BoxDecoration(
+                        color: AppColors.error,
+                        borderRadius: BorderRadius.circular(999),
+                        border: Border.all(
+                            color: AppColors.surfaceContainerLowest,
+                            width: 1.5),
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        unread > 99 ? '99+' : '$unread',
+                        style: const TextStyle(
+                          color: AppColors.onPrimary,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          height: 1.0,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          );
+        }),
         IconButton(
           onPressed: () => _confirmSignOut(context, ref),
           tooltip: 'Sign out',
@@ -135,20 +163,6 @@ class _HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
   }
 }
 
-class _Dot extends StatelessWidget {
-  const _Dot();
-  @override
-  Widget build(BuildContext context) => Container(
-        width: 8,
-        height: 8,
-        decoration: BoxDecoration(
-          color: AppColors.error,
-          shape: BoxShape.circle,
-          border: Border.all(
-              color: AppColors.surfaceContainerLowest, width: 1.5),
-        ),
-      );
-}
 
 class _WelcomeHero extends ConsumerWidget {
   const _WelcomeHero({required this.profile});

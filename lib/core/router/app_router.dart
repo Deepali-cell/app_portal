@@ -18,7 +18,9 @@ import '../../features/home/presentation/app_shell.dart';
 import '../../features/home/presentation/home_screen.dart';
 import '../../features/leads/presentation/lead_detail_screen.dart';
 import '../../features/leads/presentation/leads_screen.dart';
+import '../../features/leave/presentation/leave_detail_screen.dart';
 import '../../features/leave/presentation/leave_screen.dart';
+import '../../features/notifications/presentation/notifications_screen.dart';
 import '../../features/payslips/presentation/payslip_detail_screen.dart';
 import '../../features/payslips/presentation/payslips_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
@@ -52,7 +54,9 @@ class Routes {
   static const dealDetail = '/deal-detail';
   static const timesheetDetail = '/timesheet-detail';
   static const invoiceDetail = '/invoice-detail';
+  static const leaveDetail = '/leave-detail';
   static const profile = '/profile';
+  static const notifications = '/notifications';
 
   // Legacy aliases (kept so old strings still resolve)
   static const attendance = time;
@@ -103,6 +107,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: Routes.leave, builder: (_, _) => const LeaveScreen()),
+            GoRoute(
+              path: Routes.leaveDetail,
+              builder: (_, state) =>
+                  LeaveDetailScreen(name: state.extra! as String),
+            ),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: Routes.payroll, builder: (_, _) => const PayslipsScreen()),
@@ -165,6 +174,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           path: Routes.profile,
           parentNavigatorKey: _rootNavigatorKey,
           builder: (_, _) => const ProfileScreen()),
+      GoRoute(
+          path: Routes.notifications,
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (_, _) => const NotificationsScreen()),
     ],
   );
 });

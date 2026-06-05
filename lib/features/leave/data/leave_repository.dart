@@ -8,6 +8,20 @@ class LeaveRepository {
   LeaveRepository(this._dio);
   final Dio _dio;
 
+  Future<LeaveApplicationDetail> getApplicationDetail(String name) async {
+    try {
+      final resp = await _dio.get(
+        ApiPaths.leaveApplicationDetail,
+        queryParameters: {'name': name},
+      );
+      return LeaveApplicationDetail.fromJson(
+        (resp.data['message'] as Map).cast<String, dynamic>(),
+      );
+    } on DioException catch (e) {
+      throw _asApiException(e);
+    }
+  }
+
   Future<LeaveContext> getContext() async {
     try {
       final resp = await _dio.get(ApiPaths.leaveContext);

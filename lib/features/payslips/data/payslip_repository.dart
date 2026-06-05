@@ -1,4 +1,8 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/api_paths.dart';
@@ -24,6 +28,27 @@ class PayslipRepository {
       return PayslipContext.fromJson(
         (resp.data['message'] as Map).cast<String, dynamic>(),
       );
+    } on DioException catch (e) {
+      throw _asApiException(e);
+    }
+  }
+
+  /// Downloads the PDF of `name` and writes it to a temp file. Returns the
+  /// absolute file path so the caller can hand it off to share_plus / open.
+  Future<String> downloadPdf(String name) async {
+    try {
+      final resp = await _dio.post(
+        ApiPaths.payslipDownloadPdf,
+        data: {'name': name},
+      );
+      final msg = (resp.data['message'] as Map).cast<String, dynamic>();
+      final fileName = (msg['filename'] as String?) ?? '$name.pdf';
+      final b64 = msg['content'] as String;
+      final bytes = base64Decode(b64);
+      final tmp = await getTemporaryDirectory();
+      final path = '${tmp.path}/$fileName';
+      await File(path).writeAsBytes(bytes, flush: true);
+      return path;
     } on DioException catch (e) {
       throw _asApiException(e);
     }

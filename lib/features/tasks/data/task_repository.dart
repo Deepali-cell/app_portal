@@ -51,6 +51,53 @@ class TaskRepository {
     }
   }
 
+  Future<TaskDetail> getDetail(String name) async {
+    try {
+      final resp = await _dio.get(
+        ApiPaths.taskDetail,
+        queryParameters: {'name': name},
+      );
+      return TaskDetail.fromJson(
+        (resp.data['message'] as Map).cast<String, dynamic>(),
+      );
+    } on DioException catch (e) {
+      throw _err(e);
+    }
+  }
+
+  Future<void> update({
+    required String name,
+    String? subject,
+    String? description,
+    String? priority,
+    DateTime? expEndDate,
+    bool clearExpEndDate = false,
+    String? project,
+    bool clearProject = false,
+    String? status,
+  }) async {
+    final data = <String, dynamic>{'name': name};
+    if (subject != null) data['subject'] = subject;
+    if (description != null) data['description'] = description;
+    if (priority != null) data['priority'] = priority;
+    if (status != null) data['status'] = status;
+    if (clearExpEndDate) {
+      data['exp_end_date'] = '';
+    } else if (expEndDate != null) {
+      data['exp_end_date'] = expEndDate.toIso8601String().split('.').first;
+    }
+    if (clearProject) {
+      data['project'] = '';
+    } else if (project != null) {
+      data['project'] = project;
+    }
+    try {
+      await _dio.post(ApiPaths.taskUpdate, data: data);
+    } on DioException catch (e) {
+      throw _err(e);
+    }
+  }
+
   ApiException _err(DioException e) =>
       e.error is ApiException ? e.error as ApiException : ApiException.fromDio(e);
 }

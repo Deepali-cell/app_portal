@@ -35,3 +35,10 @@ class LeaveController extends AsyncNotifier<LeaveContext> {
     await reload();
   }
 }
+
+/// On-demand detail for a single Leave Application.
+final leaveApplicationDetailProvider =
+    FutureProvider.family<LeaveApplicationDetail, String>(
+        (ref, name) => ref
+            .read(leaveRepositoryProvider)
+            .getApplicationDetail(name));

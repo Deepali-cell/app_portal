@@ -43,6 +43,7 @@ bool isInBranch(String dest, String current) {
     Routes.deals: Routes.dealDetail,
     Routes.timesheet: Routes.timesheetDetail,
     Routes.invoices: Routes.invoiceDetail,
+    Routes.leave: Routes.leaveDetail,
   };
   return childMap[dest] == current;
 }

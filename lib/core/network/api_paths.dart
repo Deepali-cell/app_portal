@@ -116,6 +116,30 @@ class ApiPaths {
   static const String unregisterDevice =
       '/api/method/tcb_portal_erp.api.notifications.unregister_device';
 
+  // In-app notifications (powered by Frappe's Notification Log)
+  static const String notificationsList =
+      '/api/method/tcb_portal_erp.api.notifications.list_notifications';
+  static const String notificationsUnreadCount =
+      '/api/method/tcb_portal_erp.api.notifications.unread_count';
+  static const String notificationMarkRead =
+      '/api/method/tcb_portal_erp.api.notifications.mark_as_read';
+  static const String notificationsMarkAllRead =
+      '/api/method/tcb_portal_erp.api.notifications.mark_all_read';
+
+  // Leave detail
+  static const String leaveApplicationDetail =
+      '/api/method/tcb_portal_erp.api.leave.get_application_detail';
+
+  // Task detail + update
+  static const String taskDetail =
+      '/api/method/tcb_portal_erp.api.task.get_detail';
+  static const String taskUpdate =
+      '/api/method/tcb_portal_erp.api.task.update';
+
+  // Payslip PDF
+  static const String payslipDownloadPdf =
+      '/api/method/tcb_portal_erp.api.payslip.download_pdf';
+
   // CRM collaboration (Notes / Tasks / Comments / Attachments / Assignees)
   static const String notesList = '/api/method/tcb_portal_erp.api.notes.list_notes';
   static const String noteCreate = '/api/method/tcb_portal_erp.api.notes.create_note';

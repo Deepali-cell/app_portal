@@ -41,4 +41,36 @@ class TaskController extends AsyncNotifier<TaskContext> {
     await ref.read(taskRepositoryProvider).setStatus(name, status);
     await reload();
   }
+
+  // Named `saveTask` not `update` because `update` is reserved by the
+  // AsyncNotifier base class (mutates state).
+  Future<void> saveTask({
+    required String name,
+    String? subject,
+    String? description,
+    String? priority,
+    DateTime? expEndDate,
+    bool clearExpEndDate = false,
+    String? project,
+    bool clearProject = false,
+    String? status,
+  }) async {
+    await ref.read(taskRepositoryProvider).update(
+          name: name,
+          subject: subject,
+          description: description,
+          priority: priority,
+          expEndDate: expEndDate,
+          clearExpEndDate: clearExpEndDate,
+          project: project,
+          clearProject: clearProject,
+          status: status,
+        );
+    await reload();
+    ref.invalidate(taskDetailProvider(name));
+  }
 }
+
+/// On-demand single-task detail.
+final taskDetailProvider = FutureProvider.family<TaskDetail, String>(
+    (ref, name) => ref.read(taskRepositoryProvider).getDetail(name));

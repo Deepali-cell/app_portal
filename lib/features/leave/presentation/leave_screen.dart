@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../../shared/widgets/brand_button.dart';
@@ -390,43 +392,48 @@ class _RequestRow extends StatelessWidget {
     final dStr = days == days.roundToDouble()
         ? days.toInt().toString()
         : days.toString();
-    return Padding(
-      padding: const EdgeInsets.all(AppDimens.md),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.surfaceContainerHigh,
-              shape: BoxShape.circle,
+    return InkWell(
+      onTap: () => context.push(Routes.leaveDetail, extra: app.name),
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimens.md),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceContainerHigh,
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Icon(icon, color: AppColors.onSurface, size: 20),
             ),
-            alignment: Alignment.center,
-            child: Icon(icon, color: AppColors.onSurface, size: 20),
-          ),
-          const SizedBox(width: AppDimens.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(app.leaveType,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: AppColors.onSurface,
-                        fontWeight: FontWeight.w600)),
-                const SizedBox(height: 2),
-                Text(
-                  '$range · $dStr day${dStr == "1" ? "" : "s"}'
-                  '${app.halfDay ? " · half day" : ""}',
-                  style: Theme.of(context).textTheme.bodySmall,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+            const SizedBox(width: AppDimens.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(app.leaveType,
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: AppColors.onSurface,
+                          fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 2),
+                  Text(
+                    '$range · $dStr day${dStr == "1" ? "" : "s"}'
+                    '${app.halfDay ? " · half day" : ""}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
             ),
-          ),
-          _StatusChip(status: app.status),
-        ],
+            _StatusChip(status: app.status),
+            const SizedBox(width: 4),
+            const Icon(Icons.chevron_right, color: AppColors.outline),
+          ],
+        ),
       ),
     );
   }

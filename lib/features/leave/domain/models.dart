@@ -75,6 +75,59 @@ class LeaveApplication {
 }
 
 @immutable
+class LeaveApplicationDetail {
+  const LeaveApplicationDetail({
+    required this.name,
+    required this.leaveType,
+    required this.fromDate,
+    required this.toDate,
+    required this.totalLeaveDays,
+    required this.status,
+    required this.docstatus,
+    required this.halfDay,
+    this.description,
+    this.halfDayDate,
+    this.leaveApprover,
+    this.leaveApproverName,
+    this.postingDate,
+  });
+  final String name;
+  final String leaveType;
+  final DateTime fromDate;
+  final DateTime toDate;
+  final double totalLeaveDays;
+  final LeaveStatus status;
+  final int docstatus;
+  final bool halfDay;
+  final DateTime? halfDayDate;
+  final String? description;
+  final String? leaveApprover;
+  final String? leaveApproverName;
+  final DateTime? postingDate;
+
+  factory LeaveApplicationDetail.fromJson(Map<String, dynamic> j) =>
+      LeaveApplicationDetail(
+        name: j['name'] as String,
+        leaveType: (j['leave_type'] ?? '') as String,
+        fromDate: DateTime.parse(j['from_date'] as String),
+        toDate: DateTime.parse(j['to_date'] as String),
+        totalLeaveDays: (j['total_leave_days'] as num?)?.toDouble() ?? 0,
+        status: leaveStatusFrom(j['status'] as String?),
+        docstatus: (j['docstatus'] as num?)?.toInt() ?? 0,
+        halfDay: (j['half_day'] as num?)?.toInt() == 1,
+        halfDayDate: j['half_day_date'] != null
+            ? DateTime.tryParse(j['half_day_date'].toString())
+            : null,
+        description: j['description'] as String?,
+        leaveApprover: j['leave_approver'] as String?,
+        leaveApproverName: j['leave_approver_name'] as String?,
+        postingDate: j['posting_date'] != null
+            ? DateTime.tryParse(j['posting_date'].toString())
+            : null,
+      );
+}
+
+@immutable
 class LeaveContext {
   const LeaveContext({
     required this.employee,

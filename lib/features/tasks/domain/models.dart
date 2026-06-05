@@ -36,6 +36,46 @@ class TaskItem {
 }
 
 @immutable
+class TaskDetail {
+  const TaskDetail({
+    required this.name,
+    required this.subject,
+    required this.status,
+    required this.priority,
+    this.description,
+    this.project,
+    this.expEndDate,
+    this.progress = 0,
+    this.assignees = const [],
+  });
+  final String name;
+  final String subject;
+  final String status;
+  final String priority;
+  final String? description;
+  final String? project;
+  final DateTime? expEndDate;
+  final double progress;
+  final List<String> assignees;
+
+  factory TaskDetail.fromJson(Map<String, dynamic> j) => TaskDetail(
+        name: j['name'] as String,
+        subject: (j['subject'] ?? '') as String,
+        status: (j['status'] ?? 'Open') as String,
+        priority: (j['priority'] ?? 'Medium') as String,
+        description: j['description'] as String?,
+        project: j['project'] as String?,
+        expEndDate: j['exp_end_date'] != null
+            ? DateTime.tryParse(j['exp_end_date'].toString())
+            : null,
+        progress: (j['progress'] as num?)?.toDouble() ?? 0,
+        assignees: ((j['assignees'] as List?) ?? [])
+            .map((e) => e.toString())
+            .toList(),
+      );
+}
+
+@immutable
 class ProjectRef {
   const ProjectRef({required this.name, required this.label});
   final String name;
