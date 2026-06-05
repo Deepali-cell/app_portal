@@ -129,10 +129,22 @@ class AttendanceController extends AsyncNotifier<AttendanceState> {
     await _resolveLocation(current.context);
   }
 
-  /// Marks IN/OUT using a fresh GPS fix (server enforces the geofence and the
-  /// selfie-required rule for IN). Throws [LocationException] / [ApiException]
-  /// for the UI to render.
-  Future<MarkResult> mark(LogType type, {String? selfiePath}) async {
+  /// Marks IN/OUT using a fresh GPS fix.
+  ///
+  /// **On-site path** (default): server enforces the office geofence and the
+  /// selfie-required rule for IN.
+  ///
+  /// **Off-site path** ([offsite] true): geofence is skipped, [reason] is
+  /// mandatory. Used for WFH / client-site / field work. Lat/lon still
+  /// captured for audit.
+  ///
+  /// Throws [LocationException] / [ApiException] for the UI to render.
+  Future<MarkResult> mark(
+    LogType type, {
+    String? selfiePath,
+    bool offsite = false,
+    String? reason,
+  }) async {
     final repo = ref.read(attendanceRepositoryProvider);
     // Always re-acquire location at the moment of marking — the cached state
     // can be stale or null if GPS resolved after the screen rendered.
@@ -142,6 +154,8 @@ class AttendanceController extends AsyncNotifier<AttendanceState> {
       longitude: position.longitude,
       logType: type,
       selfiePath: selfiePath,
+      offsite: offsite,
+      reason: reason,
     );
     await reload();
     return result;

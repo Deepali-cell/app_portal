@@ -41,6 +41,8 @@ class Checkin {
     required this.time,
     this.latitude,
     this.longitude,
+    this.isOffsite = false,
+    this.offsiteReason,
   });
 
   final String name;
@@ -48,6 +50,8 @@ class Checkin {
   final DateTime time;
   final double? latitude;
   final double? longitude;
+  final bool isOffsite;
+  final String? offsiteReason;
 
   factory Checkin.fromJson(Map<String, dynamic> j) => Checkin(
         name: j['name'] as String,
@@ -55,6 +59,8 @@ class Checkin {
         time: DateTime.parse(j['time'] as String),
         latitude: (j['latitude'] as num?)?.toDouble(),
         longitude: (j['longitude'] as num?)?.toDouble(),
+        isOffsite: (j['custom_is_offsite'] as num?)?.toInt() == 1,
+        offsiteReason: j['custom_offsite_reason'] as String?,
       );
 }
 
@@ -100,6 +106,8 @@ class PendingCheckin {
     required this.capturedAt,
     this.selfiePath,
     this.lastError,
+    this.offsite = false,
+    this.offsiteReason,
   });
 
   final String id;
@@ -109,6 +117,8 @@ class PendingCheckin {
   final DateTime capturedAt;
   final String? selfiePath;
   final String? lastError;
+  final bool offsite;
+  final String? offsiteReason;
 
   PendingCheckin copyWith({String? lastError}) => PendingCheckin(
         id: id,
@@ -118,6 +128,8 @@ class PendingCheckin {
         capturedAt: capturedAt,
         selfiePath: selfiePath,
         lastError: lastError ?? this.lastError,
+        offsite: offsite,
+        offsiteReason: offsiteReason,
       );
 
   Map<String, dynamic> toJson() => {
@@ -128,6 +140,8 @@ class PendingCheckin {
         'captured_at': capturedAt.toIso8601String(),
         'selfie_path': selfiePath,
         'last_error': lastError,
+        'offsite': offsite,
+        'offsite_reason': offsiteReason,
       };
 
   factory PendingCheckin.fromJson(Map<String, dynamic> j) => PendingCheckin(
@@ -138,5 +152,7 @@ class PendingCheckin {
         capturedAt: DateTime.parse(j['captured_at'] as String),
         selfiePath: j['selfie_path'] as String?,
         lastError: j['last_error'] as String?,
+        offsite: (j['offsite'] as bool?) ?? false,
+        offsiteReason: j['offsite_reason'] as String?,
       );
 }

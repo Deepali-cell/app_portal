@@ -62,11 +62,16 @@ class AttendanceRepository {
   /// Marks attendance. Online → posts immediately (selfie inline as base64).
   /// Offline (or a network failure) → enqueues for later sync. A missing selfie
   /// on IN is a permanent rejection; never queued.
+  ///
+  /// When [offsite] is true, the geofence is skipped server-side and [reason]
+  /// is mandatory (>= 4 chars). Used for WFH / client-site / field work.
   Future<MarkResult> mark({
     required double latitude,
     required double longitude,
     required LogType logType,
     String? selfiePath,
+    bool offsite = false,
+    String? reason,
   }) async {
     if (logType == LogType.inn && (selfiePath == null || selfiePath.isEmpty)) {
       throw const ApiException(
@@ -74,9 +79,16 @@ class AttendanceRepository {
         'A selfie is required to check in.',
       );
     }
+    if (offsite && (reason == null || reason.trim().length < 4)) {
+      throw const ApiException(
+        ApiErrorKind.unknown,
+        'Please tell us where you\'re working (at least 4 characters).',
+      );
+    }
 
     if (!await isOnline()) {
-      await _enqueue(_pending(latitude, longitude, logType, selfiePath));
+      await _enqueue(_pending(latitude, longitude, logType, selfiePath,
+          offsite: offsite, reason: reason));
       return MarkResult.queued(logType: logType);
     }
 
@@ -86,10 +98,13 @@ class AttendanceRepository {
         longitude: longitude,
         logType: logType,
         selfiePath: selfiePath,
+        offsite: offsite,
+        reason: reason,
       );
     } on ApiException catch (e) {
       if (e.kind == ApiErrorKind.network || e.kind == ApiErrorKind.timeout) {
-        await _enqueue(_pending(latitude, longitude, logType, selfiePath));
+        await _enqueue(_pending(latitude, longitude, logType, selfiePath,
+            offsite: offsite, reason: reason));
         return MarkResult.queued(logType: logType);
       }
       rethrow;
@@ -102,6 +117,8 @@ class AttendanceRepository {
     required LogType logType,
     String? selfiePath,
     DateTime? capturedAt,
+    bool offsite = false,
+    String? reason,
   }) async {
     String? selfieB64;
     if (selfiePath != null && selfiePath.isNotEmpty) {
@@ -124,6 +141,10 @@ class AttendanceRepository {
     if (selfieB64 != null) payload['selfie'] = selfieB64;
     if (capturedAt != null) {
       payload['timestamp'] = capturedAt.toUtc().toIso8601String();
+    }
+    if (offsite) {
+      payload['offsite'] = 1;
+      payload['reason'] = reason!.trim();
     }
 
     try {
@@ -169,6 +190,8 @@ class AttendanceRepository {
           logType: p.logType,
           selfiePath: p.selfiePath,
           capturedAt: p.capturedAt,
+          offsite: p.offsite,
+          reason: p.offsiteReason,
         );
         await _queue.delete(p.id);
         synced++;
@@ -186,8 +209,10 @@ class AttendanceRepository {
     double lat,
     double lon,
     LogType type,
-    String? selfiePath,
-  ) =>
+    String? selfiePath, {
+    bool offsite = false,
+    String? reason,
+  }) =>
       PendingCheckin(
         id: DateTime.now().microsecondsSinceEpoch.toString(),
         latitude: lat,
@@ -195,6 +220,8 @@ class AttendanceRepository {
         logType: type,
         capturedAt: DateTime.now(),
         selfiePath: selfiePath,
+        offsite: offsite,
+        offsiteReason: reason,
       );
 
   ApiException _asApiException(DioException e) =>

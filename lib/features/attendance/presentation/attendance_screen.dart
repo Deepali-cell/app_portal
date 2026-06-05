@@ -44,7 +44,33 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     super.dispose();
   }
 
-  Future<void> _mark(LogType type) async {
+  Future<void> _mark(LogType type) => _doMark(type, offsite: false);
+
+  Future<void> _markOffsite(LogType type) async {
+    // Ask for the reason first — if user cancels, we never open the camera.
+    final reason = await _askOffsiteReason(type);
+    if (reason == null) return; // cancelled
+    await _doMark(type, offsite: true, reason: reason);
+  }
+
+  Future<String?> _askOffsiteReason(LogType type) async {
+    return showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surfaceContainerLowest,
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppDimens.radiusXl)),
+      ),
+      builder: (_) => _OffsiteReasonSheet(logType: type),
+    );
+  }
+
+  Future<void> _doMark(
+    LogType type, {
+    required bool offsite,
+    String? reason,
+  }) async {
     // For IN: capture a selfie before anything else. Cancelling cancels the mark.
     String? selfiePath;
     if (type == LogType.inn) {
@@ -73,11 +99,18 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
     try {
       final result = await ref
           .read(attendanceControllerProvider.notifier)
-          .mark(type, selfiePath: selfiePath);
+          .mark(type, selfiePath: selfiePath, offsite: offsite, reason: reason);
       if (!mounted) return;
-      _snack(result.status == MarkStatus.queued
-          ? 'No connection — ${result.logType.label.toLowerCase()} saved and will sync.'
-          : '${result.logType.label} recorded at ${result.matchedLocation}.');
+      if (result.status == MarkStatus.queued) {
+        _snack(
+            'No connection — ${result.logType.label.toLowerCase()} saved and will sync.');
+      } else if (offsite) {
+        _snack(
+            '${result.logType.label} recorded off-site. HR will see the reason on the desk.');
+      } else {
+        _snack(
+            '${result.logType.label} recorded at ${result.matchedLocation}.');
+      }
     } on LocationException catch (e) {
       _snack(e.message);
     } on ApiException catch (e) {
@@ -141,6 +174,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                 state: state,
                 marking: _marking,
                 onMark: _mark,
+                onMarkOffsite: _markOffsite,
               ),
               const SizedBox(height: AppDimens.lg),
               _WeekStrip(state: state),
@@ -178,10 +212,12 @@ class _ClockCard extends ConsumerWidget {
     required this.state,
     required this.marking,
     required this.onMark,
+    required this.onMarkOffsite,
   });
   final AttendanceState state;
   final bool marking;
   final ValueChanged<LogType> onMark;
+  final ValueChanged<LogType> onMarkOffsite;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -366,6 +402,32 @@ class _ClockCard extends ConsumerWidget {
               const SizedBox(height: AppDimens.md),
               _PendingChip(count: state.pendingCount),
             ],
+            // Working off-site — secondary action. Visible whether the user is
+            // inside the geofence or not; especially useful when outside.
+            const SizedBox(height: AppDimens.sm),
+            Center(
+              child: TextButton.icon(
+                onPressed: marking ? null : () => onMarkOffsite(type),
+                icon: const Icon(Icons.work_outline,
+                    size: 16, color: AppColors.onSecondaryFixedVariant),
+                label: Text(
+                  type == LogType.inn
+                      ? 'Working off-site (WFH / client site)'
+                      : 'Off-site check-out',
+                  style: const TextStyle(
+                      color: AppColors.onSecondaryFixedVariant,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13),
+                ),
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 6),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -654,29 +716,176 @@ class _LogRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(log.logType.label,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: AppColors.onSurface,
-                        fontWeight: FontWeight.w600)),
+                Row(
+                  children: [
+                    Text(log.logType.label,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                            color: AppColors.onSurface,
+                            fontWeight: FontWeight.w600)),
+                    if (log.isOffsite) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppColors.secondaryFixed,
+                          borderRadius:
+                              BorderRadius.circular(AppDimens.radiusSm),
+                        ),
+                        child: const Text('Off-site',
+                            style: TextStyle(
+                                color: AppColors.onSecondaryFixedVariant,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 10)),
+                      ),
+                    ],
+                  ],
+                ),
                 Text(_timeOnly.format(log.time.toLocal()),
                     style: Theme.of(context).textTheme.bodySmall),
+                if (log.isOffsite &&
+                    log.offsiteReason != null &&
+                    log.offsiteReason!.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(log.offsiteReason!,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: AppColors.onSurfaceVariant,
+                            fontStyle: FontStyle.italic)),
+                  ),
               ],
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-            decoration: BoxDecoration(
-              color: AppColors.tertiaryFixedDim.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-              border: Border.all(
-                  color: AppColors.tertiaryFixedDim.withValues(alpha: 0.4)),
+          if (!log.isOffsite)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: AppColors.tertiaryFixedDim.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+                border: Border.all(
+                    color: AppColors.tertiaryFixedDim.withValues(alpha: 0.4)),
+              ),
+              child: Text('On Time',
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: AppColors.onTertiaryFixedVariant,
+                      fontWeight: FontWeight.w600)),
             ),
-            child: Text('On Time',
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColors.onTertiaryFixedVariant,
-                    fontWeight: FontWeight.w600)),
-          ),
         ],
+      ),
+    );
+  }
+}
+
+/// Bottom sheet asking the user where they're working before submitting an
+/// off-site check-in/out. Returns the trimmed reason (>= 4 chars) on Submit,
+/// or null on Cancel.
+class _OffsiteReasonSheet extends StatefulWidget {
+  const _OffsiteReasonSheet({required this.logType});
+  final LogType logType;
+  @override
+  State<_OffsiteReasonSheet> createState() => _OffsiteReasonSheetState();
+}
+
+class _OffsiteReasonSheetState extends State<_OffsiteReasonSheet> {
+  final _ctrl = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final v = _ctrl.text.trim();
+    if (v.length < 4) {
+      setState(() => _error =
+          'Tell us where you are working (at least 4 characters).');
+      return;
+    }
+    Navigator.pop(context, v);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    final isIn = widget.logType == LogType.inn;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          AppDimens.xl, AppDimens.xl, AppDimens.xl, AppDimens.xl + bottom),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Text(
+                  isIn ? 'Working off-site' : 'Off-site check-out',
+                  style: Theme.of(context).textTheme.titleLarge),
+            ),
+            const SizedBox(height: AppDimens.sm),
+            Text(
+              isIn
+                  ? "We'll skip the office geofence and still capture your selfie + location. Tell HR where you're working today."
+                  : "We'll mark this check-out as off-site. Tell HR where you've been working.",
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: AppDimens.lg),
+            TextField(
+              controller: _ctrl,
+              autofocus: true,
+              minLines: 2,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                labelText: 'Where are you working?',
+                hintText:
+                    'WFH today / Acme Corp office / Field visit to Hyderabad',
+                alignLabelWithHint: true,
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: AppDimens.sm),
+              Text(_error!,
+                  style:
+                      const TextStyle(color: AppColors.error, fontSize: 13)),
+            ],
+            const SizedBox(height: AppDimens.xl),
+            Row(children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppDimens.radiusLg),
+                    ),
+                  ),
+                  child: const Text('Cancel'),
+                ),
+              ),
+              const SizedBox(width: AppDimens.md),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: _submit,
+                  icon: const Icon(Icons.work_outline, size: 18),
+                  label: Text(isIn ? 'Continue' : 'Check out'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.secondaryContainer,
+                    foregroundColor: AppColors.onSecondaryContainer,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius:
+                          BorderRadius.circular(AppDimens.radiusLg),
+                    ),
+                  ),
+                ),
+              ),
+            ]),
+          ],
+        ),
       ),
     );
   }
