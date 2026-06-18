@@ -25,7 +25,7 @@ class LeaveDetailScreen extends ConsumerWidget {
         actions: [
           IconButton(
             tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh, color: AppColors.primary),
+            icon: Icon(Icons.refresh, color: AppColors.primary),
             onPressed: () =>
                 ref.invalidate(leaveApplicationDetailProvider(name)),
           ),
@@ -193,7 +193,7 @@ class _InfoCard extends StatelessWidget {
         children: [
           for (var i = 0; i < rows.length; i++) ...[
             if (i > 0)
-              const Divider(
+              Divider(
                   height: 1, indent: 16, color: AppColors.outlineVariant),
             Padding(
               padding: const EdgeInsets.symmetric(

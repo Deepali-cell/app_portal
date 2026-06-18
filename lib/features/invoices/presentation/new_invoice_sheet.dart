@@ -225,7 +225,7 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
                 decoration: InputDecoration(
                   labelText: _partyLabel,
                   suffixIcon:
-                      const Icon(Icons.search, color: AppColors.onSurfaceVariant),
+                      Icon(Icons.search, color: AppColors.onSurfaceVariant),
                 ),
                 child: Text(
                   _party?.label ?? 'Select a $_partyLabel',
@@ -348,7 +348,7 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
                     label: const Text('Save'),
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      side: const BorderSide(color: AppColors.primary),
+                      side: BorderSide(color: AppColors.primary),
                       foregroundColor: AppColors.primary,
                       shape: RoundedRectangleBorder(
                         borderRadius:
@@ -404,7 +404,7 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
               child: InkWell(
                 onTap: () => _pickItem(idx),
                 child: InputDecorator(
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Item',
                     suffixIcon:
                         Icon(Icons.search, color: AppColors.onSurfaceVariant),
@@ -462,7 +462,7 @@ class _NewInvoiceSheetState extends ConsumerState<NewInvoiceSheet> {
               child: InputDecorator(
                 decoration: const InputDecoration(labelText: 'Amount'),
                 child: Text(money(it.amount, _currency),
-                    style: const TextStyle(
+                    style: TextStyle(
                         color: AppColors.primary,
                         fontWeight: FontWeight.w700)),
               ),
@@ -574,7 +574,7 @@ class _PartyPickerState extends ConsumerState<_PartyPicker> {
                                 style: Theme.of(context).textTheme.bodyMedium))
                         : ListView.separated(
                             itemCount: _results.length,
-                            separatorBuilder: (_, _) => const Divider(
+                            separatorBuilder: (_, _) => Divider(
                                 height: 1, color: AppColors.outlineVariant),
                             itemBuilder: (_, i) {
                               final p = _results[i];
@@ -691,7 +691,7 @@ class _ItemPickerState extends ConsumerState<_ItemPicker> {
                                 style: Theme.of(context).textTheme.bodyMedium))
                         : ListView.separated(
                             itemCount: _results.length,
-                            separatorBuilder: (_, _) => const Divider(
+                            separatorBuilder: (_, _) => Divider(
                                 height: 1, color: AppColors.outlineVariant),
                             itemBuilder: (_, i) {
                               final it = _results[i];
@@ -786,7 +786,7 @@ class _SupplierBillBlock extends StatelessWidget {
               label: const Text("Attach supplier invoice (PDF / image)"),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 12),
-                side: const BorderSide(color: AppColors.primary),
+                side: BorderSide(color: AppColors.primary),
                 foregroundColor: AppColors.primary,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(AppDimens.radiusLg),
@@ -802,14 +802,14 @@ class _SupplierBillBlock extends StatelessWidget {
                 borderRadius: BorderRadius.circular(AppDimens.radiusLg),
               ),
               child: Row(children: [
-                const Icon(Icons.check_circle,
+                Icon(Icons.check_circle,
                     color: AppColors.onTertiaryFixedVariant, size: 18),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(supplierInvoiceName!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                           color: AppColors.onTertiaryFixedVariant,
                           fontSize: 13,
                           fontWeight: FontWeight.w600)),
@@ -818,7 +818,7 @@ class _SupplierBillBlock extends StatelessWidget {
                   tooltip: "Remove",
                   visualDensity: VisualDensity.compact,
                   onPressed: onClearAttachment,
-                  icon: const Icon(Icons.close,
+                  icon: Icon(Icons.close,
                       color: AppColors.onTertiaryFixedVariant, size: 18),
                 ),
               ]),

@@ -77,7 +77,7 @@ class _RunningTimerCardState extends ConsumerState<RunningTimerCard>
                   borderRadius: BorderRadius.circular(AppDimens.radiusLg),
                 ),
                 alignment: Alignment.center,
-                child: const Icon(Icons.bolt,
+                child: Icon(Icons.bolt,
                     color: AppColors.onSecondaryContainer, size: 24),
               ),
               const SizedBox(width: AppDimens.md),
@@ -88,7 +88,7 @@ class _RunningTimerCardState extends ConsumerState<RunningTimerCard>
                     Text(widget.timer.task,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                             color: AppColors.onPrimary,
                             fontSize: 15,
                             fontWeight: FontWeight.w700)),
@@ -101,7 +101,7 @@ class _RunningTimerCardState extends ConsumerState<RunningTimerCard>
                             color: AppColors.primaryFixedDim, fontSize: 12)),
                     const SizedBox(height: 6),
                     Text(formatElapsed(elapsed),
-                        style: const TextStyle(
+                        style: TextStyle(
                             color: AppColors.onPrimary,
                             fontSize: 22,
                             fontWeight: FontWeight.w800,
@@ -110,7 +110,7 @@ class _RunningTimerCardState extends ConsumerState<RunningTimerCard>
                 ),
               ),
               const SizedBox(width: AppDimens.sm),
-              const Icon(Icons.stop_circle,
+              Icon(Icons.stop_circle,
                   color: AppColors.tertiaryFixedDim, size: 32),
             ],
           ),
@@ -160,7 +160,7 @@ class _RunningTimerStripState extends ConsumerState<RunningTimerStrip>
                     horizontal: AppDimens.md, vertical: 6),
                 child: Row(
                   children: [
-                    const Icon(Icons.bolt,
+                    Icon(Icons.bolt,
                         size: 16, color: AppColors.tertiaryFixedDim),
                     const SizedBox(width: 6),
                     Expanded(
@@ -168,7 +168,7 @@ class _RunningTimerStripState extends ConsumerState<RunningTimerStrip>
                         '${timer.task} · ${formatElapsed(elapsed)}',
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.onPrimary,
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -177,7 +177,7 @@ class _RunningTimerStripState extends ConsumerState<RunningTimerStrip>
                       ),
                     ),
                     const SizedBox(width: AppDimens.sm),
-                    const Text('Stop',
+                    Text('Stop',
                         style: TextStyle(
                             color: AppColors.tertiaryFixedDim,
                             fontWeight: FontWeight.w700,

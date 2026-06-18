@@ -39,7 +39,7 @@ class EventsTab extends ConsumerWidget {
                 child: Padding(
               padding: const EdgeInsets.all(AppDimens.xl),
               child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.event_outlined,
+                Icon(Icons.event_outlined,
                     size: 40, color: AppColors.inkFaint),
                 const SizedBox(height: AppDimens.md),
                 Text('No events scheduled',
@@ -135,7 +135,7 @@ class _EventCard extends StatelessWidget {
                       maxLines: 1, overflow: TextOverflow.ellipsis),
                 ),
                 IconButton(
-                  icon: const Icon(Icons.delete_outline, color: AppColors.danger),
+                  icon: Icon(Icons.delete_outline, color: AppColors.danger),
                   onPressed: onDelete,
                 ),
               ]),
@@ -333,7 +333,7 @@ class _EventSheetState extends ConsumerState<_EventSheet> {
             if (_error != null) ...[
               const SizedBox(height: AppDimens.md),
               Text(_error!,
-                  style: const TextStyle(color: AppColors.danger, fontSize: 13)),
+                  style: TextStyle(color: AppColors.danger, fontSize: 13)),
             ],
             const SizedBox(height: AppDimens.xl),
             BrandButton(

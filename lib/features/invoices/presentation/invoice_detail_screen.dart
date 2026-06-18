@@ -89,7 +89,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
         actions: [
           IconButton(
             tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh, color: AppColors.primary),
+            icon: Icon(Icons.refresh, color: AppColors.primary),
             onPressed: () => ref.invalidate(invoiceDetailProvider(_key)),
           ),
         ],
@@ -247,7 +247,7 @@ class _Hero extends StatelessWidget {
           ),
           const SizedBox(height: AppDimens.md),
           Text(money(d.grandTotal, d.currency),
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppColors.onPrimary,
                   fontSize: 28,
                   fontWeight: FontWeight.w800)),
@@ -282,7 +282,7 @@ class _Hero extends StatelessWidget {
                     color: AppColors.primaryFixedDim, fontSize: 11)),
             const SizedBox(height: 2),
             Text(v,
-                style: const TextStyle(
+                style: TextStyle(
                     color: AppColors.onPrimary,
                     fontSize: 13,
                     fontWeight: FontWeight.w600)),
@@ -357,7 +357,7 @@ class _ItemsCard extends StatelessWidget {
           ),
           for (var i = 0; i < d.items.length; i++) ...[
             if (i > 0)
-              const Divider(
+              Divider(
                   height: 1, indent: 16, color: AppColors.outlineVariant),
             _ItemRow(line: d.items[i], currency: d.currency),
           ],
@@ -402,7 +402,7 @@ class _ItemRow extends StatelessWidget {
               ),
               const SizedBox(width: AppDimens.sm),
               Text(money(line.amount, currency),
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: AppColors.primary,
                       fontWeight: FontWeight.w700,
                       fontSize: 14)),
@@ -449,7 +449,7 @@ class _TaxesCard extends StatelessWidget {
                           style: Theme.of(context).textTheme.bodySmall),
                     ),
                     Text(money(t.taxAmount, d.currency),
-                        style: const TextStyle(
+                        style: TextStyle(
                             fontWeight: FontWeight.w600,
                             color: AppColors.onSurface,
                             fontSize: 12)),
@@ -504,7 +504,7 @@ class _TotalsCard extends StatelessWidget {
                   : Theme.of(context).textTheme.bodyMedium),
           Text(value,
               style: emphasised
-                  ? const TextStyle(
+                  ? TextStyle(
                       color: AppColors.primary,
                       fontWeight: FontWeight.w800,
                       fontSize: 16)
@@ -565,7 +565,7 @@ class _PaymentsTimeline extends StatelessWidget {
           ),
           for (var i = 0; i < d.payments.length; i++) ...[
             if (i > 0)
-              const Divider(
+              Divider(
                   height: 1, indent: 16, color: AppColors.outlineVariant),
             _PaymentRow(p: d.payments[i], currency: d.currency),
           ],
@@ -593,7 +593,7 @@ class _PaymentRow extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppDimens.radiusLg),
             ),
             alignment: Alignment.center,
-            child: const Icon(Icons.payments_outlined,
+            child: Icon(Icons.payments_outlined,
                 color: AppColors.onTertiaryFixedVariant, size: 18),
           ),
           const SizedBox(width: AppDimens.md),
@@ -621,7 +621,7 @@ class _PaymentRow extends StatelessWidget {
             ),
           ),
           Text(money(p.allocatedAmount, currency),
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppColors.primary,
                   fontWeight: FontWeight.w700,
                   fontSize: 13)),

@@ -186,7 +186,7 @@ class _DealDetailScreenState extends ConsumerState<DealDetailScreen>
         child: Padding(
           padding: const EdgeInsets.all(AppDimens.xl),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.error_outline, size: 40, color: AppColors.danger),
+            Icon(Icons.error_outline, size: 40, color: AppColors.danger),
             const SizedBox(height: AppDimens.md),
             Text(e is ApiException ? e.message : 'Could not load.',
                 textAlign: TextAlign.center),
@@ -292,12 +292,12 @@ class _DetailsTab extends StatelessWidget {
                 SizedBox(
                   width: 110,
                   child: Text(label,
-                      style: const TextStyle(color: AppColors.inkMuted, fontSize: 13)),
+                      style: TextStyle(color: AppColors.inkMuted, fontSize: 13)),
                 ),
                 Expanded(
                   child: Text(
                     (value == null || value.isEmpty) ? '—' : value,
-                    style: const TextStyle(
+                    style: TextStyle(
                         color: AppColors.ink, fontWeight: FontWeight.w500),
                   ),
                 ),
@@ -322,7 +322,7 @@ class _Section extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(title.toUpperCase(),
-                    style: const TextStyle(
+                    style: TextStyle(
                         color: AppColors.inkMuted,
                         fontWeight: FontWeight.w700,
                         fontSize: 12,
@@ -348,7 +348,7 @@ class _DealHeader extends StatelessWidget {
           radius: 28,
           backgroundColor: AppColors.navy,
           child: Text((deal.title.isNotEmpty ? deal.title[0] : '?').toUpperCase(),
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppColors.canvas, fontSize: 18, fontWeight: FontWeight.w700)),
         ),
         const SizedBox(width: AppDimens.md),
@@ -361,7 +361,7 @@ class _DealHeader extends StatelessWidget {
                   maxLines: 2, overflow: TextOverflow.ellipsis),
               if (deal.dealValue > 0)
                 Text(money(deal.dealValue, deal.currency),
-                    style: const TextStyle(color: AppColors.navy, fontWeight: FontWeight.w700)),
+                    style: TextStyle(color: AppColors.navy, fontWeight: FontWeight.w700)),
               const SizedBox(height: AppDimens.xs),
               Wrap(spacing: AppDimens.xs, runSpacing: AppDimens.xs, children: [
                 _chip(deal.status, AppColors.navy, filled: true),

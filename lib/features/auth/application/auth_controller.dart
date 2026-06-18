@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../../core/notifications/notification_service.dart';
 import '../../../core/providers.dart';
+import '../../attendance/data/attendance_repository.dart';
 import '../domain/profile.dart';
 import 'lock_controller.dart';
 
@@ -77,8 +79,19 @@ class AuthController extends Notifier<AuthState> {
 
   Future<void> logout() async {
     await ref.read(authRepositoryProvider).logout();
+    await _clearPerUserCaches();
     ref.invalidate(sessionUnlockedProvider);
     state = const AuthState.unauthenticated();
+  }
+
+  /// Per-user Hive caches that should NOT leak to the next user even if the
+  /// next user logs in against the same tenant. The tenant config itself
+  /// stays cached (so the login screen stays themed).
+  Future<void> _clearPerUserCaches() async {
+    final boxName = AttendanceRepository.boxName;
+    if (Hive.isBoxOpen(boxName)) {
+      await Hive.box(boxName).clear();
+    }
   }
 
   /// Pushes editable Employee fields to the server and updates local state.

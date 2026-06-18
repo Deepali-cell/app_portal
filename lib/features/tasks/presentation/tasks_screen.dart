@@ -25,7 +25,7 @@ class TasksScreen extends ConsumerWidget {
         actions: [
           IconButton(
             tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh, color: AppColors.primary),
+            icon: Icon(Icons.refresh, color: AppColors.primary),
             onPressed: () => ref.read(taskControllerProvider.notifier).reload(),
           ),
         ],
@@ -79,7 +79,7 @@ class TasksScreen extends ConsumerWidget {
                         ),
                         for (var i = 0; i < ctx.tasks.length; i++) ...[
                           if (i > 0)
-                            const Divider(
+                            Divider(
                                 height: 1,
                                 indent: 64,
                                 color: AppColors.outlineVariant),
@@ -178,7 +178,7 @@ class _TaskRow extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(AppDimens.radiusLg),
               ),
               alignment: Alignment.center,
-              child: const Icon(Icons.task_alt_outlined,
+              child: Icon(Icons.task_alt_outlined,
                   color: AppColors.onSurfaceVariant, size: 20),
             ),
             const SizedBox(width: AppDimens.md),
@@ -205,7 +205,7 @@ class _TaskRow extends ConsumerWidget {
             ),
             _StatusChip.task(task.status),
             const SizedBox(width: 4),
-            const Icon(Icons.chevron_right, color: AppColors.outline),
+            Icon(Icons.chevron_right, color: AppColors.outline),
           ],
         ),
       ),
@@ -285,10 +285,10 @@ class _StatusChip extends StatelessWidget {
   static _StatusSpec _taskColor(String status) {
     switch (status) {
       case 'Completed':
-        return const _StatusSpec(
+        return _StatusSpec(
             bg: AppColors.tertiaryFixed, fg: AppColors.onTertiaryFixedVariant);
       case 'Cancelled':
-        return const _StatusSpec(
+        return _StatusSpec(
             bg: AppColors.surfaceContainerHigh, fg: AppColors.onSurfaceVariant);
       case 'Overdue':
         return const _StatusSpec(
@@ -297,7 +297,7 @@ class _StatusChip extends StatelessWidget {
       case 'Pending Review':
         return const _StatusSpec(bg: Color(0xFFFFF3E0), fg: Color(0xFFE65100));
       default:
-        return const _StatusSpec(
+        return _StatusSpec(
             bg: AppColors.secondaryFixed, fg: AppColors.onSecondaryFixedVariant);
     }
   }
@@ -709,7 +709,7 @@ class _EditTaskSheetState extends ConsumerState<_EditTaskSheet> {
                     IconButton(
                       tooltip: 'Clear',
                       onPressed: () => setState(() => _due = null),
-                      icon: const Icon(Icons.close,
+                      icon: Icon(Icons.close,
                           color: AppColors.onSurfaceVariant),
                     ),
                   ],

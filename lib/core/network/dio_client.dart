@@ -4,7 +4,8 @@ import '../config/app_config.dart';
 import '../storage/secure_store.dart';
 import 'api_exception.dart';
 
-/// Builds and owns the app's [Dio] instance.
+/// Builds and owns the app's [Dio] instance for talking to the active
+/// tenant's ERPNext.
 ///
 /// Responsibilities:
 ///  - inject the `Authorization: token <key>:<secret>` header from [SecureStore]
@@ -12,11 +13,19 @@ import 'api_exception.dart';
 ///  - normalise every error into an [ApiException]
 ///  - invoke [onUnauthorized] once when the server rejects the token, so the
 ///    app can force a sign-out
+///
+/// The [serverUrl] is supplied at construction time and is expected to be
+/// the resolved tenant's URL. The owning Riverpod provider rebuilds this
+/// instance when the tenant changes.
 class DioClient {
-  DioClient(this._store, {this.onUnauthorized}) {
+  DioClient(
+    this._store, {
+    required String serverUrl,
+    this.onUnauthorized,
+  }) {
     dio = Dio(
       BaseOptions(
-        baseUrl: AppConfig.baseUrl,
+        baseUrl: serverUrl,
         connectTimeout: AppConfig.connectTimeout,
         receiveTimeout: AppConfig.receiveTimeout,
         responseType: ResponseType.json,

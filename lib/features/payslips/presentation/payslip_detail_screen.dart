@@ -160,7 +160,7 @@ class _NetCard extends ConsumerWidget {
               style: TextStyle(color: AppColors.canvas.withValues(alpha: 0.8))),
           const SizedBox(height: AppDimens.xs),
           Text(_mask(d.net, d.currency, revealed),
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppColors.canvas,
                   fontSize: 30,
                   fontWeight: FontWeight.w800)),
@@ -223,7 +223,7 @@ class _LinesCard extends ConsumerWidget {
                   Text(totalLabel,
                       style: const TextStyle(fontWeight: FontWeight.w700)),
                   Text(_mask(total, currency, revealed),
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontWeight: FontWeight.w700, color: AppColors.navy)),
                 ],
               ),

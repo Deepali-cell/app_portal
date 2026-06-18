@@ -143,7 +143,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         actions: [
           IconButton(
             tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh, color: AppColors.primary),
+            icon: Icon(Icons.refresh, color: AppColors.primary),
             onPressed: () =>
                 ref.read(attendanceControllerProvider.notifier).reload(),
           ),
@@ -316,17 +316,17 @@ class _ClockCard extends ConsumerWidget {
                     color: canMark
                         ? AppColors.primary
                         : AppColors.primary.withValues(alpha: 0.5),
-                    boxShadow: const [
+                    boxShadow: [
                       BoxShadow(
                         color: AppColors.cardShadow,
                         blurRadius: 18,
-                        offset: Offset(0, 8),
+                        offset: const Offset(0, 8),
                       ),
                     ],
                   ),
                   alignment: Alignment.center,
                   child: marking
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 28,
                           height: 28,
                           child: CircularProgressIndicator(
@@ -408,13 +408,13 @@ class _ClockCard extends ConsumerWidget {
             Center(
               child: TextButton.icon(
                 onPressed: marking ? null : () => onMarkOffsite(type),
-                icon: const Icon(Icons.work_outline,
+                icon: Icon(Icons.work_outline,
                     size: 16, color: AppColors.onSecondaryFixedVariant),
                 label: Text(
                   type == LogType.inn
                       ? 'Working off-site (WFH / client site)'
                       : 'Off-site check-out',
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: AppColors.onSecondaryFixedVariant,
                       fontWeight: FontWeight.w600,
                       fontSize: 13),
@@ -449,7 +449,7 @@ class _PendingChip extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.cloud_upload_outlined,
+          Icon(Icons.cloud_upload_outlined,
               size: 16, color: AppColors.onSecondaryFixed),
           const SizedBox(width: 6),
           Text('$count pending sync',
@@ -653,7 +653,7 @@ class _RecentLogs extends StatelessWidget {
           padding: const EdgeInsets.all(AppDimens.md),
           child: Row(
             children: [
-              const Icon(Icons.event_busy_outlined,
+              Icon(Icons.event_busy_outlined,
                   color: AppColors.onSurfaceVariant),
               const SizedBox(width: AppDimens.md),
               Text('No check-ins today',
@@ -732,7 +732,7 @@ class _LogRow extends StatelessWidget {
                           borderRadius:
                               BorderRadius.circular(AppDimens.radiusSm),
                         ),
-                        child: const Text('Off-site',
+                        child: Text('Off-site',
                             style: TextStyle(
                                 color: AppColors.onSecondaryFixedVariant,
                                 fontWeight: FontWeight.w700,

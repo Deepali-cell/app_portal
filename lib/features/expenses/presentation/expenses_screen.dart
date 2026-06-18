@@ -30,7 +30,7 @@ class ExpensesScreen extends ConsumerWidget {
         actions: [
           IconButton(
             tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh, color: AppColors.primary),
+            icon: Icon(Icons.refresh, color: AppColors.primary),
             onPressed: () =>
                 ref.read(expenseControllerProvider.notifier).reload(),
           ),
@@ -96,7 +96,7 @@ class ExpensesScreen extends ConsumerWidget {
                       ),
                       for (var i = 0; i < ctx.claims.length; i++) ...[
                         if (i > 0)
-                          const Divider(
+                          Divider(
                               height: 1,
                               indent: 64,
                               color: AppColors.outlineVariant),
@@ -259,7 +259,7 @@ class _TotalsCard extends StatelessWidget {
                   TextStyle(color: AppColors.primaryFixedDim, fontSize: 11)),
           const SizedBox(height: 2),
           Text(v,
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppColors.onPrimary,
                   fontSize: 14,
                   fontWeight: FontWeight.w600)),
@@ -288,7 +288,7 @@ class _ClaimRow extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppDimens.radiusLg),
             ),
             alignment: Alignment.center,
-            child: const Icon(Icons.receipt_long_outlined,
+            child: Icon(Icons.receipt_long_outlined,
                 color: AppColors.onSurfaceVariant, size: 20),
           ),
           const SizedBox(width: AppDimens.md),

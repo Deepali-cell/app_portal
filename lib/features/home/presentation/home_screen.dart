@@ -75,7 +75,7 @@ class _HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
                 radius: 18,
                 backgroundColor: AppColors.primary,
                 child: Text(profile.initials,
-                    style: const TextStyle(
+                    style: TextStyle(
                         color: AppColors.onPrimary,
                         fontWeight: FontWeight.w700,
                         fontSize: 13)),
@@ -96,7 +96,7 @@ class _HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
             icon: Stack(
               clipBehavior: Clip.none,
               children: [
-                const Icon(Icons.notifications_outlined,
+                Icon(Icons.notifications_outlined,
                     color: AppColors.primary),
                 if (unread > 0)
                   Positioned(
@@ -117,7 +117,7 @@ class _HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
                       alignment: Alignment.center,
                       child: Text(
                         unread > 99 ? '99+' : '$unread',
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: AppColors.onPrimary,
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
@@ -133,7 +133,7 @@ class _HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
         IconButton(
           onPressed: () => _confirmSignOut(context, ref),
           tooltip: 'Sign out',
-          icon: const Icon(Icons.logout, color: AppColors.primary),
+          icon: Icon(Icons.logout, color: AppColors.primary),
         ),
         const SizedBox(width: 4),
       ],
@@ -393,7 +393,7 @@ class _LeaveBalanceCard extends ConsumerWidget {
                   minHeight: 6,
                   borderRadius: BorderRadius.circular(999),
                   backgroundColor: AppColors.surfaceContainer,
-                  valueColor: const AlwaysStoppedAnimation(
+                  valueColor: AlwaysStoppedAnimation(
                       AppColors.secondaryContainer),
                 ),
               const SizedBox(height: 6),
@@ -442,7 +442,7 @@ class _LastPayslipCardState extends ConsumerState<_LastPayslipCard> {
               const SizedBox(height: 4),
               Row(
                 children: [
-                  const Icon(Icons.check_circle,
+                  Icon(Icons.check_circle,
                       color: AppColors.tertiaryFixedDim, size: 16),
                   const SizedBox(width: 4),
                   Expanded(
@@ -580,7 +580,7 @@ class _ActivityRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         border: Border(top: BorderSide(color: AppColors.outlineVariant, width: 0.4)),
       ),
       padding: const EdgeInsets.all(AppDimens.md),

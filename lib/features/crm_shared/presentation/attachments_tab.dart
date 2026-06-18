@@ -87,7 +87,7 @@ class _AttachmentsTabState extends ConsumerState<AttachmentsTab> {
         backgroundColor: AppColors.navy,
         foregroundColor: AppColors.canvas,
         icon: _uploading
-            ? const SizedBox(
+            ? SizedBox(
                 width: 18, height: 18,
                 child: CircularProgressIndicator(
                     strokeWidth: 2, color: AppColors.canvas))
@@ -127,7 +127,7 @@ class _AttachmentsTabState extends ConsumerState<AttachmentsTab> {
                         '${_size(a.fileSize)} · ${_ts.format(a.creation.toLocal())}'
                         '${a.isPrivate ? " · private" : ""}'),
                     trailing: IconButton(
-                      icon: const Icon(Icons.delete_outline,
+                      icon: Icon(Icons.delete_outline,
                           color: AppColors.danger),
                       onPressed: () => _delete(a),
                     ),

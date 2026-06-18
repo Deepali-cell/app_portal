@@ -32,7 +32,7 @@ class ActivityTab extends ConsumerWidget {
               child: Padding(
                 padding: const EdgeInsets.all(AppDimens.xl),
                 child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Icon(Icons.history,
+                  Icon(Icons.history,
                       size: 40, color: AppColors.inkFaint),
                   const SizedBox(height: AppDimens.md),
                   Text('No activity yet.',
@@ -89,7 +89,7 @@ class _DayHeader extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(top: AppDimens.sm, bottom: AppDimens.xs),
       child: Text(label.toUpperCase(),
-          style: const TextStyle(
+          style: TextStyle(
               color: AppColors.inkMuted,
               fontWeight: FontWeight.w700,
               fontSize: 12,
@@ -126,7 +126,7 @@ class _EntryRow extends StatelessWidget {
               children: [
                 RichText(
                   text: TextSpan(
-                    style: const TextStyle(color: AppColors.ink, fontSize: 14),
+                    style: TextStyle(color: AppColors.ink, fontSize: 14),
                     children: [
                       TextSpan(
                         text: entry.owner,
@@ -142,11 +142,11 @@ class _EntryRow extends StatelessWidget {
                   Text(v.detail!,
                       maxLines: 3,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: AppColors.inkMuted, fontSize: 13)),
+                      style: TextStyle(color: AppColors.inkMuted, fontSize: 13)),
                 ],
                 const SizedBox(height: 2),
                 Text(_ts.format(entry.creation.toLocal()),
-                    style: const TextStyle(
+                    style: TextStyle(
                         color: AppColors.inkFaint, fontSize: 11)),
               ],
             ),

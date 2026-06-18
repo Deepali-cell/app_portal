@@ -19,7 +19,7 @@ class ProfileScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: AppColors.surfaceContainerLowest,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.primary),
+          icon: Icon(Icons.arrow_back, color: AppColors.primary),
           onPressed: () => context.pop(),
         ),
         title: const Text('My Profile'),
@@ -27,7 +27,7 @@ class ProfileScreen extends ConsumerWidget {
           if (profile?.employee != null)
             IconButton(
               tooltip: 'Edit',
-              icon: const Icon(Icons.edit_outlined, color: AppColors.primary),
+              icon: Icon(Icons.edit_outlined, color: AppColors.primary),
               onPressed: () => _openEdit(context, ref, profile!.employee!),
             ),
         ],
@@ -74,7 +74,7 @@ class ProfileScreen extends ConsumerWidget {
                       padding: const EdgeInsets.all(AppDimens.lg),
                       child: Row(
                         children: [
-                          const Icon(Icons.info_outline,
+                          Icon(Icons.info_outline,
                               color: AppColors.outline),
                           const SizedBox(width: AppDimens.md),
                           Expanded(
@@ -132,7 +132,7 @@ class _Hero extends StatelessWidget {
             ),
             alignment: Alignment.center,
             child: Text(profile.initials,
-                style: const TextStyle(
+                style: TextStyle(
                     color: AppColors.onSecondaryContainer,
                     fontWeight: FontWeight.w700,
                     fontSize: 28)),
@@ -174,7 +174,7 @@ class _InfoCard extends StatelessWidget {
           ),
           for (var i = 0; i < rows.length; i++) ...[
             if (i > 0)
-              const Divider(
+              Divider(
                   height: 1, indent: 16, color: AppColors.outlineVariant),
             Padding(
               padding: const EdgeInsets.symmetric(

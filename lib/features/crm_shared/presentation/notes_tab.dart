@@ -117,7 +117,7 @@ class _NoteCard extends StatelessWidget {
                         style: Theme.of(context).textTheme.titleMedium),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.delete_outline, color: AppColors.danger),
+                    icon: Icon(Icons.delete_outline, color: AppColors.danger),
                     onPressed: onDelete,
                   ),
                 ],
@@ -129,7 +129,7 @@ class _NoteCard extends StatelessWidget {
                     _stripHtml(note.content!),
                     maxLines: 3,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(color: AppColors.ink),
+                    style: TextStyle(color: AppColors.ink),
                   ),
                 ),
               const SizedBox(height: AppDimens.xs),
@@ -229,7 +229,7 @@ class _NoteSheetState extends ConsumerState<_NoteSheet> {
             if (_error != null) ...[
               const SizedBox(height: AppDimens.md),
               Text(_error!,
-                  style: const TextStyle(color: AppColors.danger, fontSize: 13)),
+                  style: TextStyle(color: AppColors.danger, fontSize: 13)),
             ],
             const SizedBox(height: AppDimens.xl),
             BrandButton(
@@ -269,7 +269,7 @@ class _Err extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(AppDimens.xl),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.error_outline, size: 40, color: AppColors.danger),
+            Icon(Icons.error_outline, size: 40, color: AppColors.danger),
             const SizedBox(height: AppDimens.md),
             Text(msg, textAlign: TextAlign.center),
             const SizedBox(height: AppDimens.lg),

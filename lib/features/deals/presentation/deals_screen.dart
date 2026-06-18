@@ -24,7 +24,7 @@ class DealsScreen extends ConsumerWidget {
         actions: [
           IconButton(
             tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh, color: AppColors.primary),
+            icon: Icon(Icons.refresh, color: AppColors.primary),
             onPressed: () =>
                 ref.read(dealsControllerProvider.notifier).reload(),
           ),
@@ -95,7 +95,7 @@ class DealsScreen extends ConsumerWidget {
                         ),
                         for (var i = 0; i < ctx.deals.length; i++) ...[
                           if (i > 0)
-                            const Divider(
+                            Divider(
                                 height: 1,
                                 indent: 64,
                                 color: AppColors.outlineVariant),
@@ -165,7 +165,7 @@ class _PipelineCard extends StatelessWidget {
                   color: AppColors.primaryFixedDim, fontSize: 12)),
           const SizedBox(height: 4),
           Text(money(total, currency),
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppColors.onPrimary,
                   fontSize: 28,
                   fontWeight: FontWeight.w800)),
@@ -196,7 +196,7 @@ class _PipelineCard extends StatelessWidget {
                   TextStyle(color: AppColors.primaryFixedDim, fontSize: 11)),
           const SizedBox(height: 2),
           Text(v,
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppColors.onPrimary,
                   fontSize: 14,
                   fontWeight: FontWeight.w600)),
@@ -228,7 +228,7 @@ class _DealRow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(AppDimens.radiusLg),
               ),
               alignment: Alignment.center,
-              child: const Icon(Icons.handshake_outlined,
+              child: Icon(Icons.handshake_outlined,
                   color: AppColors.onSecondaryFixed, size: 20),
             ),
             const SizedBox(width: AppDimens.md),
@@ -246,7 +246,7 @@ class _DealRow extends StatelessWidget {
                   Row(children: [
                     if (value > 0)
                       Text(money(value, deal.currency),
-                          style: const TextStyle(
+                          style: TextStyle(
                               color: AppColors.primary,
                               fontWeight: FontWeight.w700,
                               fontSize: 13)),
@@ -261,7 +261,7 @@ class _DealRow extends StatelessWidget {
             ),
             _DealStatusChip(status: deal.status),
             const SizedBox(width: 4),
-            const Icon(Icons.chevron_right, color: AppColors.outline),
+            Icon(Icons.chevron_right, color: AppColors.outline),
           ],
         ),
       ),

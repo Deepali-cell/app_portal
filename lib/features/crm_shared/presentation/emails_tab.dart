@@ -39,7 +39,7 @@ class EmailsTab extends ConsumerWidget {
                 child: Padding(
               padding: const EdgeInsets.all(AppDimens.xl),
               child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.mail_outline,
+                Icon(Icons.mail_outline,
                     size: 40, color: AppColors.inkFaint),
                 const SizedBox(height: AppDimens.md),
                 Text('No emails yet — tap "Compose" to send the first.',
@@ -105,7 +105,7 @@ class _EmailCard extends StatelessWidget {
                           fontSize: 12)),
                   const Spacer(),
                   Text(_ts.format(email.creation.toLocal()),
-                      style: const TextStyle(
+                      style: TextStyle(
                           color: AppColors.inkFaint, fontSize: 12)),
                 ],
               ),
@@ -129,7 +129,7 @@ class _EmailCard extends StatelessWidget {
                   _stripHtml(email.content!),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: AppColors.inkMuted),
+                  style: TextStyle(color: AppColors.inkMuted),
                 ),
               ],
             ],
@@ -326,7 +326,7 @@ class _ComposeSheetState extends ConsumerState<_ComposeSheet> {
             if (_error != null) ...[
               const SizedBox(height: AppDimens.md),
               Text(_error!,
-                  style: const TextStyle(color: AppColors.danger, fontSize: 13)),
+                  style: TextStyle(color: AppColors.danger, fontSize: 13)),
             ],
             const SizedBox(height: AppDimens.xl),
             BrandButton(

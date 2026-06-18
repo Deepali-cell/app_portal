@@ -88,7 +88,7 @@ class _CommentsTabState extends ConsumerState<CommentsTab> {
           child: Container(
             padding: const EdgeInsets.fromLTRB(
                 AppDimens.md, AppDimens.sm, AppDimens.md, AppDimens.md),
-            decoration: const BoxDecoration(
+            decoration: BoxDecoration(
               color: AppColors.surface,
               border: Border(top: BorderSide(color: AppColors.line)),
             ),
@@ -112,11 +112,11 @@ class _CommentsTabState extends ConsumerState<CommentsTab> {
                   onPressed: _sending ? null : _send,
                   style: IconButton.styleFrom(backgroundColor: AppColors.navy),
                   icon: _sending
-                      ? const SizedBox(
+                      ? SizedBox(
                           width: 18, height: 18,
                           child: CircularProgressIndicator(
                               strokeWidth: 2, color: AppColors.canvas))
-                      : const Icon(Icons.send, color: AppColors.canvas),
+                      : Icon(Icons.send, color: AppColors.canvas),
                 ),
               ],
             ),
@@ -149,7 +149,7 @@ class _CommentBubble extends ConsumerWidget {
                 backgroundColor: AppColors.navyTint,
                 child: Text(
                   (comment.owner.isNotEmpty ? comment.owner[0] : '?').toUpperCase(),
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: AppColors.navy, fontWeight: FontWeight.w700, fontSize: 12),
                 ),
               ),
@@ -159,7 +159,7 @@ class _CommentBubble extends ConsumerWidget {
                     style: const TextStyle(fontWeight: FontWeight.w600)),
               ),
               Text(_ts.format(comment.creation.toLocal()),
-                  style: const TextStyle(color: AppColors.inkFaint, fontSize: 12)),
+                  style: TextStyle(color: AppColors.inkFaint, fontSize: 12)),
             ],
           ),
           const SizedBox(height: AppDimens.sm),

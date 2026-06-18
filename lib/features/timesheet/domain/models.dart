@@ -220,6 +220,7 @@ class TimeLog {
     required this.hours,
     this.activityType,
     this.project,
+    this.task,
     this.description,
   });
 
@@ -227,6 +228,7 @@ class TimeLog {
   final double hours;
   final String? activityType;
   final String? project;
+  final String? task;
   final String? description;
 
   Map<String, dynamic> toJson() => {
@@ -234,6 +236,7 @@ class TimeLog {
         'hours': hours,
         if (activityType != null) 'activity_type': activityType,
         if (project != null) 'project': project,
+        if (task != null) 'task': task,
         if (description != null && description!.isNotEmpty)
           'description': description,
       };

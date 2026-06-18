@@ -55,7 +55,7 @@ class PayslipsScreen extends ConsumerWidget {
           ),
           IconButton(
             tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh, color: AppColors.primary),
+            icon: Icon(Icons.refresh, color: AppColors.primary),
             onPressed: () => ref.read(payslipListProvider.notifier).reload(),
           ),
         ],
@@ -96,7 +96,7 @@ class PayslipsScreen extends ConsumerWidget {
                       padding: const EdgeInsets.all(AppDimens.lg),
                       child: Row(
                         children: [
-                          const Icon(Icons.payments_outlined,
+                          Icon(Icons.payments_outlined,
                               color: AppColors.outline),
                           const SizedBox(width: AppDimens.md),
                           Expanded(
@@ -197,7 +197,7 @@ class _NetSalaryHero extends ConsumerWidget {
                       child: Text(
                           _maskedMoney(slip.net, slip.currency,
                               revealed: revealed),
-                          style: const TextStyle(
+                          style: TextStyle(
                               color: AppColors.primary,
                               fontSize: 36,
                               fontWeight: FontWeight.w800,
@@ -290,7 +290,7 @@ class _PeriodTotalCard extends ConsumerWidget {
                         color: AppColors.onPrimary,
                         fontWeight: FontWeight.w600)),
               ),
-              const Icon(Icons.account_balance,
+              Icon(Icons.account_balance,
                   color: AppColors.primaryFixedDim, size: 20),
             ],
           ),
@@ -305,7 +305,7 @@ class _PeriodTotalCard extends ConsumerWidget {
               style: TextStyle(
                   color: AppColors.primaryFixedDim, fontSize: 12)),
           Text(_maskedMoney(net, currency, revealed: revealed),
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppColors.onPrimary,
                   fontSize: 24,
                   fontWeight: FontWeight.w800)),
@@ -331,7 +331,7 @@ class _PeriodTotalCard extends ConsumerWidget {
         Text(label,
             style: TextStyle(color: AppColors.primaryFixedDim, fontSize: 13)),
         Text(value,
-            style: const TextStyle(
+            style: TextStyle(
                 color: AppColors.onPrimary,
                 fontWeight: FontWeight.w600,
                 fontSize: 13)),
@@ -489,7 +489,7 @@ class _BreakdownCard extends ConsumerWidget {
                             style: Theme.of(context).textTheme.bodySmall),
                       ),
                       Text(_fmt(l.amount, revealed),
-                          style: const TextStyle(
+                          style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.w600,
                               color: AppColors.onSurface)),
@@ -528,7 +528,7 @@ class _PastPayslipsCard extends StatelessWidget {
           ),
           for (var i = 0; i < past.length; i++) ...[
             if (i > 0)
-              const Divider(height: 1, indent: 64, color: AppColors.outlineVariant),
+              Divider(height: 1, indent: 64, color: AppColors.outlineVariant),
             _PastRow(slip: past[i]),
           ],
         ],
@@ -557,7 +557,7 @@ class _PastRow extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(AppDimens.radiusLg),
               ),
               alignment: Alignment.center,
-              child: const Icon(Icons.description_outlined,
+              child: Icon(Icons.description_outlined,
                   color: AppColors.onSurfaceVariant, size: 20),
             ),
             const SizedBox(width: AppDimens.md),
@@ -576,7 +576,7 @@ class _PastRow extends ConsumerWidget {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_right, color: AppColors.outline),
+            Icon(Icons.chevron_right, color: AppColors.outline),
           ],
         ),
       ),

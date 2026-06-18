@@ -46,7 +46,7 @@ class _DirectoryScreenState extends ConsumerState<DirectoryScreen> {
         actions: [
           IconButton(
             tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh, color: AppColors.primary),
+            icon: Icon(Icons.refresh, color: AppColors.primary),
             onPressed: () =>
                 ref.read(directoryControllerProvider.notifier).reload(),
           ),
@@ -65,19 +65,19 @@ class _DirectoryScreenState extends ConsumerState<DirectoryScreen> {
               onChanged: _onSearch,
               decoration: InputDecoration(
                 hintText: 'Search by name, role, department, or number',
-                prefixIcon: const Icon(Icons.search,
+                prefixIcon: Icon(Icons.search,
                     color: AppColors.onSurfaceVariant),
                 filled: true,
                 fillColor: AppColors.surfaceContainerLowest,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppDimens.radiusLg),
                   borderSide:
-                      const BorderSide(color: AppColors.outlineVariant),
+                      BorderSide(color: AppColors.outlineVariant),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppDimens.radiusLg),
                   borderSide:
-                      const BorderSide(color: AppColors.outlineVariant),
+                      BorderSide(color: AppColors.outlineVariant),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                     horizontal: AppDimens.md, vertical: 12),
@@ -124,7 +124,7 @@ class _DirectoryScreenState extends ConsumerState<DirectoryScreen> {
                           children: [
                             for (var i = 0; i < list.length; i++) ...[
                               if (i > 0)
-                                const Divider(
+                                Divider(
                                     height: 1,
                                     indent: 76,
                                     color: AppColors.outlineVariant),
@@ -190,7 +190,7 @@ class _Row extends StatelessWidget {
             ),
             alignment: Alignment.center,
             child: Text(entry.initials,
-                style: const TextStyle(
+                style: TextStyle(
                     color: AppColors.onSecondaryFixed,
                     fontWeight: FontWeight.w700,
                     fontSize: 14)),
@@ -236,7 +236,7 @@ class _Row extends StatelessWidget {
             IconButton(
               tooltip: 'Email',
               onPressed: () => _email(context),
-              icon: const Icon(Icons.mail_outline, color: AppColors.primary),
+              icon: Icon(Icons.mail_outline, color: AppColors.primary),
             ),
           if (entry.cellNumber != null && entry.cellNumber!.isNotEmpty)
             IconButton(
@@ -250,7 +250,7 @@ class _Row extends StatelessWidget {
                   borderRadius: BorderRadius.circular(AppDimens.radiusLg),
                 ),
                 alignment: Alignment.center,
-                child: const Icon(Icons.call,
+                child: Icon(Icons.call,
                     color: AppColors.onTertiaryFixedVariant, size: 20),
               ),
             ),

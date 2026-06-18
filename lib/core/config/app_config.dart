@@ -1,22 +1,37 @@
 /// Centralised runtime configuration.
 ///
-/// Override at build/run time, e.g.:
-///   flutter run --dart-define=TCB_BASE_URL=https://portal.example.com
-///
-/// Defaults target the local Frappe v16 bench. The v16 site `tcb.local` is the
-/// served default site, so any Host works against the dev bench; in production
-/// point [baseUrl] at the Cloudflare-tunnelled HTTPS domain.
+/// Overrides at build/run time via `--dart-define`. Example for local dev:
+///   flutter run \
+///     --dart-define=TCB_MIDDLEWARE_URL=http://127.0.0.1:8001 \
+///     --dart-define=TCB_SEND_HOST_HEADER=true \
+///     --dart-define=TCB_BIOMETRIC_LOCK=off
 class AppConfig {
   AppConfig._();
 
-  /// Base URL of the Frappe server (scheme + host + optional port, no trailing slash).
-  static const String baseUrl = String.fromEnvironment(
-    'TCB_BASE_URL',
-    defaultValue: 'http://127.0.0.1:8001',
+  /// URL of TCB's middleware (control-plane).
+  ///
+  /// The mobile app calls `tcb_portal_control.api.tenant.resolve` here on
+  /// login to look up the customer's ERPNext server URL. This is the ONE
+  /// URL that is compile-time-baked into the binary. Every other URL is
+  /// resolved at runtime per tenant.
+  static const String middlewareBaseUrl = String.fromEnvironment(
+    'TCB_MIDDLEWARE_URL',
+    defaultValue: 'https://office.tcbinfotech.com',
   );
 
-  /// Frappe site name. Only sent as a `Host` header when [sendHostHeader] is true
-  /// (local multi-site dev over HTTP). Never override Host on an HTTPS domain.
+  /// Optional fallback server URL when no tenant is cached.
+  ///
+  /// Empty string (default) means "no fallback" — the user must enter a
+  /// Company ID. Useful for local dev where you want to point straight at a
+  /// known site and skip the middleware step entirely.
+  static const String defaultTenantServerUrl = String.fromEnvironment(
+    'TCB_DEFAULT_TENANT_URL',
+    defaultValue: '',
+  );
+
+  /// Frappe site name. Only sent as a `Host` header when [sendHostHeader] is
+  /// true (local multi-site dev over HTTP). Never override Host on an HTTPS
+  /// domain.
   static const String siteHost = String.fromEnvironment(
     'TCB_SITE_HOST',
     defaultValue: 'tcb.local',
@@ -36,6 +51,4 @@ class AppConfig {
     'TCB_BIOMETRIC_LOCK',
     defaultValue: true,
   );
-
-  static bool get isHttps => baseUrl.startsWith('https://');
 }

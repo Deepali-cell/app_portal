@@ -5,52 +5,59 @@ import 'package:google_fonts/google_fonts.dart';
 import 'app_colors.dart';
 import 'app_dimens.dart';
 
-/// Light-only Material 3 theme using the new tonal palette + Hanken Grotesk.
+/// Light-only Material 3 theme. Colours come from [AppColors], which is
+/// updated by the app shell whenever the active tenant changes.
+///
+/// Note: nothing in this file is `const`, because [AppColors] is a mutable
+/// runtime palette. Rebuild the theme whenever the tenant changes (the app
+/// shell does this by re-issuing `AppTheme.light` to MaterialApp.theme).
 class AppTheme {
   AppTheme._();
 
-  static const ColorScheme _scheme = ColorScheme(
-    brightness: Brightness.light,
-    primary: AppColors.primary,
-    onPrimary: AppColors.onPrimary,
-    primaryContainer: AppColors.primaryContainer,
-    onPrimaryContainer: AppColors.onPrimaryContainer,
-    secondary: AppColors.secondary,
-    onSecondary: AppColors.onSecondary,
-    secondaryContainer: AppColors.secondaryContainer,
-    onSecondaryContainer: AppColors.onSecondaryContainer,
-    tertiary: AppColors.tertiary,
-    onTertiary: AppColors.onTertiary,
-    tertiaryContainer: AppColors.tertiaryContainer,
-    onTertiaryContainer: AppColors.onTertiaryContainer,
-    error: AppColors.error,
-    onError: AppColors.onError,
-    errorContainer: AppColors.errorContainer,
-    onErrorContainer: AppColors.onErrorContainer,
-    surface: AppColors.surface,
-    onSurface: AppColors.onSurface,
-    onSurfaceVariant: AppColors.onSurfaceVariant,
-    surfaceContainerLowest: AppColors.surfaceContainerLowest,
-    surfaceContainerLow: AppColors.surfaceContainerLow,
-    surfaceContainer: AppColors.surfaceContainer,
-    surfaceContainerHigh: AppColors.surfaceContainerHigh,
-    surfaceContainerHighest: AppColors.surfaceContainerHighest,
-    surfaceTint: AppColors.surfaceTint,
-    surfaceBright: AppColors.surfaceBright,
-    surfaceDim: AppColors.surfaceDim,
-    inverseSurface: AppColors.inverseSurface,
-    onInverseSurface: AppColors.inverseOnSurface,
-    inversePrimary: AppColors.inversePrimary,
-    outline: AppColors.outline,
-    outlineVariant: AppColors.outlineVariant,
-    shadow: Color(0xFF000000),
-    scrim: Color(0xFF000000),
-  );
+  static ColorScheme buildScheme() {
+    return ColorScheme(
+      brightness: Brightness.light,
+      primary: AppColors.primary,
+      onPrimary: AppColors.onPrimary,
+      primaryContainer: AppColors.primaryContainer,
+      onPrimaryContainer: AppColors.onPrimaryContainer,
+      secondary: AppColors.secondary,
+      onSecondary: AppColors.onSecondary,
+      secondaryContainer: AppColors.secondaryContainer,
+      onSecondaryContainer: AppColors.onSecondaryContainer,
+      tertiary: AppColors.tertiary,
+      onTertiary: AppColors.onTertiary,
+      tertiaryContainer: AppColors.tertiaryContainer,
+      onTertiaryContainer: AppColors.onTertiaryContainer,
+      error: AppColors.error,
+      onError: AppColors.onError,
+      errorContainer: AppColors.errorContainer,
+      onErrorContainer: AppColors.onErrorContainer,
+      surface: AppColors.surface,
+      onSurface: AppColors.onSurface,
+      onSurfaceVariant: AppColors.onSurfaceVariant,
+      surfaceContainerLowest: AppColors.surfaceContainerLowest,
+      surfaceContainerLow: AppColors.surfaceContainerLow,
+      surfaceContainer: AppColors.surfaceContainer,
+      surfaceContainerHigh: AppColors.surfaceContainerHigh,
+      surfaceContainerHighest: AppColors.surfaceContainerHighest,
+      surfaceTint: AppColors.surfaceTint,
+      surfaceBright: AppColors.surfaceBright,
+      surfaceDim: AppColors.surfaceDim,
+      inverseSurface: AppColors.inverseSurface,
+      onInverseSurface: AppColors.inverseOnSurface,
+      inversePrimary: AppColors.inversePrimary,
+      outline: AppColors.outline,
+      outlineVariant: AppColors.outlineVariant,
+      shadow: const Color(0xFF000000),
+      scrim: const Color(0xFF000000),
+    );
+  }
 
   static ThemeData get light {
     final base = ThemeData(
       useMaterial3: true,
-      colorScheme: _scheme,
+      colorScheme: buildScheme(),
       scaffoldBackgroundColor: AppColors.background,
       splashFactory: InkRipple.splashFactory,
     );
@@ -58,7 +65,7 @@ class AppTheme {
 
     return base.copyWith(
       textTheme: _typeScale(hanken),
-      appBarTheme: const AppBarTheme(
+      appBarTheme: AppBarTheme(
         backgroundColor: AppColors.surfaceContainerLowest,
         foregroundColor: AppColors.primary,
         elevation: 0,
@@ -71,7 +78,7 @@ class AppTheme {
           fontWeight: FontWeight.w600,
           letterSpacing: -0.18,
         ),
-        systemOverlayStyle: SystemUiOverlayStyle(
+        systemOverlayStyle: const SystemUiOverlayStyle(
           statusBarColor: Colors.transparent,
           statusBarIconBrightness: Brightness.dark,
           statusBarBrightness: Brightness.light,
@@ -85,7 +92,7 @@ class AppTheme {
         shadowColor: AppColors.cardShadow,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusXl),
-          side: const BorderSide(
+          side: BorderSide(
             color: AppColors.outlineVariant,
             width: 0.4,
           ),
@@ -123,7 +130,7 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: AppColors.primary,
           minimumSize: const Size.fromHeight(AppDimens.buttonHeight),
-          side: const BorderSide(color: AppColors.outlineVariant),
+          side: BorderSide(color: AppColors.outlineVariant),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppDimens.radiusLg),
           ),
@@ -146,8 +153,10 @@ class AppTheme {
           horizontal: AppDimens.md,
           vertical: AppDimens.md,
         ),
-        hintStyle: GoogleFonts.hankenGrotesk(color: AppColors.outline, fontSize: 14),
-        labelStyle: GoogleFonts.hankenGrotesk(color: AppColors.onSurfaceVariant, fontSize: 14),
+        hintStyle:
+            GoogleFonts.hankenGrotesk(color: AppColors.outline, fontSize: 14),
+        labelStyle: GoogleFonts.hankenGrotesk(
+            color: AppColors.onSurfaceVariant, fontSize: 14),
         prefixIconColor: AppColors.onSurfaceVariant,
         border: _border(AppColors.outlineVariant),
         enabledBorder: _border(AppColors.outlineVariant),
@@ -155,7 +164,7 @@ class AppTheme {
         errorBorder: _border(AppColors.error),
         focusedErrorBorder: _border(AppColors.error, width: 1.4),
       ),
-      dividerTheme: const DividerThemeData(
+      dividerTheme: DividerThemeData(
         color: AppColors.outlineVariant,
         thickness: 1,
         space: 1,
@@ -184,9 +193,10 @@ class AppTheme {
         ),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
-            return const IconThemeData(color: AppColors.onSecondaryContainer);
+            return IconThemeData(color: AppColors.onSecondaryContainer);
           }
-          return IconThemeData(color: AppColors.primaryFixedDim.withValues(alpha: 0.85));
+          return IconThemeData(
+              color: AppColors.primaryFixedDim.withValues(alpha: 0.85));
         }),
         elevation: 0,
         height: AppDimens.bottomNavHeight,
@@ -218,7 +228,7 @@ class AppTheme {
           fontWeight: FontWeight.w500,
         ),
       ),
-      iconTheme: const IconThemeData(color: AppColors.primary),
+      iconTheme: IconThemeData(color: AppColors.primary),
     );
   }
 
@@ -231,7 +241,6 @@ class AppTheme {
 
   static TextTheme _typeScale(TextTheme base) {
     return base.copyWith(
-      // headline-lg (28 / 36, -0.02em, 700)
       headlineLarge: GoogleFonts.hankenGrotesk(
         fontSize: 28,
         height: 36 / 28,
@@ -239,14 +248,12 @@ class AppTheme {
         fontWeight: FontWeight.w700,
         color: AppColors.primary,
       ),
-      // headline-lg-mobile (24 / 32, 700)
       displaySmall: GoogleFonts.hankenGrotesk(
         fontSize: 24,
         height: 32 / 24,
         fontWeight: FontWeight.w700,
         color: AppColors.primary,
       ),
-      // headline-md (22 / 28, -0.01em, 600)
       headlineMedium: GoogleFonts.hankenGrotesk(
         fontSize: 22,
         height: 28 / 22,
@@ -254,7 +261,6 @@ class AppTheme {
         fontWeight: FontWeight.w600,
         color: AppColors.primary,
       ),
-      // headline-sm (18 / 24, 600)
       headlineSmall: GoogleFonts.hankenGrotesk(
         fontSize: 18,
         height: 24 / 18,
@@ -279,14 +285,12 @@ class AppTheme {
         fontWeight: FontWeight.w600,
         color: AppColors.onSurface,
       ),
-      // body-lg (16 / 24, 400)
       bodyLarge: GoogleFonts.hankenGrotesk(
         fontSize: 16,
         height: 24 / 16,
         fontWeight: FontWeight.w400,
         color: AppColors.onSurface,
       ),
-      // body-md (14 / 20, 400)
       bodyMedium: GoogleFonts.hankenGrotesk(
         fontSize: 14,
         height: 20 / 14,
@@ -299,14 +303,12 @@ class AppTheme {
         fontWeight: FontWeight.w400,
         color: AppColors.onSurfaceVariant,
       ),
-      // label-lg (14 / 20, 0.01em, 600)
       labelLarge: GoogleFonts.hankenGrotesk(
         fontSize: 14,
         height: 20 / 14,
         letterSpacing: 0.14,
         fontWeight: FontWeight.w600,
       ),
-      // label-sm (12 / 16, 0.02em, 500)
       labelSmall: GoogleFonts.hankenGrotesk(
         fontSize: 12,
         height: 16 / 12,

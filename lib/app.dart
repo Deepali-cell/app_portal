@@ -2,13 +2,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'core/router/app_router.dart';
+import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
+import 'features/tenant/application/tenant_controller.dart';
+import 'features/tenant/domain/tenant.dart';
 
 class TcbPortalApp extends ConsumerWidget {
   const TcbPortalApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Apply the active tenant's palette before the rest of the tree builds.
+    // The MaterialApp below reads from AppColors during its build, so updates
+    // are atomic from the user's point of view: any tenant change triggers a
+    // root rebuild here, which re-applies AppColors *before* MaterialApp and
+    // every screen reads them.
+    final tenant = ref.watch(tenantControllerProvider) ?? Tenant.tcbDefault;
+    AppColors.apply(AppPalette.fromTenant(tenant));
+
     final router = ref.watch(routerProvider);
     return MaterialApp.router(
       title: 'TCB Portal',

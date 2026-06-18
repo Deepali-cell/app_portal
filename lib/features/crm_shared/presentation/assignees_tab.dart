@@ -55,7 +55,7 @@ class AssigneesTab extends ConsumerWidget {
                       backgroundColor: AppColors.navy,
                       child: Text(
                         (a.fullName.isNotEmpty ? a.fullName[0] : '?').toUpperCase(),
-                        style: const TextStyle(
+                        style: TextStyle(
                             color: AppColors.canvas, fontWeight: FontWeight.w700),
                       ),
                     ),
@@ -63,7 +63,7 @@ class AssigneesTab extends ConsumerWidget {
                     subtitle: Text(a.user),
                     trailing: IconButton(
                       tooltip: 'Remove',
-                      icon: const Icon(Icons.close, color: AppColors.danger),
+                      icon: Icon(Icons.close, color: AppColors.danger),
                       onPressed: () => _remove(context, ref, a),
                     ),
                   ),
@@ -218,7 +218,7 @@ class _UserPickerState extends ConsumerState<_UserPicker> {
                                     backgroundColor: AppColors.navyTint,
                                     child: Text(
                                       (u.fullName.isNotEmpty ? u.fullName[0] : '?').toUpperCase(),
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                           color: AppColors.navy,
                                           fontWeight: FontWeight.w700),
                                     ),

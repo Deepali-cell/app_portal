@@ -27,7 +27,7 @@ class AppShell extends ConsumerWidget {
         body: Row(
           children: [
             _SideRail(dests: dests, currentRoute: _currentRoute(context)),
-            const VerticalDivider(width: 1, color: AppColors.outlineVariant),
+            VerticalDivider(width: 1, color: AppColors.outlineVariant),
             Expanded(child: shell),
           ],
         ),
@@ -59,7 +59,7 @@ class _ScrollableBottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppColors.primary,
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppDimens.radiusXl)),
         boxShadow: [

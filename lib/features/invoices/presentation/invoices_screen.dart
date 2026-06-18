@@ -66,7 +66,7 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
         actions: [
           IconButton(
             tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh, color: AppColors.primary),
+            icon: Icon(Icons.refresh, color: AppColors.primary),
             onPressed: () =>
                 ref.read(invoicesControllerProvider.notifier).reload(),
           ),
@@ -199,7 +199,7 @@ class _InvoiceList extends ConsumerWidget {
                   ),
                   for (var i = 0; i < invoices.length; i++) ...[
                     if (i > 0)
-                      const Divider(
+                      Divider(
                           height: 1,
                           indent: 64,
                           color: AppColors.outlineVariant),
@@ -244,7 +244,7 @@ class _SummaryCard extends StatelessWidget {
                   color: AppColors.primaryFixedDim, fontSize: 12)),
           const SizedBox(height: 4),
           Text(money(total, currency),
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppColors.onPrimary,
                   fontSize: 26,
                   fontWeight: FontWeight.w800)),
@@ -275,7 +275,7 @@ class _SummaryCard extends StatelessWidget {
                     color: AppColors.primaryFixedDim, fontSize: 11)),
             const SizedBox(height: 2),
             Text(v,
-                style: const TextStyle(
+                style: TextStyle(
                     color: AppColors.onPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.w600)),
@@ -338,7 +338,7 @@ class _InvoiceRow extends StatelessWidget {
                 Row(
                   children: [
                     Text(money(invoice.grandTotal, invoice.currency),
-                        style: const TextStyle(
+                        style: TextStyle(
                             color: AppColors.primary,
                             fontWeight: FontWeight.w700,
                             fontSize: 13)),
@@ -355,7 +355,7 @@ class _InvoiceRow extends StatelessWidget {
           ),
           _StatusChip(invoice: invoice),
           const SizedBox(width: 4),
-          const Icon(Icons.chevron_right, color: AppColors.outline),
+          Icon(Icons.chevron_right, color: AppColors.outline),
         ],
       ),
       ),
@@ -415,7 +415,7 @@ class _EmptyCard extends StatelessWidget {
         padding: const EdgeInsets.all(AppDimens.lg),
         child: Row(
           children: [
-            const Icon(Icons.receipt_outlined, color: AppColors.outline),
+            Icon(Icons.receipt_outlined, color: AppColors.outline),
             const SizedBox(width: AppDimens.md),
             Expanded(
                 child: Text('No invoices to show.',
@@ -514,7 +514,7 @@ class _PaymentsTab extends ConsumerWidget {
                     ),
                     for (var i = 0; i < ctx.payments.length; i++) ...[
                       if (i > 0)
-                        const Divider(
+                        Divider(
                             height: 1,
                             indent: 64,
                             color: AppColors.outlineVariant),
@@ -582,7 +582,7 @@ class _PaymentsSummary extends StatelessWidget {
                     color: AppColors.primaryFixedDim, fontSize: 11)),
             const SizedBox(height: 2),
             Text(v,
-                style: const TextStyle(
+                style: TextStyle(
                     color: AppColors.onPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.w600)),

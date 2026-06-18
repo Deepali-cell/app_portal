@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_colors.dart';
@@ -323,4 +324,267 @@ Future<bool?> showStartTimerSheet(BuildContext context, TimesheetContext ctx) =>
             BorderRadius.vertical(top: Radius.circular(AppDimens.radiusXl)),
       ),
       builder: (_) => StartTimerSheet(ctx: ctx),
+    );
+
+/// Modal sheet — back-fill time for users who forgot to start the timer.
+///
+/// Collects activity / project / task / start datetime / hours / description
+/// and posts them in one go via the `create` endpoint. Hours must be > 0.
+class LogPastTimeSheet extends ConsumerStatefulWidget {
+  const LogPastTimeSheet({super.key, required this.ctx});
+  final TimesheetContext ctx;
+
+  @override
+  ConsumerState<LogPastTimeSheet> createState() => _LogPastTimeSheetState();
+}
+
+class _LogPastTimeSheetState extends ConsumerState<LogPastTimeSheet> {
+  String? _activity;
+  String? _project;
+  String? _task;
+  DateTime _start = DateTime.now().subtract(const Duration(hours: 1));
+  final _hoursCtrl = TextEditingController(text: '1.0');
+  final _descCtrl = TextEditingController();
+  bool _busy = false;
+  String? _error;
+
+  static final _dateFmt = DateFormat('d MMM yyyy · h:mm a');
+
+  @override
+  void dispose() {
+    _hoursCtrl.dispose();
+    _descCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pickStart() async {
+    final now = DateTime.now();
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _start,
+      firstDate: now.subtract(const Duration(days: 60)),
+      lastDate: now,
+    );
+    if (pickedDate == null || !mounted) return;
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.fromDateTime(_start),
+    );
+    if (pickedTime == null) return;
+    setState(() {
+      _start = DateTime(
+        pickedDate.year,
+        pickedDate.month,
+        pickedDate.day,
+        pickedTime.hour,
+        pickedTime.minute,
+      );
+    });
+  }
+
+  Future<void> _save() async {
+    final hours = double.tryParse(_hoursCtrl.text.trim());
+    final desc = _descCtrl.text.trim();
+    if (_activity == null) {
+      setState(() => _error = 'Pick an activity type.');
+      return;
+    }
+    if (_project == null || _task == null) {
+      setState(() => _error = 'Pick a project and a task.');
+      return;
+    }
+    if (hours == null || hours <= 0) {
+      setState(() => _error = 'Hours must be greater than zero.');
+      return;
+    }
+    if (_start.isAfter(DateTime.now())) {
+      setState(() => _error = 'Start time cannot be in the future.');
+      return;
+    }
+    if (desc.length < 4) {
+      setState(() => _error = 'Add a short description (≥ 4 chars).');
+      return;
+    }
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    try {
+      await ref.read(timesheetControllerProvider.notifier).create([
+        TimeLog(
+          fromTime: _start,
+          hours: hours,
+          activityType: _activity,
+          project: _project,
+          task: _task,
+          description: desc,
+        ),
+      ]);
+      if (mounted) Navigator.pop(context, true);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) setState(() => _error = 'Could not save the entry.');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    final tasksAsync = _project == null
+        ? const AsyncValue<List<TaskRef>>.data([])
+        : ref.watch(projectTasksProvider(_project!));
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          AppDimens.xl, AppDimens.xl, AppDimens.xl, AppDimens.xl + bottom),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Text('Log Past Time',
+                  style: Theme.of(context).textTheme.titleLarge),
+            ),
+            const SizedBox(height: AppDimens.xs),
+            Center(
+              child: Text(
+                'For work you did but forgot to start a timer for.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+            const SizedBox(height: AppDimens.xl),
+            DropdownButtonFormField<String>(
+              initialValue: _activity,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Activity'),
+              items: widget.ctx.activityTypes
+                  .map((a) => DropdownMenuItem(value: a, child: Text(a)))
+                  .toList(),
+              onChanged: (v) => setState(() => _activity = v),
+            ),
+            const SizedBox(height: AppDimens.lg),
+            DropdownButtonFormField<String>(
+              initialValue: _project,
+              isExpanded: true,
+              decoration: const InputDecoration(labelText: 'Project'),
+              items: widget.ctx.projects
+                  .map((p) =>
+                      DropdownMenuItem(value: p.name, child: Text(p.label)))
+                  .toList(),
+              onChanged: (v) => setState(() {
+                _project = v;
+                _task = null;
+              }),
+            ),
+            const SizedBox(height: AppDimens.lg),
+            tasksAsync.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.symmetric(vertical: AppDimens.md),
+                child: LinearProgressIndicator(),
+              ),
+              error: (e, _) => Text(
+                  e is ApiException ? e.message : 'Could not load tasks.',
+                  style: TextStyle(color: AppColors.error, fontSize: 13)),
+              data: (tasks) {
+                if (_project == null) {
+                  return Text('Pick a project first.',
+                      style: Theme.of(context).textTheme.bodySmall);
+                }
+                if (tasks.isEmpty) {
+                  return Text('No open tasks on this project.',
+                      style: Theme.of(context).textTheme.bodySmall);
+                }
+                return DropdownButtonFormField<String>(
+                  initialValue:
+                      tasks.any((t) => t.name == _task) ? _task : null,
+                  isExpanded: true,
+                  decoration: const InputDecoration(labelText: 'Task'),
+                  items: tasks
+                      .map((t) => DropdownMenuItem(
+                          value: t.name, child: Text(t.subject)))
+                      .toList(),
+                  onChanged: (v) => setState(() => _task = v),
+                );
+              },
+            ),
+            const SizedBox(height: AppDimens.lg),
+            InkWell(
+              onTap: _busy ? null : _pickStart,
+              borderRadius: BorderRadius.circular(AppDimens.radiusLg),
+              child: InputDecorator(
+                decoration: const InputDecoration(
+                  labelText: 'Start time',
+                  prefixIcon: Icon(Icons.schedule),
+                ),
+                child: Text(_dateFmt.format(_start)),
+              ),
+            ),
+            const SizedBox(height: AppDimens.lg),
+            TextField(
+              controller: _hoursCtrl,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(
+                labelText: 'Hours',
+                hintText: 'e.g. 1.5',
+                prefixIcon: Icon(Icons.timer_outlined),
+              ),
+            ),
+            const SizedBox(height: AppDimens.lg),
+            TextField(
+              controller: _descCtrl,
+              minLines: 2,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                labelText: 'What did you work on?',
+                alignLabelWithHint: true,
+                hintText: 'Required — at least 4 characters',
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: AppDimens.md),
+              Text(_error!,
+                  style: TextStyle(color: AppColors.error, fontSize: 13)),
+            ],
+            const SizedBox(height: AppDimens.xl),
+            FilledButton.icon(
+              onPressed: _busy ? null : _save,
+              icon: _busy
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.save, size: 18),
+              label: const Text('Save entry'),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.secondaryContainer,
+                foregroundColor: AppColors.onSecondaryContainer,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppDimens.radiusLg),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+Future<bool?> showLogPastTimeSheet(
+        BuildContext context, TimesheetContext ctx) =>
+    showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surfaceContainerLowest,
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppDimens.radiusXl)),
+      ),
+      builder: (_) => LogPastTimeSheet(ctx: ctx),
     );

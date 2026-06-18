@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../application/notifications_controller.dart';
 import '../domain/models.dart';
+import 'notification_deep_link.dart';
 
 final _dateFmt = DateFormat('d MMM yyyy · h:mm a');
 
@@ -22,20 +23,20 @@ class NotificationsScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: AppColors.surfaceContainerLowest,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.primary),
+          icon: Icon(Icons.arrow_back, color: AppColors.primary),
           onPressed: () => context.pop(),
         ),
         title: const Text('Notifications'),
         actions: [
           IconButton(
             tooltip: 'Mark all read',
-            icon: const Icon(Icons.done_all, color: AppColors.primary),
+            icon: Icon(Icons.done_all, color: AppColors.primary),
             onPressed: () =>
                 ref.read(notificationsListProvider.notifier).markAllRead(),
           ),
           IconButton(
             tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh, color: AppColors.primary),
+            icon: Icon(Icons.refresh, color: AppColors.primary),
             onPressed: () =>
                 ref.read(notificationsListProvider.notifier).reload(),
           ),
@@ -60,7 +61,7 @@ class NotificationsScreen extends ConsumerWidget {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.notifications_off_outlined,
+                    Icon(Icons.notifications_off_outlined,
                         size: 44, color: AppColors.outline),
                     const SizedBox(height: AppDimens.md),
                     Text('No notifications yet.',
@@ -138,6 +139,7 @@ class _NotificationTile extends ConsumerWidget {
                 .read(notificationsListProvider.notifier)
                 .markRead(item.name);
           }
+          openNotificationTarget(context, item);
         },
         child: Padding(
           padding: const EdgeInsets.all(AppDimens.md),

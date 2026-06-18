@@ -14,15 +14,22 @@ import '../domain/profile.dart';
 /// the per-user API key/secret is fetched and stored. Every later request uses
 /// the token, so neither the password nor the session is retained on-device.
 class AuthRepository {
-  AuthRepository(this._dio, this._store);
+  AuthRepository(this._dio, this._store, this._serverUrl);
 
-  final Dio _dio; // token-authenticated app client
+  final Dio _dio; // token-authenticated app client (per current tenant)
   final SecureStore _store;
+  final String _serverUrl;
 
   Future<Profile> login(String usr, String pwd) async {
+    if (_serverUrl.isEmpty) {
+      throw const ApiException(
+        ApiErrorKind.unknown,
+        'No company server is selected. Enter your Company ID first.',
+      );
+    }
     final handshake = Dio(
       BaseOptions(
-        baseUrl: AppConfig.baseUrl,
+        baseUrl: _serverUrl,
         connectTimeout: AppConfig.connectTimeout,
         receiveTimeout: AppConfig.receiveTimeout,
         headers: {

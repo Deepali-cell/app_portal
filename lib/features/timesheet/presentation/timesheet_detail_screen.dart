@@ -75,7 +75,7 @@ class _TimesheetDetailScreenState extends ConsumerState<TimesheetDetailScreen> {
         actions: [
           IconButton(
             tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh, color: AppColors.primary),
+            icon: Icon(Icons.refresh, color: AppColors.primary),
             onPressed: () =>
                 ref.invalidate(timesheetDetailProvider(widget.name)),
           ),
@@ -141,7 +141,7 @@ class _TimesheetDetailScreenState extends ConsumerState<TimesheetDetailScreen> {
                     Padding(
                       padding: const EdgeInsets.only(bottom: AppDimens.sm),
                       child: Row(children: [
-                        const Icon(Icons.info_outline,
+                        Icon(Icons.info_outline,
                             size: 14, color: AppColors.onSurfaceVariant),
                         const SizedBox(width: 4),
                         Expanded(
@@ -264,7 +264,7 @@ class _Hero extends StatelessWidget {
                   TextStyle(color: AppColors.primaryFixedDim, fontSize: 11)),
           const SizedBox(height: 2),
           Text(v,
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppColors.onPrimary,
                   fontSize: 13,
                   fontWeight: FontWeight.w600)),
@@ -289,7 +289,7 @@ class _LogsSection extends StatelessWidget {
           padding: const EdgeInsets.all(AppDimens.lg),
           child: Row(
             children: [
-              const Icon(Icons.event_busy_outlined,
+              Icon(Icons.event_busy_outlined,
                   color: AppColors.onSurfaceVariant),
               const SizedBox(width: AppDimens.md),
               Expanded(
@@ -322,7 +322,7 @@ class _LogsSection extends StatelessWidget {
           ),
           for (var i = 0; i < logs.length; i++) ...[
             if (i > 0)
-              const Divider(
+              Divider(
                   height: 1, indent: 64, color: AppColors.outlineVariant),
             _LogRow(log: logs[i], hours: _h(logs[i].hours)),
           ],
@@ -357,7 +357,7 @@ class _LogRow extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppDimens.radiusLg),
             ),
             alignment: Alignment.center,
-            child: const Icon(Icons.access_time_outlined,
+            child: Icon(Icons.access_time_outlined,
                 color: AppColors.onSurfaceVariant, size: 20),
           ),
           const SizedBox(width: AppDimens.md),
@@ -396,7 +396,7 @@ class _LogRow extends StatelessWidget {
           ),
           const SizedBox(width: AppDimens.sm),
           Text(hours,
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppColors.primary,
                   fontWeight: FontWeight.w700,
                   fontSize: 14)),

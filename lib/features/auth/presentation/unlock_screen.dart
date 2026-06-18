@@ -61,7 +61,7 @@ class _UnlockScreenState extends ConsumerState<UnlockScreen> {
               const Spacer(),
               const BrandWordmark(size: 72, showLabel: false),
               const SizedBox(height: AppDimens.xxl),
-              const Icon(Icons.fingerprint, size: 56, color: AppColors.navy),
+              Icon(Icons.fingerprint, size: 56, color: AppColors.navy),
               const SizedBox(height: AppDimens.lg),
               Text(
                 'Locked',

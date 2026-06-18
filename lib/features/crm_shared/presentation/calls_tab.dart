@@ -46,7 +46,7 @@ class CallsTab extends ConsumerWidget {
                 child: Padding(
               padding: const EdgeInsets.all(AppDimens.xl),
               child: Column(mainAxisSize: MainAxisSize.min, children: [
-                const Icon(Icons.call_outlined,
+                Icon(Icons.call_outlined,
                     size: 40, color: AppColors.inkFaint),
                 const SizedBox(height: AppDimens.md),
                 Text('No calls logged yet',
@@ -155,11 +155,11 @@ class _CallCard extends StatelessWidget {
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
           IconButton(
             tooltip: 'Call back',
-            icon: const Icon(Icons.call, color: AppColors.navy),
+            icon: Icon(Icons.call, color: AppColors.navy),
             onPressed: onDial,
           ),
           IconButton(
-            icon: const Icon(Icons.delete_outline, color: AppColors.danger),
+            icon: Icon(Icons.delete_outline, color: AppColors.danger),
             onPressed: onDelete,
           ),
         ]),
@@ -305,7 +305,7 @@ class _CallSheetState extends ConsumerState<_CallSheet> {
                       suffixIcon: Icon(Icons.calendar_today_outlined, size: 18),
                     ),
                     child: Text(_ts.format(_when),
-                        style: const TextStyle(color: AppColors.ink)),
+                        style: TextStyle(color: AppColors.ink)),
                   ),
                 ),
               ),
@@ -324,7 +324,7 @@ class _CallSheetState extends ConsumerState<_CallSheet> {
             if (_error != null) ...[
               const SizedBox(height: AppDimens.md),
               Text(_error!,
-                  style: const TextStyle(color: AppColors.danger, fontSize: 13)),
+                  style: TextStyle(color: AppColors.danger, fontSize: 13)),
             ],
             const SizedBox(height: AppDimens.xl),
             BrandButton(

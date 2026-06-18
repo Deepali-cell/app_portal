@@ -24,7 +24,7 @@ class LeadsScreen extends ConsumerWidget {
         actions: [
           IconButton(
             tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh, color: AppColors.primary),
+            icon: Icon(Icons.refresh, color: AppColors.primary),
             onPressed: () =>
                 ref.read(leadsControllerProvider.notifier).reload(),
           ),
@@ -93,7 +93,7 @@ class LeadsScreen extends ConsumerWidget {
                         ),
                         for (var i = 0; i < ctx.leads.length; i++) ...[
                           if (i > 0)
-                            const Divider(
+                            Divider(
                                 height: 1,
                                 indent: 64,
                                 color: AppColors.outlineVariant),
@@ -194,7 +194,7 @@ class _LeadRow extends StatelessWidget {
               ),
               alignment: Alignment.center,
               child: Text(lead.initials,
-                  style: const TextStyle(
+                  style: TextStyle(
                       color: AppColors.onSecondaryFixed,
                       fontWeight: FontWeight.w700,
                       fontSize: 13)),
@@ -222,7 +222,7 @@ class _LeadRow extends StatelessWidget {
             ),
             _LeadStatusChip(status: lead.status),
             const SizedBox(width: 4),
-            const Icon(Icons.chevron_right, color: AppColors.outline),
+            Icon(Icons.chevron_right, color: AppColors.outline),
           ],
         ),
       ),

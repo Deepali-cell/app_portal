@@ -149,7 +149,7 @@ class _RecordPaymentSheetState extends ConsumerState<RecordPaymentSheet> {
                     Text(
                         money(widget.invoice.outstanding,
                             widget.invoice.currency),
-                        style: const TextStyle(
+                        style: TextStyle(
                             color: AppColors.primary,
                             fontWeight: FontWeight.w800,
                             fontSize: 15)),

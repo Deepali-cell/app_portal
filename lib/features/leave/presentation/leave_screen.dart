@@ -28,7 +28,7 @@ class LeaveScreen extends ConsumerWidget {
         actions: [
           IconButton(
             tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh, color: AppColors.primary),
+            icon: Icon(Icons.refresh, color: AppColors.primary),
             onPressed: () => ref.read(leaveControllerProvider.notifier).reload(),
           ),
         ],
@@ -100,7 +100,7 @@ class _HeaderSection extends ConsumerWidget {
                 child: OutlinedButton.icon(
                   onPressed: () => _openCompOffSheet(context, ref, ctx),
                   style: OutlinedButton.styleFrom(
-                    side: const BorderSide(color: AppColors.primary),
+                    side: BorderSide(color: AppColors.primary),
                     foregroundColor: AppColors.primary,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
@@ -319,7 +319,7 @@ class _EmptyBalances extends StatelessWidget {
         padding: const EdgeInsets.all(AppDimens.lg),
         child: Row(
           children: [
-            const Icon(Icons.info_outline,
+            Icon(Icons.info_outline,
                 color: AppColors.onSurfaceVariant),
             const SizedBox(width: AppDimens.md),
             Expanded(
@@ -369,7 +369,7 @@ class _MyRequestsSection extends StatelessWidget {
           else
             for (var i = 0; i < applications.length; i++) ...[
               if (i > 0)
-                const Divider(height: 1, indent: 64, color: AppColors.outlineVariant),
+                Divider(height: 1, indent: 64, color: AppColors.outlineVariant),
               _RequestRow(app: applications[i]),
             ],
         ],
@@ -431,7 +431,7 @@ class _RequestRow extends StatelessWidget {
             ),
             _StatusChip(status: app.status),
             const SizedBox(width: 4),
-            const Icon(Icons.chevron_right, color: AppColors.outline),
+            Icon(Icons.chevron_right, color: AppColors.outline),
           ],
         ),
       ),
@@ -837,7 +837,7 @@ class _ApplyCompOffSheetState extends ConsumerState<_ApplyCompOffSheet> {
               InputDecorator(
                 decoration: const InputDecoration(labelText: 'Leave type'),
                 child: Text(widget.compensatoryLeaveTypes.first,
-                    style: const TextStyle(color: AppColors.onSurface)),
+                    style: TextStyle(color: AppColors.onSurface)),
               ),
             const SizedBox(height: AppDimens.lg),
 

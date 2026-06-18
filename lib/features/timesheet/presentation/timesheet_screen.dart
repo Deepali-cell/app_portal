@@ -30,7 +30,7 @@ class TimesheetScreen extends ConsumerWidget {
         actions: [
           IconButton(
             tooltip: 'Refresh',
-            icon: const Icon(Icons.refresh, color: AppColors.primary),
+            icon: Icon(Icons.refresh, color: AppColors.primary),
             onPressed: () =>
                 ref.read(timesheetControllerProvider.notifier).reload(),
           ),
@@ -64,6 +64,18 @@ class TimesheetScreen extends ConsumerWidget {
                 if (ctx.activeTimer != null) ...[
                   const SizedBox(height: AppDimens.md),
                   RunningTimerCard(timer: ctx.activeTimer!),
+                ],
+                if (ctx.projects.isNotEmpty &&
+                    ctx.activityTypes.isNotEmpty) ...[
+                  const SizedBox(height: AppDimens.sm),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: TextButton.icon(
+                      icon: const Icon(Icons.history, size: 18),
+                      label: const Text('Log past time'),
+                      onPressed: () => _openLogPast(context, ctx),
+                    ),
+                  ),
                 ],
                 const SizedBox(height: AppDimens.md),
                 DateRangeBar(
@@ -102,7 +114,7 @@ class TimesheetScreen extends ConsumerWidget {
                         ),
                         for (var i = 0; i < ctx.timesheets.length; i++) ...[
                           if (i > 0)
-                            const Divider(
+                            Divider(
                                 height: 1,
                                 indent: 64,
                                 color: AppColors.outlineVariant),
@@ -132,6 +144,14 @@ class TimesheetScreen extends ConsumerWidget {
     if (ok == true && context.mounted) {
       ScaffoldMessenger.of(context)
           .showSnackBar(const SnackBar(content: Text('Timer started.')));
+    }
+  }
+
+  Future<void> _openLogPast(BuildContext context, TimesheetContext ctx) async {
+    final ok = await showLogPastTimeSheet(context, ctx);
+    if (ok == true && context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Time entry saved.')));
     }
   }
 }
@@ -211,7 +231,7 @@ class _TotalsCard extends StatelessWidget {
                   color: AppColors.primaryFixedDim, fontSize: 12)),
           const SizedBox(height: 4),
           Text(_h(total),
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppColors.onPrimary,
                   fontSize: 28,
                   fontWeight: FontWeight.w800)),
@@ -248,7 +268,7 @@ class _TotalsCard extends StatelessWidget {
                   color: AppColors.primaryFixedDim, fontSize: 11)),
           const SizedBox(height: 2),
           Text(v,
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppColors.onPrimary,
                   fontSize: 14,
                   fontWeight: FontWeight.w600)),
@@ -281,7 +301,7 @@ class _TsRow extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppDimens.radiusLg),
             ),
             alignment: Alignment.center,
-            child: const Icon(Icons.access_time_outlined,
+            child: Icon(Icons.access_time_outlined,
                 color: AppColors.onSurfaceVariant, size: 20),
           ),
           const SizedBox(width: AppDimens.md),
@@ -301,12 +321,12 @@ class _TsRow extends StatelessWidget {
           ),
           Text(
               '${ts.totalHours == ts.totalHours.truncate() ? ts.totalHours.toInt() : ts.totalHours.toStringAsFixed(1)} h',
-              style: const TextStyle(
+              style: TextStyle(
                   color: AppColors.primary,
                   fontWeight: FontWeight.w700,
                   fontSize: 15)),
           const SizedBox(width: 4),
-          const Icon(Icons.chevron_right, color: AppColors.outline),
+          Icon(Icons.chevron_right, color: AppColors.outline),
         ],
       ),
       ),

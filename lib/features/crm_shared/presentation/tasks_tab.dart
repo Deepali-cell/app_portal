@@ -144,7 +144,7 @@ class _TaskCard extends StatelessWidget {
                         style: Theme.of(context).textTheme.titleMedium),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.delete_outline, color: AppColors.danger),
+                    icon: Icon(Icons.delete_outline, color: AppColors.danger),
                     onPressed: onDelete,
                   ),
                 ],
@@ -339,7 +339,7 @@ class _TaskSheetState extends ConsumerState<_TaskSheet> {
             if (_error != null) ...[
               const SizedBox(height: AppDimens.md),
               Text(_error!,
-                  style: const TextStyle(color: AppColors.danger, fontSize: 13)),
+                  style: TextStyle(color: AppColors.danger, fontSize: 13)),
             ],
             const SizedBox(height: AppDimens.xl),
             BrandButton(
@@ -379,7 +379,7 @@ class _Err extends StatelessWidget {
         child: Padding(
           padding: const EdgeInsets.all(AppDimens.xl),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.error_outline, size: 40, color: AppColors.danger),
+            Icon(Icons.error_outline, size: 40, color: AppColors.danger),
             const SizedBox(height: AppDimens.md),
             Text(msg, textAlign: TextAlign.center),
             const SizedBox(height: AppDimens.lg),

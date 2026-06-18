@@ -470,6 +470,68 @@ This is the biggest item — a significant architectural change. Suggested stagi
 - Theme system: the M3 ColorScheme is derived from a single seed colour — easy to swap per tenant. `app_theme.dart` should take a `seedColor` parameter sourced from the tenant config.
 - The Super Admin portal itself is a separate small Frappe site (`portal.tcbinfotech.com`) — design it as a web admin UI, not part of the mobile app.
 
+**Decisions locked in by user 2026-06-15 — SUPERSEDES the 2026-05-30 lock-in above:**
+
+The Phase B middleware is now firmly designed. These answers are final and the implementation should follow them when development starts:
+
+1. **Middleware hosting site:** **`office.tcbinfotech.com`** (TCB's existing ERPNext site — not a new dedicated `portal.tcbinfotech.com`). The middleware app is installed alongside `tcb_portal_erp` on that same bench. Rationale: keeps TCB's footprint at one server; avoids extra DNS/SSL/maintenance overhead.
+2. **Middleware app name:** **`tcb_portal_control`**. Created via `bench new-app tcb_portal_control` on `frappe-bench-v16`, installed only on `office.tcbinfotech.com`.
+3. **`company_id` format:** **user-written text field** (free-form Data). TCB Admin enters whatever value they want when creating each `Customer Tenant` record manually. Not auto-generated. Stored unique (case-insensitive recommended). Examples: `TCB`, `ACMECORP`, `DELTA123`. The customer types this exact value on the mobile login screen.
+4. **Middleware call cadence:** **on login only, never on every request.** After the resolve_tenant call returns the server URL + brand colors, the mobile app caches them in `flutter_secure_storage` and points Dio at the customer's ERPNext directly. All subsequent traffic (timer ticks, attendance pings, notification polls, etc.) bypasses the middleware. Rationale: latency — every request hopping through TCB's server would degrade UX badly, and would also make TCB a single point of failure for every customer's day-to-day usage.
+5. **Per-tenant active flag:** every `Customer Tenant` record has an **`is_active` (Check)** field. Only `is_active = 1` tenants return a valid response from `resolve_tenant`. Tenants with `is_active = 0` get a clean "This account is not active. Contact TCB Infotech." error on login — and since middleware is only consulted on login (decision 4), a deactivated tenant can keep using the app **until their current session ends or they log out**. Acceptable trade-off; if instant kill is ever needed, that's a future enhancement (heartbeat call).
+
+**Locked DocType shape — `Customer Tenant`** (in `tcb_portal_control` module):
+| Field | Type | Notes |
+|---|---|---|
+| `company_id` | Data | unique, mandatory, the value the user types on login |
+| `company_name` | Data | display name (used on login screen header after company_id is entered) |
+| `server_url` | Data | full URL of the customer's ERPNext, e.g. `https://erp.acmecorp.com` |
+| `is_active` | Check | default 1; setting to 0 blocks new logins |
+| `color_p1` | Color | "primary" — surface/background. TCB default `#FFFFFF` (white) |
+| `color_p2` | Color | "secondary" — primary brand. TCB default `#022B60` (dark blue) |
+| `color_p3` | Color | "tertiary" — accent. TCB default `#67B7E5` (light blue, placeholder — pick exact value with user) |
+| `logo` | Attach Image | optional, replaces "TCB Portal" wordmark in app |
+| `contact_email` | Data | primary contact for the tenant |
+| `notes` | Small Text | internal notes for TCB Admin |
+
+**Locked endpoint — `tcb_portal_control.api.tenant.resolve(company_id)`:**
+- Whitelisted, **`allow_guest=True`** (mobile must call this BEFORE having any credentials).
+- Looks up by `company_id` (case-insensitive). Throws `frappe.DoesNotExistError` if not found.
+- If `is_active = 0` → throws with message "This account is not active. Contact TCB Infotech."
+- Returns: `{ company_name, server_url, color_p1, color_p2, color_p3, logo_url }`.
+- Rate-limit it (Frappe's `rate_limit` decorator) — say 30/hour per IP — since it's guest and reveals "is this company_id valid" info.
+
+**Mobile-side login flow change (locked):**
+1. Login screen shows three fields: **Company ID**, **Username**, **Password** (in that order). Username/password fields disabled until Company ID is resolved.
+2. On Company ID blur (or a "Continue" button): mobile calls `https://office.tcbinfotech.com/api/method/tcb_portal_control.api.tenant.resolve?company_id=…`.
+3. On success: store `server_url` + `color_p1/p2/p3` + `logo_url` + `company_name` in `flutter_secure_storage`. Apply theme immediately so the rest of the login form re-renders in the tenant's colors and shows `company_name` above the username field. Re-init Dio with the new `baseUrl`.
+4. User enters username + password → standard ERPNext `/api/method/login` against the (now correctly pointed) Dio → continue as today.
+5. On subsequent app launches: if `server_url` is already in secure storage, **skip the middleware** and go straight to the login form (still pre-themed from cached colors). Show a "Switch company" link in the corner that clears the cache and brings back the Company ID step.
+6. On logout: keep `server_url` + colors cached (so login form stays themed). On "Switch company": clear all of it.
+
+**Mobile-side theme system (locked):**
+- Stop using the M3 single-seed-color trick. Instead derive ColorScheme from the **three explicit values P1/P2/P3**:
+  - P1 → `surface`, `surfaceContainerLowest`, `background`
+  - P2 → `primary`, `onSecondary` contrasts, AppBar bg
+  - P3 → `secondary`, `secondaryContainer`, accent chips
+  - All other tokens (errors, outlines, surfaces tints) derived algorithmically from P1+P2+P3 via a single mapping function in `app_theme.dart`.
+- Until middleware is called the FIRST time on a fresh install, use TCB defaults baked into `AppConfig` (so the login screen has a color identity even before tenant resolve).
+- `AppColors.*` constants get deprecated. New approach: `Theme.of(context).colorScheme.primary` etc. everywhere. This will touch every screen — mechanical but big.
+
+**Acceptance test for the SaaS phase:**
+- TCB Admin creates two tenants in `tcb_portal_control` on `office.tcbinfotech.com`:
+  - `company_id=TCB`, server_url=`https://office.tcbinfotech.com`, P1=white, P2=#022B60, P3=#67B7E5.
+  - `company_id=DEMO`, server_url=`https://demo.tcbinfotech.com` (or any other ERPNext we can point at), P1/P2/P3 different (e.g. orange theme).
+- Mobile login as TCB → sees navy theme + TCB Portal logo, hits TCB ERPNext.
+- Logout → "Switch company" → enter DEMO → sees orange theme + (optional) DEMO logo, hits demo ERPNext.
+- TCB Admin toggles `DEMO.is_active = 0`. Mobile is forced to re-login (or fresh install) → login fails with the inactive-tenant message.
+
+**Open questions deliberately deferred (do NOT block start of Phase B work):**
+- Logo storage: do customers upload through the TCB Admin UI (TCB controls), or upload themselves through a separate portal? Assume TCB-controlled for now (matches "we control the brand" stance).
+- Color picker UI for the DocType: Frappe's native `Color` field gives a swatch + hex input — fine. No custom widget needed unless user later wants live preview.
+- Token refresh / session expiry behavior — no change from today's flow; still client ERPNext's responsibility.
+- Migration path for the ~existing TCB-only install of `tcb_portal_erp` on `office.tcbinfotech.com`: when middleware ships, the mobile app stops shipping a hardcoded TCB URL. TCB Admin must create the first `Customer Tenant` (company_id=`TCB`) BEFORE the new APK rolls out, else existing users can't log in. Plan a coordinated cut-over.
+
 ### 6. Invoices + Payments — follow ERPNext-native flow
 **User direction 2026-05-30:** "for accounts, i want to use basic erpnext flow — first user will create sales invoice and against that, user will create payment entry → ERPNext will automatically change the status and mobile app will show that only".
 
@@ -535,6 +597,75 @@ Reference implementation shipped today: [`_RangeBar` in lib/features/timesheet/p
 
 Shared bits worth extracting:
 - The `_RangeBar` + `_Chip` widgets from `timesheet_screen.dart` would be cleaner pulled into `lib/shared/widgets/` as `DateRangeBar`. Three screens using the same pattern is the threshold where extraction pays. Worth doing as part of this work.
+
+### 8. "Ask Anything" chat tab — conversational AI agent (post-SaaS)
+**Spec captured 2026-06-15. Do not build until Phase 5 (SaaS) is done.**
+
+**User vision verbatim:** *"AsAnythink tab: just before Home: On that: Screen looks like chat: User can ask: Put my timesheet for today → I have started working on this project with this task → system will automatically perform the task. That AI will perform: create, update, read."*
+
+**Goal:** an LLM-powered chat tab where users speak naturally and the assistant translates their intent into the right Frappe API calls. Read, create, and update — the same surface the rest of the app exposes through buttons, now exposed through conversation.
+
+**UX shape (locked from user's description):**
+- **New nav tab, positioned BEFORE Home** — leftmost in the bottom nav, so it becomes the literal first thing a user sees.
+- Screen looks like a chat (message bubbles, input box at the bottom, send button).
+- User types or speaks → assistant responds in chat → may ask follow-up questions if intent is ambiguous → confirms before executing destructive/creative actions → reports outcome with a tappable deep-link to the new/updated doc.
+
+**Concrete example flows the user gave:**
+| User says | Assistant does |
+|---|---|
+| "Put my timesheet for today" | Asks: which project + task + hours? → creates a Timesheet via `tcb_portal_erp.api.timesheet.*` |
+| "I have started working on Project Alpha, Task Foo" | Starts a running Time Log on that project+task (existing native ERPNext start-timer flow) |
+| "Show me my pending leaves" | Calls `leave.get_context` → renders summary inline |
+| "Apply leave from Mon to Wed, sick leave" | Asks for reason → calls `leave.apply` |
+
+**Architecture options (decide before building):**
+
+**Option A — direct mobile → Anthropic:** mobile holds API key, calls Anthropic directly, executes returned tool calls against the customer's ERPNext. Simplest. Worst: API key in APK (reversible), no central metering.
+
+**Option B — server-side via middleware on `office.tcbinfotech.com`:** mobile sends user message to TCB middleware → middleware calls Anthropic → returns tool calls → mobile executes against customer ERPNext. Better: API key central, TCB meters/bills per tenant. **Worst: contradicts the SaaS spec's decision 4 ("middleware on login only").** AI traffic would hit middleware on every message.
+
+**Option C — server-side in customer's own ERPNext:** add `tcb_portal_erp.api.ai.ask(message, history)` endpoint. Customer configures their own Anthropic key in a Settings DocType. Mobile only ever talks to customer ERPNext (consistent with SaaS spec). **Best privacy** (data stays in customer's environment). **Worst billing UX** (each customer pays their own Anthropic bill, manages their own key).
+
+**Option D (recommended) — hybrid metered:** customer's ERPNext calls TCB's central LLM proxy (one new endpoint on `office.tcbinfotech.com` or a dedicated billing service). TCB owns the Anthropic relationship; each tenant has a per-month token budget enforced by the proxy. Customer ERPNext receives the LLM response and executes tool calls locally. Mobile only ever talks to customer ERPNext. Reconciles **everything**: SaaS spec stays clean (mobile never re-hits middleware), TCB centrally bills, customer data only briefly transits through the proxy on its way to Anthropic.
+
+**Decide which option when starting this phase.** Recommend Option D.
+
+**Tool surface (the "functions" the LLM can call):**
+- Reuse the **existing whitelisted endpoints** in `tcb_portal_erp`. Don't build a parallel AI-only backend.
+- Generate a tool manifest from `ApiPaths` + Python docstrings. Each endpoint becomes one Anthropic tool with: `name`, `description` (from docstring), `input_schema` (from function signature). Keep this auto-generated so the surface stays in sync as endpoints evolve.
+- Server-side guardrails enforced **the same way the buttons enforce them today** — `frappe.has_permission`, own-record checks, etc. The AI gets no special privileges; it operates as the logged-in user. (Critical: never use `ignore_permissions=True` in the AI path.)
+
+**Conversation memory:**
+- v1: single-turn (each message standalone, no context).
+- v2: multi-turn — keep last N messages + a structured "recent entities" cache (last project/task/employee the user mentioned, so "log 2 hours on it" resolves "it" correctly).
+
+**Confirmation pattern (mandatory for write operations):**
+- Read calls (list leaves, show today's checkins) execute immediately, render inline.
+- Create/update calls render a confirmation card first: "About to create Timesheet for today: 2h on Project Alpha / Task Foo. Confirm or cancel." User taps Confirm → execute. Cancel → discard. No silent writes from chat.
+- After execution, show a small success card with a tap-target that deep-links into the affected screen (`go_router` push to `/timesheet?selected=…`).
+
+**Failure modes to design for:**
+- LLM hallucinates an endpoint/field that doesn't exist → tool execution fails → assistant says "couldn't do that, here's why" with the raw error.
+- LLM picks the wrong entity because of ambiguous name ("which Alpha? You have 'Project Alpha' and 'Alpha Demo'") → ask the user to disambiguate in chat.
+- Customer ERPNext rejects on permission/validation → show the ERPNext error verbatim in chat.
+- Network/LLM timeout → graceful "couldn't reach the assistant, try again" + a Retry button on the last user message.
+
+**Phasing (when this phase is reached):**
+- **8a — proof-of-concept:** 3-5 hardcoded tools (timesheet create/list, leave apply, task create). Single-turn. Option A architecture initially for fastest iteration, swap to Option D before any real tenant gets it.
+- **8b — full tool registry:** auto-generated from `tcb_portal_erp` endpoints. Multi-turn memory. Confirmation cards. Deep-links to created docs.
+- **8c — polish:** voice input (`speech_to_text` package), suggested-prompt chips below the input box ("Try: 'log 2 hours against...'"), undo for last create (where ERPNext allows delete), per-tenant token budget UI on the TCB Admin side.
+
+**Open questions deferred (record now, decide at start of Phase 8):**
+- Architecture: Option A / B / C / D — recommend D.
+- LLM provider: Claude (Anthropic). Confirm. Falling back to a cheaper model for routine "show me X" reads vs. Sonnet/Opus for complex multi-tool flows is worth designing.
+- Voice input from v1 or v2? Voice is high-impact on mobile, low effort with `speech_to_text` + on-device transcription.
+- Position: literally first tab (leftmost). Replaces nothing — Home + Timesheet + Leaves + Tasks + More all shift right by one slot. Confirm visual budget on small screens.
+- Cost cap per tenant per month — what's the default? Need a stub Customer Tenant field for `monthly_token_budget` on the middleware side.
+
+**Why this belongs AFTER SaaS, not before:**
+- Tool execution must respect tenant boundaries — the AI must run against the user's own ERPNext, not TCB's. That requires the runtime-baseUrl plumbing the SaaS phase delivers.
+- Token budgeting per tenant needs the `Customer Tenant` registry the SaaS phase delivers.
+- Trying to bolt this on before SaaS would force a hardcoded-URL design that immediately breaks once we go multi-tenant. Sequencing matters.
 
 ---
 

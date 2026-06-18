@@ -2,6 +2,12 @@
 class ApiPaths {
   ApiPaths._();
 
+  // Tenant resolution (middleware on `TCB_MIDDLEWARE_URL`, NOT the tenant's
+  // own ERPNext). Called only on login to look up the tenant's server URL
+  // and brand colours by Company ID.
+  static const String tenantResolve =
+      '/api/method/tcb_portal_control.api.tenant.resolve';
+
   // Auth
   static const String login = '/api/method/login';
   static const String logout = '/api/method/logout';
