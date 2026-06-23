@@ -68,14 +68,14 @@ class Routes {
   static const more = home;
 }
 
-final _rootNavigatorKey = GlobalKey<NavigatorState>();
+final rootNavigatorKey = GlobalKey<NavigatorState>();
 
 final routerProvider = Provider<GoRouter>((ref) {
   final refresh = _RouterRefresh(ref);
   ref.onDispose(refresh.dispose);
 
   return GoRouter(
-    navigatorKey: _rootNavigatorKey,
+    navigatorKey: rootNavigatorKey,
     initialLocation: Routes.splash,
     refreshListenable: refresh,
     redirect: (context, state) {
@@ -176,19 +176,19 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
           path: Routes.profile,
-          parentNavigatorKey: _rootNavigatorKey,
+          parentNavigatorKey: rootNavigatorKey,
           builder: (_, _) => const ProfileScreen()),
       GoRoute(
           path: Routes.notifications,
-          parentNavigatorKey: _rootNavigatorKey,
+          parentNavigatorKey: rootNavigatorKey,
           builder: (_, _) => const NotificationsScreen()),
       GoRoute(
           path: Routes.missedActivities,
-          parentNavigatorKey: _rootNavigatorKey,
+          parentNavigatorKey: rootNavigatorKey,
           builder: (_, _) => const MissedActivitiesScreen()),
       GoRoute(
           path: Routes.leaderboard,
-          parentNavigatorKey: _rootNavigatorKey,
+          parentNavigatorKey: rootNavigatorKey,
           builder: (_, _) => const LeaderboardScreen()),
     ],
   );

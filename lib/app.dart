@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
+import 'features/call_outcome/presentation/post_call_resume_listener.dart';
 import 'features/tenant/application/tenant_controller.dart';
 import 'features/tenant/domain/tenant.dart';
 
@@ -21,14 +22,16 @@ class TcbPortalApp extends ConsumerWidget {
     AppColors.apply(AppPalette.fromTenant(tenant));
 
     final router = ref.watch(routerProvider);
-    return MaterialApp.router(
-      title: 'TCB Portal',
-      debugShowCheckedModeBanner: false,
-      theme: AppTheme.light,
-      // Light-mode only: force the light theme regardless of system setting.
-      darkTheme: AppTheme.light,
-      themeMode: ThemeMode.light,
-      routerConfig: router,
+    return PostCallResumeListener(
+      child: MaterialApp.router(
+        title: 'TCB Portal',
+        debugShowCheckedModeBanner: false,
+        theme: AppTheme.light,
+        // Light-mode only: force the light theme regardless of system setting.
+        darkTheme: AppTheme.light,
+        themeMode: ThemeMode.light,
+        routerConfig: router,
+      ),
     );
   }
 }

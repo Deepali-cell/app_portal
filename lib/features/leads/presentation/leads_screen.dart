@@ -8,6 +8,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../../shared/widgets/brand_button.dart';
 import '../../../shared/widgets/followup_gap_badge.dart';
+import '../../../shared/widgets/quick_call_icon_button.dart';
 import '../../phone_lookup/presentation/phone_lookup_sheet.dart';
 import '../application/lead_controller.dart';
 import '../domain/models.dart';
@@ -235,7 +236,12 @@ class _LeadRow extends StatelessWidget {
               ),
             ),
             _LeadStatusChip(status: lead.status),
-            const SizedBox(width: 4),
+            QuickCallIconButton(
+              phoneNumber: lead.mobileNo ?? lead.phone,
+              referenceDoctype: 'CRM Lead',
+              referenceDocname: lead.name,
+              parentLabel: lead.title,
+            ),
             Icon(Icons.chevron_right, color: AppColors.outline),
           ],
         ),
