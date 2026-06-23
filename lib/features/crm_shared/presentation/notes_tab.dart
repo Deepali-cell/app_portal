@@ -6,6 +6,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../../shared/widgets/brand_button.dart';
+import '../../../shared/widgets/mic_note_button.dart';
 import '../application/providers.dart';
 import '../domain/crm_ref.dart';
 import '../domain/models.dart';
@@ -221,9 +222,16 @@ class _NoteSheetState extends ConsumerState<_NoteSheet> {
               controller: _content,
               minLines: 4,
               maxLines: 10,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Content',
                 alignLabelWithHint: true,
+                suffixIcon: Padding(
+                  padding: const EdgeInsets.only(right: 8, top: 6),
+                  child: MicNoteButton(
+                    controller: _content,
+                    tooltip: 'Dictate note content',
+                  ),
+                ),
               ),
             ),
             if (_error != null) ...[
