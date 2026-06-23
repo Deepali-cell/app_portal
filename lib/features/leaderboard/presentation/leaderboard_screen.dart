@@ -55,6 +55,8 @@ class LeaderboardScreen extends ConsumerWidget {
                   AppDimens.screenPadding, AppDimens.md, AppDimens.screenPadding, AppDimens.xl),
               children: [
                 _MetricChips(active: query.metric),
+                const SizedBox(height: AppDimens.sm),
+                _PeriodChips(active: query.period),
                 const SizedBox(height: AppDimens.md),
                 if (snap.fromDate != null && snap.toDate != null)
                   Text(
@@ -92,6 +94,53 @@ class _MetricChips extends ConsumerWidget {
               active: m == active,
               onTap: () =>
                   ref.read(leaderboardQueryProvider.notifier).setMetric(m),
+            ),
+            const SizedBox(width: AppDimens.xs),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _PeriodChips extends ConsumerWidget {
+  const _PeriodChips({required this.active});
+  final LeaderboardPeriod active;
+
+  Future<void> _pickCustomRange(BuildContext context, WidgetRef ref) async {
+    final now = DateTime.now();
+    final picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(now.year - 2),
+      lastDate: now,
+      initialDateRange: DateTimeRange(
+        start: DateTime(now.year, now.month, 1),
+        end: now,
+      ),
+    );
+    if (picked == null) return;
+    ref
+        .read(leaderboardQueryProvider.notifier)
+        .setCustomRange(picked.start, picked.end);
+  }
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          for (final p in LeaderboardPeriod.values) ...[
+            _Chip(
+              label: p.label,
+              active: p == active,
+              onTap: () {
+                if (p == LeaderboardPeriod.custom) {
+                  _pickCustomRange(context, ref);
+                } else {
+                  ref.read(leaderboardQueryProvider.notifier).setPreset(p);
+                }
+              },
             ),
             const SizedBox(width: AppDimens.xs),
           ],
