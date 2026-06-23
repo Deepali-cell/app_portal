@@ -8,6 +8,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../crm_shared/domain/crm_ref.dart';
+import 'probability_pill.dart';
 import '../../crm_shared/presentation/activity_tab.dart';
 import '../../crm_shared/presentation/assignees_tab.dart';
 import '../../crm_shared/presentation/attachments_tab.dart';
@@ -231,8 +232,13 @@ class _DetailsTab extends StatelessWidget {
           else _row('Status', deal.status, null, editing: false),
           _row('Deal value', editing ? null : (deal.dealValue == 0 ? null : money(deal.dealValue, deal.currency)),
               ctrls['deal_value'], editing: editing, keyboardType: const TextInputType.numberWithOptions(decimal: true), numberOnly: true),
-          _row('Probability %', editing ? null : (deal.probability == null ? null : '${deal.probability!.round()}%'),
-              ctrls['probability'], editing: editing, keyboardType: const TextInputType.numberWithOptions(decimal: true), numberOnly: true),
+          if (editing)
+            _row('Probability %', null, ctrls['probability'],
+                editing: true,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                numberOnly: true)
+          else
+            _ProbabilityRow(probability: deal.probability),
           _row('Annual revenue', editing ? null : (deal.annualRevenue == 0 ? null : money(deal.annualRevenue, deal.currency)),
               ctrls['annual_revenue'], editing: editing, keyboardType: const TextInputType.numberWithOptions(decimal: true), numberOnly: true),
           _row('Next step', deal.nextStep, ctrls['next_step'], editing: editing),
@@ -442,6 +448,30 @@ class _QuickButton extends StatelessWidget {
           minimumSize: const Size.fromHeight(44),
           padding: const EdgeInsets.symmetric(horizontal: AppDimens.sm),
         ),
+      ),
+    );
+  }
+}
+
+/// Read-only probability row that renders the colour-coded [ProbabilityPill]
+/// instead of plain text. Used in the Deal detail screen when NOT editing.
+class _ProbabilityRow extends StatelessWidget {
+  const _ProbabilityRow({required this.probability});
+  final double? probability;
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppDimens.xs),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 110,
+            child: Text('Probability',
+                style: TextStyle(color: AppColors.inkMuted, fontSize: 13)),
+          ),
+          ProbabilityPill(percent: probability, dense: false),
+        ],
       ),
     );
   }

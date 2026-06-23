@@ -9,6 +9,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../application/deal_controller.dart';
 import '../domain/models.dart';
+import 'probability_pill.dart';
 
 class DealsScreen extends ConsumerWidget {
   const DealsScreen({super.key});
@@ -252,8 +253,7 @@ class _DealRow extends StatelessWidget {
                               fontSize: 13)),
                     if (deal.probability != null) ...[
                       const SizedBox(width: AppDimens.sm),
-                      Text('${deal.probability!.round()}%',
-                          style: Theme.of(context).textTheme.bodySmall),
+                      ProbabilityPill(percent: deal.probability),
                     ],
                   ]),
                 ],
