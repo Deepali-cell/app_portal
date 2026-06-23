@@ -20,6 +20,10 @@ class ApiPaths {
   static const String leaderboard =
       '/api/method/tcb_portal_erp.api.leaderboard.get_leaderboard';
 
+  // Lookup CRM Lead / Deal by phone number (Phase D.1)
+  static const String lookupByPhone =
+      '/api/method/tcb_portal_erp.api.call_lookup.lookup_by_phone';
+
   // Auth
   static const String login = '/api/method/login';
   static const String logout = '/api/method/logout';

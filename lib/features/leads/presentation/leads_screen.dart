@@ -7,6 +7,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../../shared/widgets/brand_button.dart';
+import '../../phone_lookup/presentation/phone_lookup_sheet.dart';
 import '../application/lead_controller.dart';
 import '../domain/models.dart';
 
@@ -29,6 +30,13 @@ class LeadsScreen extends ConsumerWidget {
                 ref.read(leadsControllerProvider.notifier).reload(),
           ),
         ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => showPhoneLookupSheet(context),
+        icon: const Icon(Icons.phone_outlined),
+        label: const Text('Find by phone'),
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.onPrimary,
       ),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
