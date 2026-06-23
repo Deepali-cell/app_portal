@@ -11,6 +11,7 @@ import '../../../shared/widgets/followup_gap_badge.dart';
 import '../../../shared/widgets/quick_call_icon_button.dart';
 import '../../phone_lookup/presentation/phone_lookup_sheet.dart';
 import '../application/lead_controller.dart';
+import '../application/leads_view_prefs.dart';
 import '../domain/models.dart';
 
 class LeadsScreen extends ConsumerWidget {
@@ -19,6 +20,7 @@ class LeadsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(leadsControllerProvider);
+    final prefs = ref.watch(leadsViewPrefsProvider);
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -71,51 +73,34 @@ class LeadsScreen extends ConsumerWidget {
                     text: 'No leads yet. Tap "New Lead" to add one.',
                   )
                 else
-                  Card(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(
-                              AppDimens.md,
-                              AppDimens.md,
-                              AppDimens.md,
-                              AppDimens.sm),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Text('My Leads',
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium
-                                        ?.copyWith(
-                                            color: AppColors.primary,
-                                            fontWeight: FontWeight.w600)),
-                              ),
-                              Text('${ctx.leads.length}',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .labelMedium
-                                      ?.copyWith(
-                                          color: AppColors.onSurfaceVariant)),
-                            ],
-                          ),
-                        ),
-                        for (var i = 0; i < ctx.leads.length; i++) ...[
-                          if (i > 0)
-                            Divider(
-                                height: 1,
-                                indent: 64,
-                                color: AppColors.outlineVariant),
-                          _LeadRow(
-                            lead: ctx.leads[i],
-                            onTap: () => context.push(Routes.leadDetail,
-                                extra: ctx.leads[i].name),
-                          ),
+                  Builder(builder: (context) {
+                    final sortedLeads = applyLeadSort(ctx.leads, prefs.sort);
+                    return Card(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _LeadsToolbar(
+                              count: sortedLeads.length, prefs: prefs),
+                          for (var i = 0; i < sortedLeads.length; i++) ...[
+                            if (i > 0)
+                              Divider(
+                                  height: 1,
+                                  indent: prefs.density ==
+                                          LeadDensity.compact
+                                      ? 56
+                                      : 64,
+                                  color: AppColors.outlineVariant),
+                            _LeadRow(
+                              lead: sortedLeads[i],
+                              density: prefs.density,
+                              onTap: () => context.push(Routes.leadDetail,
+                                  extra: sortedLeads[i].name),
+                            ),
+                          ],
                         ],
-                      ],
-                    ),
-                  ),
+                      ),
+                    );
+                  }),
               ],
             ),
           );
@@ -183,21 +168,96 @@ class _Header extends StatelessWidget {
   }
 }
 
+class _LeadsToolbar extends ConsumerWidget {
+  const _LeadsToolbar({required this.count, required this.prefs});
+  final int count;
+  final LeadsViewPrefs prefs;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final notifier = ref.read(leadsViewPrefsProvider.notifier);
+    final compact = prefs.density == LeadDensity.compact;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+          AppDimens.md, AppDimens.md, AppDimens.sm, AppDimens.sm),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text('My Leads',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppColors.primary, fontWeight: FontWeight.w600)),
+          ),
+          Text('$count',
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: AppColors.onSurfaceVariant)),
+          const SizedBox(width: AppDimens.sm),
+          PopupMenuButton<LeadSort>(
+            tooltip: 'Sort',
+            initialValue: prefs.sort,
+            onSelected: notifier.setSort,
+            position: PopupMenuPosition.under,
+            itemBuilder: (_) => [
+              for (final s in LeadSort.values)
+                PopupMenuItem(
+                  value: s,
+                  child: Row(children: [
+                    Icon(
+                      s == prefs.sort
+                          ? Icons.check_circle
+                          : Icons.circle_outlined,
+                      size: 16,
+                      color: s == prefs.sort
+                          ? AppColors.primary
+                          : AppColors.outline,
+                    ),
+                    const SizedBox(width: 10),
+                    Text(s.label),
+                  ]),
+                )
+            ],
+            icon: Icon(Icons.sort, size: 20, color: AppColors.primary),
+          ),
+          IconButton(
+            tooltip: compact ? 'Comfortable density' : 'Compact density',
+            icon: Icon(
+              compact ? Icons.unfold_more : Icons.unfold_less,
+              size: 20,
+              color: AppColors.primary,
+            ),
+            onPressed: () => notifier.setDensity(
+                compact ? LeadDensity.comfortable : LeadDensity.compact),
+            visualDensity: VisualDensity.compact,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _LeadRow extends StatelessWidget {
-  const _LeadRow({required this.lead, required this.onTap});
+  const _LeadRow({
+    required this.lead,
+    required this.onTap,
+    this.density = LeadDensity.comfortable,
+  });
   final Lead lead;
   final VoidCallback onTap;
+  final LeadDensity density;
+  bool get _compact => density == LeadDensity.compact;
   @override
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
       child: Padding(
-        padding: const EdgeInsets.all(AppDimens.md),
+        padding: EdgeInsets.symmetric(
+          horizontal: AppDimens.md,
+          vertical: _compact ? AppDimens.xs : AppDimens.md,
+        ),
         child: Row(
           children: [
             Container(
-              width: 40,
-              height: 40,
+              width: _compact ? 32 : 40,
+              height: _compact ? 32 : 40,
               decoration: BoxDecoration(
                 color: AppColors.secondaryFixed,
                 borderRadius: BorderRadius.circular(AppDimens.radiusLg),
@@ -207,7 +267,7 @@ class _LeadRow extends StatelessWidget {
                   style: TextStyle(
                       color: AppColors.onSecondaryFixed,
                       fontWeight: FontWeight.w700,
-                      fontSize: 13)),
+                      fontSize: _compact ? 11 : 13)),
             ),
             const SizedBox(width: AppDimens.md),
             Expanded(
@@ -220,14 +280,16 @@ class _LeadRow extends StatelessWidget {
                           fontWeight: FontWeight.w600),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis),
-                  if (lead.organization != null &&
+                  if (!_compact &&
+                      lead.organization != null &&
                       lead.organization!.isNotEmpty &&
                       lead.organization != lead.title)
                     Text(lead.organization!,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall),
-                  if (lead.daysSinceContact != null &&
+                  if (!_compact &&
+                      lead.daysSinceContact != null &&
                       lead.daysSinceContact! >= 1) ...[
                     const SizedBox(height: 4),
                     FollowupGapBadge(days: lead.daysSinceContact!),

@@ -18,6 +18,7 @@ class SecureStore {
   static const _kToken = 'tcb.auth.token';
   static const _kProfile = 'tcb.auth.profile';
   static const _kTenant = 'tcb.tenant';
+  static const _kLeadsViewPrefs = 'tcb.leads.view_prefs';
 
   Future<void> writeToken(String token) =>
       _storage.write(key: _kToken, value: token);
@@ -38,6 +39,12 @@ class SecureStore {
   Future<String?> readTenant() => _storage.read(key: _kTenant);
 
   Future<void> clearTenant() => _storage.delete(key: _kTenant);
+
+  /// Persisted UI prefs for the Leads list (sort + density). JSON-encoded.
+  Future<void> writeLeadsViewPrefs(String json) =>
+      _storage.write(key: _kLeadsViewPrefs, value: json);
+  Future<String?> readLeadsViewPrefs() =>
+      _storage.read(key: _kLeadsViewPrefs);
 
   /// Sign-out: clears the auth token and cached profile. The tenant is
   /// intentionally preserved so the login screen stays pre-themed for the
