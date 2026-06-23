@@ -7,6 +7,7 @@ import '../../../core/network/api_paths.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
+import '../../../shared/widgets/mic_note_button.dart';
 
 /// Modal bottom sheet for capturing a post-call outcome against a CRM Lead
 /// or CRM Deal. Talks to `tcb_portal_erp.api.crm_calls.log_outcome`.
@@ -204,9 +205,16 @@ class _CallOutcomeSheetState extends ConsumerState<_CallOutcomeSheet> {
               controller: _summaryCtrl,
               minLines: 2,
               maxLines: 4,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Summary (what was discussed)',
                 alignLabelWithHint: true,
+                suffixIcon: Padding(
+                  padding: const EdgeInsets.only(right: 8, top: 6),
+                  child: MicNoteButton(
+                    controller: _summaryCtrl,
+                    tooltip: 'Dictate the summary',
+                  ),
+                ),
               ),
             ),
             const SizedBox(height: AppDimens.md),

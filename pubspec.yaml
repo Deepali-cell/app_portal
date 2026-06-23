@@ -52,6 +52,8 @@ dependencies:
   share_plus: ^11.0.0
   google_fonts: ^8.1.0
   material_symbols_icons: ^4.2928.1
+  speech_to_text: ^7.0.0
+  permission_handler: ^11.3.1
 
 dev_dependencies:
   flutter_test:

@@ -4,6 +4,8 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
     <uses-permission android:name="android.permission.CAMERA"/>
+    <!-- Phase F: voice-to-text notes -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <application
         android:label="TCB Portal"
         android:name="${applicationName}"
@@ -45,6 +47,10 @@
         <intent>
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
+        </intent>
+        <!-- Phase F: speech_to_text needs to find a RecognitionService. -->
+        <intent>
+            <action android:name="android.speech.RecognitionService"/>
         </intent>
     </queries>
 </manifest>

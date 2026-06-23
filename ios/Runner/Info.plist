@@ -34,6 +34,10 @@
 	<string>A selfie is captured at check-in to verify your attendance.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Allows you to attach files (e.g. expense receipts) from your photo library.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>The microphone is used to dictate call summaries and notes via voice-to-text.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Speech recognition transcribes your spoken notes so you don't have to type while on the go.</string>
 	<key>LSApplicationQueriesSchemes</key>
 	<array>
 		<string>tel</string>
