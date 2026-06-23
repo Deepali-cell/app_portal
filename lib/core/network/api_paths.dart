@@ -12,6 +12,10 @@ class ApiPaths {
   static const String todaysPlan =
       '/api/method/tcb_portal_erp.api.todays_plan.get_today_plan';
 
+  // Post-call outcome capture (Phase A.4)
+  static const String callLogOutcome =
+      '/api/method/tcb_portal_erp.api.crm_calls.log_outcome';
+
   // Auth
   static const String login = '/api/method/login';
   static const String logout = '/api/method/logout';

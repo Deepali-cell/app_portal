@@ -7,6 +7,7 @@ import '../../../core/format/money.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
+import '../../call_outcome/presentation/call_outcome_sheet.dart';
 import '../../crm_shared/domain/crm_ref.dart';
 import 'probability_pill.dart';
 import '../../crm_shared/presentation/activity_tab.dart';
@@ -419,6 +420,18 @@ class _QuickContact extends StatelessWidget {
     if (deal.website != null && deal.website!.isNotEmpty) {
       actions.add(_Quick(Icons.public, 'Web', () => _launch(Uri.parse(_norm(deal.website!)), context)));
     }
+    actions.add(_Quick(Icons.phone_callback, 'Log call', () async {
+      final newId = await showCallOutcomeSheet(
+        context,
+        referenceDoctype: 'CRM Deal',
+        referenceDocname: deal.name,
+        parentLabel: deal.title,
+      );
+      if (newId != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Call outcome saved.')));
+      }
+    }));
     if (actions.isEmpty) return const SizedBox.shrink();
     return Row(children: actions.map((a) => Expanded(child: _QuickButton(action: a))).toList());
   }

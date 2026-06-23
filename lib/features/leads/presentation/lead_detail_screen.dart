@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../call_outcome/presentation/call_outcome_sheet.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
@@ -467,6 +468,20 @@ class _QuickContact extends StatelessWidget {
     if (lead.website != null && lead.website!.isNotEmpty) {
       actions.add(_Quick(Icons.public, 'Web', () => _launch(Uri.parse(_norm(lead.website!)), context)));
     }
+    // Log-outcome action is always available — works even for leads with no
+    // contact info, since outcomes can capture "No answer" or "Wrong number".
+    actions.add(_Quick(Icons.phone_callback, 'Log call', () async {
+      final newId = await showCallOutcomeSheet(
+        context,
+        referenceDoctype: 'CRM Lead',
+        referenceDocname: lead.name,
+        parentLabel: lead.title,
+      );
+      if (newId != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Call outcome saved.')));
+      }
+    }));
     if (actions.isEmpty) return const SizedBox.shrink();
     return Row(children: actions.map((a) => Expanded(child: _QuickButton(action: a))).toList());
   }
