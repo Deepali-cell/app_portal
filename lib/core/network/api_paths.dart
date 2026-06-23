@@ -16,6 +16,10 @@ class ApiPaths {
   static const String callLogOutcome =
       '/api/method/tcb_portal_erp.api.crm_calls.log_outcome';
 
+  // Manager leaderboard (Phase A.7)
+  static const String leaderboard =
+      '/api/method/tcb_portal_erp.api.leaderboard.get_leaderboard';
+
   // Auth
   static const String login = '/api/method/login';
   static const String logout = '/api/method/logout';
