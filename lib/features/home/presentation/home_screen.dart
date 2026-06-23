@@ -15,6 +15,7 @@ import '../../leave/application/leave_controller.dart';
 import '../../leave/domain/models.dart';
 import '../../notifications/application/notifications_controller.dart';
 import '../../payslips/application/payslip_controller.dart';
+import '../../todays_plan/presentation/todays_plan_card.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -38,6 +39,10 @@ class HomeScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _WelcomeHero(profile: profile),
+              if (profile.can('crm_lead')) ...[
+                const SizedBox(height: AppDimens.lg),
+                const TodaysPlanCard(),
+              ],
               const SizedBox(height: AppDimens.lg),
               const _BentoGrid(),
               const SizedBox(height: AppDimens.lg),

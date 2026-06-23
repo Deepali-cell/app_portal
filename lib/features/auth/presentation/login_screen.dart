@@ -85,7 +85,8 @@ class _CompanyIdStepState extends ConsumerState<_CompanyIdStep> {
       if (mounted) setState(() => _error = e.message);
     } catch (_) {
       if (mounted) {
-        setState(() => _error = 'Unable to reach TCB. Check your connection.');
+        setState(() => _error =
+            "Couldn't connect to the TCB server. Check your internet, then try again — contact TCB Infotech if this keeps happening.");
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -194,7 +195,8 @@ class _SignInStepState extends ConsumerState<_SignInStep> {
       if (mounted) setState(() => _error = e.message);
     } catch (_) {
       if (mounted) {
-        setState(() => _error = 'Unexpected error. Please try again.');
+        setState(() => _error =
+            "Sign-in failed for an unknown reason. Please try again — if it keeps failing, contact TCB Infotech.");
       }
     } finally {
       if (mounted) setState(() => _submitting = false);

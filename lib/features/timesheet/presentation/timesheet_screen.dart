@@ -39,7 +39,7 @@ class TimesheetScreen extends ConsumerWidget {
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => _Err(
-          msg: e is ApiException ? e.message : 'Something went wrong.',
+          msg: e is ApiException ? e.message : 'Something unexpected happened. Please try again.',
           onRetry: () =>
               ref.read(timesheetControllerProvider.notifier).reload(),
         ),

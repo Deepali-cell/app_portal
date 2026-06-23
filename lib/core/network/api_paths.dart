@@ -8,6 +8,10 @@ class ApiPaths {
   static const String tenantResolve =
       '/api/method/tcb_portal_control.api.tenant.resolve';
 
+  // Today's Plan — salesperson's daily command-centre payload
+  static const String todaysPlan =
+      '/api/method/tcb_portal_erp.api.todays_plan.get_today_plan';
+
   // Auth
   static const String login = '/api/method/login';
   static const String logout = '/api/method/logout';

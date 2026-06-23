@@ -20,6 +20,7 @@ import '../../features/leads/presentation/lead_detail_screen.dart';
 import '../../features/leads/presentation/leads_screen.dart';
 import '../../features/leave/presentation/leave_detail_screen.dart';
 import '../../features/leave/presentation/leave_screen.dart';
+import '../../features/missed_activities/presentation/missed_activities_screen.dart';
 import '../../features/notifications/presentation/notifications_screen.dart';
 import '../../features/payslips/presentation/payslip_detail_screen.dart';
 import '../../features/payslips/presentation/payslips_screen.dart';
@@ -57,6 +58,7 @@ class Routes {
   static const leaveDetail = '/leave-detail';
   static const profile = '/profile';
   static const notifications = '/notifications';
+  static const missedActivities = '/missed-activities';
 
   // Legacy aliases (kept so old strings still resolve)
   static const attendance = time;
@@ -178,6 +180,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           path: Routes.notifications,
           parentNavigatorKey: _rootNavigatorKey,
           builder: (_, _) => const NotificationsScreen()),
+      GoRoute(
+          path: Routes.missedActivities,
+          parentNavigatorKey: _rootNavigatorKey,
+          builder: (_, _) => const MissedActivitiesScreen()),
     ],
   );
 });

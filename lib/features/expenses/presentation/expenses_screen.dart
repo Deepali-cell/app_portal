@@ -39,7 +39,7 @@ class ExpensesScreen extends ConsumerWidget {
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => _ErrorView(
-          message: e is ApiException ? e.message : 'Something went wrong.',
+          message: e is ApiException ? e.message : 'Something unexpected happened. Please try again.',
           onRetry: () => ref.read(expenseControllerProvider.notifier).reload(),
         ),
         data: (ctx) => RefreshIndicator(

@@ -27,6 +27,8 @@ class Lead {
     this.converted = false,
     this.assignees = const [],
     this.counts = const LeadCounts(),
+    this.lastContactAt,
+    this.daysSinceContact,
   });
 
   final String name;
@@ -53,6 +55,8 @@ class Lead {
   final bool converted;
   final List<String> assignees;
   final LeadCounts counts;
+  final DateTime? lastContactAt;
+  final int? daysSinceContact;
 
   String get title =>
       (leadName?.trim().isNotEmpty ?? false) ? leadName! : (organization ?? name);
@@ -91,7 +95,17 @@ class Lead {
         assignees:
             ((j['assignees'] as List?) ?? []).map((e) => e.toString()).toList(),
         counts: LeadCounts.fromJson(j['counts'] as Map<String, dynamic>?),
+        lastContactAt: _parseDate(j['last_contact_at']),
+        daysSinceContact: (j['days_since_contact'] as num?)?.toInt(),
       );
+}
+
+DateTime? _parseDate(dynamic v) {
+  if (v == null) return null;
+  if (v is DateTime) return v;
+  final s = v.toString();
+  if (s.isEmpty) return null;
+  return DateTime.tryParse(s);
 }
 
 @immutable

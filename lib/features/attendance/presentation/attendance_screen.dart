@@ -154,7 +154,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
         error: (e, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(AppDimens.xl),
-            child: Text(e is ApiException ? e.message : 'Something went wrong.',
+            child: Text(e is ApiException ? e.message : 'Something unexpected happened. Please try again.',
                 textAlign: TextAlign.center),
           ),
         ),
