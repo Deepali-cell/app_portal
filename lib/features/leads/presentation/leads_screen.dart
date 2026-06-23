@@ -7,6 +7,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../../shared/widgets/brand_button.dart';
+import '../../../shared/widgets/followup_gap_badge.dart';
 import '../../phone_lookup/presentation/phone_lookup_sheet.dart';
 import '../application/lead_controller.dart';
 import '../domain/models.dart';
@@ -228,7 +229,7 @@ class _LeadRow extends StatelessWidget {
                   if (lead.daysSinceContact != null &&
                       lead.daysSinceContact! >= 1) ...[
                     const SizedBox(height: 4),
-                    _FollowupGapBadge(days: lead.daysSinceContact!),
+                    FollowupGapBadge(days: lead.daysSinceContact!),
                   ],
                 ],
               ),
@@ -246,61 +247,6 @@ class _LeadRow extends StatelessWidget {
 /// Small colour-coded chip showing how many days have passed since the
 /// last meaningful contact with this lead. Hidden when the lead was
 /// touched today (no gap to flag).
-class _FollowupGapBadge extends StatelessWidget {
-  const _FollowupGapBadge({required this.days});
-  final int days;
-
-  ({Color bg, Color fg, IconData icon}) _tone() {
-    if (days >= 14) {
-      return (
-        bg: AppColors.errorContainer,
-        fg: AppColors.onErrorContainer,
-        icon: Icons.error_outline,
-      );
-    }
-    if (days >= 7) {
-      return (
-        bg: AppColors.warning.withValues(alpha: 0.16),
-        fg: AppColors.warning,
-        icon: Icons.schedule,
-      );
-    }
-    return (
-      bg: AppColors.surfaceContainer,
-      fg: AppColors.onSurfaceVariant,
-      icon: Icons.schedule_outlined,
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final t = _tone();
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: t.bg,
-        borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(t.icon, size: 12, color: t.fg),
-          const SizedBox(width: 4),
-          Text(
-            '${days}d since last contact',
-            style: TextStyle(
-              color: t.fg,
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.1,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _LeadStatusChip extends StatelessWidget {
   const _LeadStatusChip({required this.status});
   final String status;

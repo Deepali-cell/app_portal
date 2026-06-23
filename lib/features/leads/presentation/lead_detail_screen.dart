@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../shared/widgets/followup_gap_badge.dart';
 import '../../call_outcome/presentation/call_outcome_sheet.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
@@ -417,10 +418,18 @@ class _Header extends StatelessWidget {
                 Text(lead.organization!,
                     style: Theme.of(context).textTheme.bodySmall),
               const SizedBox(height: AppDimens.xs),
-              Wrap(spacing: AppDimens.xs, runSpacing: AppDimens.xs, children: [
-                _chip(lead.status, AppColors.navy, filled: true),
-                if (lead.converted) _chip('Converted', AppColors.success, filled: true),
-              ]),
+              Wrap(
+                  spacing: AppDimens.xs,
+                  runSpacing: AppDimens.xs,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    _chip(lead.status, AppColors.navy, filled: true),
+                    if (lead.converted)
+                      _chip('Converted', AppColors.success, filled: true),
+                    if (lead.daysSinceContact != null &&
+                        lead.daysSinceContact! >= 1)
+                      FollowupGapBadge(days: lead.daysSinceContact!),
+                  ]),
             ],
           ),
         ),
