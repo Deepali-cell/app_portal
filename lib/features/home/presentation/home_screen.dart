@@ -43,6 +43,10 @@ class HomeScreen extends ConsumerWidget {
                 const SizedBox(height: AppDimens.lg),
                 const TodaysPlanCard(),
               ],
+              if (profile.can('crm_lead') || profile.can('crm_deal')) ...[
+                const SizedBox(height: AppDimens.lg),
+                const _PipelineEntry(),
+              ],
               if (profile.can('manager_view')) ...[
                 const SizedBox(height: AppDimens.lg),
                 const _LeaderboardEntry(),
@@ -646,6 +650,59 @@ class _SkeletonLine extends StatelessWidget {
       decoration: BoxDecoration(
         color: AppColors.surfaceContainer,
         borderRadius: BorderRadius.circular(6),
+      ),
+    );
+  }
+}
+
+/// Compact CTA on the home that opens the CRM Pipeline / Funnel screen.
+/// Gated upstream by `crm_lead OR crm_deal` capability — non-CRM users
+/// never see this card.
+class _PipelineEntry extends StatelessWidget {
+  const _PipelineEntry();
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppDimens.radiusXl),
+        onTap: () => context.push(Routes.pipeline),
+        child: Padding(
+          padding: const EdgeInsets.all(AppDimens.md),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.secondaryFixed,
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Icon(Icons.insights_outlined,
+                    color: AppColors.primary, size: 22),
+              ),
+              const SizedBox(width: AppDimens.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Pipeline",
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 2),
+                    Text(
+                      "Funnel view — kaunsi leads / deals kaunsi stage me hain",
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right,
+                  size: 20, color: AppColors.onSurfaceVariant),
+            ],
+          ),
+        ),
       ),
     );
   }

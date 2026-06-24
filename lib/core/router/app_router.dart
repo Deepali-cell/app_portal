@@ -22,6 +22,7 @@ import '../../features/leave/presentation/leave_detail_screen.dart';
 import '../../features/leave/presentation/leave_screen.dart';
 import '../../features/leaderboard/presentation/leaderboard_screen.dart';
 import '../../features/missed_activities/presentation/missed_activities_screen.dart';
+import '../../features/pipeline/presentation/pipeline_screen.dart';
 import '../../features/notifications/presentation/notifications_screen.dart';
 import '../../features/payslips/presentation/payslip_detail_screen.dart';
 import '../../features/payslips/presentation/payslips_screen.dart';
@@ -61,6 +62,7 @@ class Routes {
   static const notifications = '/notifications';
   static const missedActivities = '/missed-activities';
   static const leaderboard = '/leaderboard';
+  static const pipeline = '/pipeline';
 
   // Legacy aliases (kept so old strings still resolve)
   static const attendance = time;
@@ -190,6 +192,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           path: Routes.leaderboard,
           parentNavigatorKey: rootNavigatorKey,
           builder: (_, _) => const LeaderboardScreen()),
+      GoRoute(
+          path: Routes.pipeline,
+          parentNavigatorKey: rootNavigatorKey,
+          builder: (_, _) => const PipelineScreen()),
     ],
   );
 });

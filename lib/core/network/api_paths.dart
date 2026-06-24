@@ -24,6 +24,12 @@ class ApiPaths {
   static const String lookupByPhone =
       '/api/method/tcb_portal_erp.api.call_lookup.lookup_by_phone';
 
+  // CRM pipeline / funnel dashboard (Runo R.14)
+  static const String leadPipeline =
+      '/api/method/tcb_portal_erp.api.pipeline.get_lead_pipeline';
+  static const String dealPipeline =
+      '/api/method/tcb_portal_erp.api.pipeline.get_deal_pipeline';
+
   // Auth
   static const String login = '/api/method/login';
   static const String logout = '/api/method/logout';
