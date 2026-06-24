@@ -244,23 +244,31 @@ class _DealRow extends StatelessWidget {
                           fontWeight: FontWeight.w600),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis),
-                  const SizedBox(height: 2),
-                  Row(children: [
-                    if (value > 0)
-                      Text(money(value, deal.currency),
-                          style: TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 13)),
-                    if (deal.probability != null) ...[
-                      const SizedBox(width: AppDimens.sm),
-                      ProbabilityPill(percent: deal.probability),
-                    ],
-                  ]),
+                  if (value > 0) ...[
+                    const SizedBox(height: 2),
+                    Text(money(value, deal.currency),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13)),
+                  ],
                 ],
               ),
             ),
-            _DealStatusChip(status: deal.status),
+            const SizedBox(width: AppDimens.sm),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _DealStatusChip(status: deal.status),
+                if (deal.probability != null) ...[
+                  const SizedBox(height: 4),
+                  ProbabilityPill(percent: deal.probability),
+                ],
+              ],
+            ),
             QuickCallIconButton(
               phoneNumber: deal.mobileNo ?? deal.phone,
               referenceDoctype: 'CRM Deal',
