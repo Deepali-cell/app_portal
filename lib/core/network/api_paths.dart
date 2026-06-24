@@ -30,6 +30,10 @@ class ApiPaths {
   static const String dealPipeline =
       '/api/method/tcb_portal_erp.api.pipeline.get_deal_pipeline';
 
+  // Manager-only live team status (Runo R.6)
+  static const String teamStatus =
+      '/api/method/tcb_portal_erp.api.team_status.get_team_status';
+
   // Auth
   static const String login = '/api/method/login';
   static const String logout = '/api/method/logout';

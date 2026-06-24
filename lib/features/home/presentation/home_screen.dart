@@ -50,6 +50,8 @@ class HomeScreen extends ConsumerWidget {
               if (profile.can('manager_view')) ...[
                 const SizedBox(height: AppDimens.lg),
                 const _LeaderboardEntry(),
+                const SizedBox(height: AppDimens.lg),
+                const _TeamStatusEntry(),
               ],
               const SizedBox(height: AppDimens.lg),
               const _BentoGrid(),
@@ -693,6 +695,58 @@ class _PipelineEntry extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       "Funnel view — kaunsi leads / deals kaunsi stage me hain",
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right,
+                  size: 20, color: AppColors.onSurfaceVariant),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Compact CTA on the home that opens the live Team Status dashboard.
+/// Gated upstream by `manager_view` capability.
+class _TeamStatusEntry extends StatelessWidget {
+  const _TeamStatusEntry();
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppDimens.radiusXl),
+        onTap: () => context.push(Routes.teamStatus),
+        child: Padding(
+          padding: const EdgeInsets.all(AppDimens.md),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.secondaryFixed,
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Icon(Icons.groups_2_outlined,
+                    color: AppColors.primary, size: 22),
+              ),
+              const SizedBox(width: AppDimens.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Team status",
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 2),
+                    Text(
+                      "Live — kaun online hai, kisne kitne calls kiye aaj",
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
