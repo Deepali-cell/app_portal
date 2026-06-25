@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_colors.dart';
 import 'core/theme/app_theme.dart';
+import 'features/call_detection/application/call_event_bridge.dart';
 import 'features/call_outcome/presentation/post_call_resume_listener.dart';
 import 'features/tenant/application/tenant_controller.dart';
 import 'features/tenant/domain/tenant.dart';
@@ -20,6 +21,11 @@ class TcbPortalApp extends ConsumerWidget {
     // every screen reads them.
     final tenant = ref.watch(tenantControllerProvider) ?? Tenant.tcbDefault;
     AppColors.apply(AppPalette.fromTenant(tenant));
+
+    // Start the native↔Flutter bridge for call detection events (D.2.2).
+    // The provider's body wires the MethodChannel listener; reading once is
+    // enough to keep it alive for the app's lifetime.
+    ref.watch(callEventBridgeProvider);
 
     final router = ref.watch(routerProvider);
     return PostCallResumeListener(

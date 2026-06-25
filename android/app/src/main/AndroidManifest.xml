@@ -54,6 +54,28 @@
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
+
+        <!-- Phase D.2.2: native call detection module -->
+        <receiver
+            android:name="com.tcbinfotech.tcb_portal.calldetect.PhoneStateReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter android:priority="900">
+                <action android:name="android.intent.action.PHONE_STATE"/>
+            </intent-filter>
+        </receiver>
+        <service
+            android:name="com.tcbinfotech.tcb_portal.calldetect.CallDetectionService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <!-- Android 14+ requires explaining why specialUse — CRM call
+                 context overlay + recording ingestion are not covered by
+                 dialer/microphone/mediaPlayback foreground-service types. -->
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="caller-id-and-recording-ingestion"/>
+        </service>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

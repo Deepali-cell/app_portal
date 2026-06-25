@@ -7,13 +7,61 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../application/call_detect_controller.dart';
+import '../application/call_event_bridge.dart';
 import '../domain/permission_status.dart';
 
-class CallDetectionScreen extends ConsumerWidget {
+class CallDetectionScreen extends ConsumerStatefulWidget {
   const CallDetectionScreen({super.key});
+  @override
+  ConsumerState<CallDetectionScreen> createState() =>
+      _CallDetectionScreenState();
+}
+
+class _CallDetectionScreenState extends ConsumerState<CallDetectionScreen> {
+  bool _wizardRan = false;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  void initState() {
+    super.initState();
+    // Auto-request all ungranted permissions in sequence right after the
+    // screen opens — addresses the "no permission popup" feedback.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _runPermissionWizard());
+  }
+
+  Future<void> _runPermissionWizard() async {
+    if (_wizardRan) return;
+    _wizardRan = true;
+    if (kIsWeb || !Platform.isAndroid) return;
+
+    final controller = ref.read(callDetectControllerProvider.notifier);
+    final svc = ref.read(permissionServiceProvider);
+
+    // Walk through each permission; request only the ungranted ones.
+    for (final perm in CallDetectPermission.values) {
+      final current = await svc.check(perm);
+      if (current == PermissionState.granted ||
+          current == PermissionState.notApplicable) {
+        continue;
+      }
+      if (!mounted) return;
+      // Brief explanation toast before each system dialog so user understands.
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text('Permission needed: ${perm.label}'),
+        duration: const Duration(milliseconds: 1500),
+        behavior: SnackBarBehavior.floating,
+      ));
+      await Future<void>.delayed(const Duration(milliseconds: 600));
+      await controller.requestPermission(perm);
+      // Tiny pause so user sees each dialog cleanly.
+      await Future<void>.delayed(const Duration(milliseconds: 400));
+    }
+    if (!mounted) return;
+    ref.invalidate(callDetectSnapshotProvider);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final snap = ref.watch(callDetectSnapshotProvider);
     final isAndroid = !kIsWeb && Platform.isAndroid;
 
@@ -57,6 +105,8 @@ class _AndroidBody extends ConsumerWidget {
       children: [
         _MasterToggle(enabled: snapshot.enabled),
         const SizedBox(height: AppDimens.md),
+        const _LastCallBanner(),
+        const SizedBox(height: AppDimens.md),
         _DeviceSupportBanner(
           supported: snapshot.deviceSupported,
           hint: snapshot.deviceModelHint,
@@ -89,6 +139,70 @@ class _AndroidBody extends ConsumerWidget {
         const SizedBox(height: AppDimens.md),
         _FooterHint(),
       ],
+    );
+  }
+}
+
+/// Live banner that shows the last call detected by the native module —
+/// the simplest visible confirmation that PhoneStateReceiver + service +
+/// MethodChannel are all wired correctly.
+class _LastCallBanner extends ConsumerWidget {
+  const _LastCallBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final event = ref.watch(lastCallEventProvider);
+    if (event == null) {
+      return Container(
+        padding: const EdgeInsets.all(AppDimens.md),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceContainer,
+          borderRadius: BorderRadius.circular(AppDimens.radiusLg),
+          border: Border.all(color: AppColors.outlineVariant),
+        ),
+        child: Row(children: [
+          Icon(Icons.hourglass_empty,
+              size: 18, color: AppColors.onSurfaceVariant),
+          const SizedBox(width: AppDimens.sm),
+          Expanded(
+            child: Text(
+              'Make or receive a call to see live detection here.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+        ]),
+      );
+    }
+    final isEnd = event.kind == CallEventKind.ended;
+    final title = isEnd
+        ? 'Last call ended'
+        : 'Detected ${event.direction.isEmpty ? "call" : event.direction} call';
+    final body = event.number.isEmpty ? '(number unavailable)' : event.number;
+    return Container(
+      padding: const EdgeInsets.all(AppDimens.md),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(AppDimens.radiusLg),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.35)),
+      ),
+      child: Row(children: [
+        Icon(isEnd ? Icons.call_end : Icons.ring_volume,
+            color: AppColors.primary, size: 22),
+        const SizedBox(width: AppDimens.md),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: TextStyle(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700)),
+              const SizedBox(height: 2),
+              Text(body, style: Theme.of(context).textTheme.bodySmall),
+            ],
+          ),
+        ),
+      ]),
     );
   }
 }
