@@ -100,15 +100,44 @@ class CallDetectionService : Service() {
     }
 
     private fun handleIdle() {
-        // Call ended — emit the end event so Flutter can offer to log outcome
-        // / fetch recording (D.2.4). Then wind down.
-        CallDetectBridge.emitCallEnded(lastNumber)
-        // Update the persistent notification to its idle state.
-        updateIdleNotification("Last call: ${lastNumber ?: "—"}")
+        val endedNumber = lastNumber
+        // Emit the end event immediately so the UI knows the call wrapped.
+        CallDetectBridge.emitCallEnded(endedNumber)
+        updateIdleNotification("Last call: ${endedNumber ?: "—"} — scanning for recording…")
+
+        // Phase D.2.4 — wait for the OEM recorder to finish writing the MP3,
+        // then scan known folders for the file and hand the path off to
+        // Flutter so it can upload + trigger the AI pipeline.
+        //
+        // Different OEMs take 2-8 seconds to flush the audio buffer; we wait
+        // 7s then scan, and retry once at 12s if nothing was found.
+        mainHandler.postDelayed({ scanAndDispatch(endedNumber, retried = false) }, 7_000)
+        // Keep the service alive long enough for both scan attempts.
+        mainHandler.postDelayed({ stopSelf() }, 20_000)
         lastNumber = null
-        // Don't stopSelf yet — let the recording scanner (D.2.4) have time.
-        // For now we stop after 10s; D.2.4 will extend this with the scan job.
-        mainHandler.postDelayed({ stopSelf() }, 10_000)
+    }
+
+    private fun scanAndDispatch(numberAtCallEnd: String?, retried: Boolean) {
+        val hit = RecordingScanner.findLatest(windowSec = if (retried) 60 else 30)
+        if (hit == null) {
+            if (!retried) {
+                // Try again after a longer write delay.
+                mainHandler.postDelayed({ scanAndDispatch(numberAtCallEnd, retried = true) }, 5_000)
+            } else {
+                Log.d("TcbCallSvc", "No recording found after retry — phone may not be configured for built-in recording")
+                updateIdleNotification("Last call: ${numberAtCallEnd ?: "—"} — no recording captured")
+            }
+            return
+        }
+        Log.d("TcbCallSvc", "Recording found: ${hit.path}")
+        updateIdleNotification("Last call recording found — uploading…")
+        CallDetectBridge.emitRecordingFound(
+            number = numberAtCallEnd,
+            path = hit.path,
+            sizeBytes = hit.sizeBytes,
+            folder = hit.folder,
+            mtimeMs = hit.mtimeMs,
+        )
     }
 
     private fun resolveFromCallLog(direction: String) {

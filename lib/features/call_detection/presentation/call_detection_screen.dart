@@ -107,6 +107,8 @@ class _AndroidBody extends ConsumerWidget {
         const SizedBox(height: AppDimens.md),
         const _LastCallBanner(),
         const SizedBox(height: AppDimens.md),
+        const _UploadBanner(),
+        const SizedBox(height: AppDimens.md),
         _DeviceSupportBanner(
           supported: snapshot.deviceSupported,
           hint: snapshot.deviceModelHint,
@@ -199,6 +201,74 @@ class _LastCallBanner extends ConsumerWidget {
                       fontWeight: FontWeight.w700)),
               const SizedBox(height: 2),
               Text(body, style: Theme.of(context).textTheme.bodySmall),
+            ],
+          ),
+        ),
+      ]),
+    );
+  }
+}
+
+/// Live banner showing recording upload state after the native scanner
+/// finds the OEM-written MP3 and the bridge hands it off for upload.
+class _UploadBanner extends ConsumerWidget {
+  const _UploadBanner();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final p = ref.watch(recordingUploadProvider);
+    if (p == null) return const SizedBox.shrink();
+
+    final Color color;
+    final IconData icon;
+    final String title;
+    final String body;
+    switch (p.state) {
+      case 'uploading':
+        color = AppColors.primary;
+        icon = Icons.upload_outlined;
+        title = 'Uploading recording…';
+        body = p.path.split('/').last;
+      case 'uploaded':
+        color = const Color(0xFF1B7F4D);
+        icon = Icons.cloud_done_outlined;
+        title = 'Recording uploaded — AI summary processing';
+        body = 'Tap to view once ready (~30s for a 2-min call).';
+      case 'failed':
+        color = const Color(0xFFB23A48);
+        icon = Icons.error_outline;
+        title = 'Recording upload failed';
+        body = p.errorMessage ?? 'Try again from the lead detail later.';
+      default:
+        return const SizedBox.shrink();
+    }
+    return Container(
+      padding: const EdgeInsets.all(AppDimens.md),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(AppDimens.radiusLg),
+        border: Border.all(color: color.withValues(alpha: 0.35)),
+      ),
+      child: Row(children: [
+        if (p.state == 'uploading')
+          const SizedBox(
+            width: 20, height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          )
+        else
+          Icon(icon, color: color, size: 22),
+        const SizedBox(width: AppDimens.md),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: TextStyle(color: color, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 2),
+              Text(body,
+                  style: Theme.of(context).textTheme.bodySmall,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
             ],
           ),
         ),

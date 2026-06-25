@@ -34,6 +34,16 @@ class ApiPaths {
   static const String teamStatus =
       '/api/method/tcb_portal_erp.api.team_status.get_team_status';
 
+  // Call recording + AI pipeline (Phase D.2.4 + D.2.5)
+  static const String uploadRecording =
+      '/api/method/tcb_portal_erp.api.call_intelligence.upload_recording';
+  static const String getRecording =
+      '/api/method/tcb_portal_erp.api.call_intelligence.get_recording';
+  static const String listRecordingsFor =
+      '/api/method/tcb_portal_erp.api.call_intelligence.list_recordings_for';
+  static const String applySuggestedStatus =
+      '/api/method/tcb_portal_erp.api.call_intelligence.apply_suggested_status';
+
   // Auth
   static const String login = '/api/method/login';
   static const String logout = '/api/method/logout';

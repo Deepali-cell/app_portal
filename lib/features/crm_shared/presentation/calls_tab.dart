@@ -7,7 +7,9 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
+import '../../../core/providers.dart';
 import '../../../shared/widgets/brand_button.dart';
+import '../../call_detection/data/recording_repository.dart';
 import '../application/providers.dart';
 import '../domain/crm_ref.dart';
 import '../domain/models.dart';
@@ -36,44 +38,86 @@ class CallsTab extends ConsumerWidget {
         label: const Text('Log call'),
         onPressed: () => _openSheet(context, ref),
       ),
-      body: async.when(
+      body: _CallsTabBody(
+        crmRef: crmRef,
+        async: async,
+        onDial: (p) => _dial(context, p),
+        onDelete: (n) => _delete(context, ref, n),
+      ),
+    );
+  }
+}
+
+class _CallsTabBody extends ConsumerWidget {
+  const _CallsTabBody({
+    required this.crmRef,
+    required this.async,
+    required this.onDial,
+    required this.onDelete,
+  });
+  final CrmRef crmRef;
+  final AsyncValue async;
+  final void Function(String) onDial;
+  final void Function(String) onDelete;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    return async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
             child: Text(e is ApiException ? e.message : 'Could not load calls.')),
         data: (calls) {
-          if (calls.isEmpty) {
-            return Center(
-                child: Padding(
-              padding: const EdgeInsets.all(AppDimens.xl),
-              child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.call_outlined,
-                    size: 40, color: AppColors.inkFaint),
-                const SizedBox(height: AppDimens.md),
-                Text('No calls logged yet',
-                    style: Theme.of(context).textTheme.bodyMedium),
-              ]),
-            ));
-          }
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(callsProvider(crmRef)),
-            child: ListView.separated(
+            child: ListView(
               padding: const EdgeInsets.fromLTRB(
-                  AppDimens.screenPadding, AppDimens.screenPadding, AppDimens.screenPadding, 96),
-              itemCount: calls.length,
-              separatorBuilder: (_, _) => const SizedBox(height: AppDimens.sm),
-              itemBuilder: (_, i) => _CallCard(
-                call: calls[i],
-                onDial: () => _dial(context, calls[i].type == CallDirection.incoming
-                    ? calls[i].fromNo : calls[i].to),
-                onDelete: () => _delete(context, ref, calls[i].name),
-              ),
+                  AppDimens.screenPadding,
+                  AppDimens.screenPadding,
+                  AppDimens.screenPadding,
+                  96),
+              children: [
+                _RecordingsSection(crmRef: crmRef),
+                const SizedBox(height: AppDimens.lg),
+                if (calls.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 32),
+                    child: Column(children: [
+                      Icon(Icons.call_outlined,
+                          size: 40, color: AppColors.inkFaint),
+                      const SizedBox(height: AppDimens.md),
+                      Text('No call logs yet',
+                          style: Theme.of(context).textTheme.bodyMedium),
+                    ]),
+                  )
+                else ...[
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                    child: Text('Call log',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            color: AppColors.onSurfaceVariant,
+                            fontWeight: FontWeight.w600)),
+                  ),
+                  for (final c in calls) ...[
+                    _CallCard(
+                      call: c,
+                      onDial: () => onDial(c.type == CallDirection.incoming
+                          ? c.fromNo
+                          : c.to),
+                      onDelete: () => onDelete(c.name),
+                    ),
+                    const SizedBox(height: AppDimens.sm),
+                  ],
+                ],
+              ],
             ),
           );
         },
-      ),
-    );
+      );
   }
+}
 
+extension on CallsTab {
   Future<void> _dial(BuildContext context, String phone) async {
     if (phone.isEmpty) return;
     final uri = Uri(scheme: 'tel', path: phone);
@@ -333,5 +377,222 @@ class _CallSheetState extends ConsumerState<_CallSheet> {
         ),
       ),
     );
+  }
+}
+
+
+// ---------------------------------------------------------------------------
+// Phase D.2.5 — Call Recordings + AI Summary section
+// ---------------------------------------------------------------------------
+
+final _recordingsProvider = FutureProvider.autoDispose
+    .family<List<CallRecording>, CrmRef>((ref, crmRef) {
+  final repo = RecordingRepository(ref.watch(dioProvider));
+  return repo.listFor(
+    referenceDoctype: crmRef.doctype,
+    referenceDocname: crmRef.name,
+  );
+});
+
+class _RecordingsSection extends ConsumerWidget {
+  const _RecordingsSection({required this.crmRef});
+  final CrmRef crmRef;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(_recordingsProvider(crmRef));
+    return async.when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (recs) {
+        if (recs.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+              child: Row(children: [
+                Icon(Icons.auto_awesome, size: 16, color: AppColors.primary),
+                const SizedBox(width: 6),
+                Text('AI call summaries',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700)),
+              ]),
+            ),
+            for (final r in recs) ...[
+              _RecordingCard(rec: r, crmRef: crmRef),
+              const SizedBox(height: 8),
+            ],
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _RecordingCard extends ConsumerWidget {
+  const _RecordingCard({required this.rec, required this.crmRef});
+  final CallRecording rec;
+  final CrmRef crmRef;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final (badgeColor, badgeIcon) = _statusBadge(rec.status);
+    return Container(
+      padding: const EdgeInsets.all(AppDimens.md),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppDimens.radiusLg),
+        border: Border.all(color: AppColors.line),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: badgeColor.withValues(alpha: 0.14),
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(badgeIcon, size: 12, color: badgeColor),
+                const SizedBox(width: 4),
+                Text(rec.status,
+                    style: TextStyle(
+                        color: badgeColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700)),
+              ]),
+            ),
+            const SizedBox(width: 8),
+            if (rec.durationSeconds != null && rec.durationSeconds! > 0)
+              Text('${_fmtDuration(rec.durationSeconds!)}',
+                  style: Theme.of(context).textTheme.bodySmall),
+            const Spacer(),
+            if (rec.aiProcessedAt != null)
+              Text(DateFormat('d MMM').format(rec.aiProcessedAt!),
+                  style: Theme.of(context).textTheme.bodySmall),
+          ]),
+          if (rec.summary != null && rec.summary!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(rec.summary!,
+                style: Theme.of(context).textTheme.bodyMedium),
+          ],
+          if (rec.keyPoints.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            for (final kp in rec.keyPoints)
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('• ',
+                      style: TextStyle(color: AppColors.primary)),
+                  Expanded(
+                      child: Text(kp,
+                          style: Theme.of(context).textTheme.bodySmall)),
+                ]),
+              ),
+          ],
+          if (rec.suggestedStatus != null && rec.suggestedStatus!.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(AppDimens.radiusLg),
+                border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.30)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('AI suggests',
+                      style: TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.4)),
+                  const SizedBox(height: 4),
+                  Text('Status → ${rec.suggestedStatus}',
+                      style: TextStyle(
+                          color: AppColors.onSurface,
+                          fontWeight: FontWeight.w600)),
+                  if (rec.suggestedNextAction != null &&
+                      rec.suggestedNextAction!.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(rec.suggestedNextAction!,
+                        style: Theme.of(context).textTheme.bodySmall),
+                  ],
+                  const SizedBox(height: 8),
+                  if (crmRef.doctype == 'CRM Lead')
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: FilledButton.tonalIcon(
+                        icon: const Icon(Icons.check, size: 16),
+                        label: Text('Apply ${rec.suggestedStatus}'),
+                        onPressed: () => _apply(context, ref),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+          if (rec.errorMessage != null && rec.errorMessage!.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            Text(rec.errorMessage!,
+                style: TextStyle(
+                    color: AppColors.danger,
+                    fontSize: 12,
+                    fontStyle: FontStyle.italic)),
+          ],
+        ],
+      ),
+    );
+  }
+
+  (Color, IconData) _statusBadge(String s) {
+    switch (s) {
+      case 'Ready':
+        return (AppColors.success, Icons.check_circle);
+      case 'Failed':
+        return (AppColors.danger, Icons.error_outline);
+      case 'Uploaded':
+      case 'Transcribing':
+      case 'Summarizing':
+        return (AppColors.navy, Icons.hourglass_empty);
+      default:
+        return (AppColors.inkFaint, Icons.help_outline);
+    }
+  }
+
+  String _fmtDuration(int sec) {
+    final m = sec ~/ 60;
+    final s = sec % 60;
+    return m > 0 ? '${m}m ${s.toString().padLeft(2, '0')}s' : '${s}s';
+  }
+
+  Future<void> _apply(BuildContext context, WidgetRef ref) async {
+    try {
+      final repo = RecordingRepository(ref.read(dioProvider));
+      await repo.applySuggestedStatus(rec.name);
+      ref.invalidate(_recordingsProvider(crmRef));
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Lead status → ${rec.suggestedStatus}'),
+          behavior: SnackBarBehavior.floating,
+        ));
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(e is ApiException
+              ? e.message
+              : "Couldn't apply status — try again."),
+          backgroundColor: AppColors.errorContainer,
+        ));
+      }
+    }
   }
 }

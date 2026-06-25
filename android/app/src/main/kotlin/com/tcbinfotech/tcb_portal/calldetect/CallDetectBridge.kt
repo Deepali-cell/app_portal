@@ -43,6 +43,25 @@ object CallDetectBridge {
         post("onCallEnded", mapOf("number" to (number ?: "")))
     }
 
+    fun emitRecordingFound(
+        number: String?,
+        path: String,
+        sizeBytes: Long,
+        folder: String,
+        mtimeMs: Long,
+    ) {
+        post(
+            "onRecordingFound",
+            mapOf(
+                "number" to (number ?: ""),
+                "path" to path,
+                "size_bytes" to sizeBytes,
+                "folder" to folder,
+                "mtime_ms" to mtimeMs,
+            ),
+        )
+    }
+
     private fun post(method: String, args: Map<String, Any?>) {
         // MethodChannel calls MUST happen on the main thread.
         main.post { channel?.invokeMethod(method, args) }
