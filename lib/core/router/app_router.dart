@@ -24,6 +24,7 @@ import '../../features/leaderboard/presentation/leaderboard_screen.dart';
 import '../../features/missed_activities/presentation/missed_activities_screen.dart';
 import '../../features/pipeline/presentation/pipeline_screen.dart';
 import '../../features/team_status/presentation/team_status_screen.dart';
+import '../../features/call_detection/presentation/call_detection_screen.dart';
 import '../../features/notifications/presentation/notifications_screen.dart';
 import '../../features/payslips/presentation/payslip_detail_screen.dart';
 import '../../features/payslips/presentation/payslips_screen.dart';
@@ -65,6 +66,7 @@ class Routes {
   static const leaderboard = '/leaderboard';
   static const pipeline = '/pipeline';
   static const teamStatus = '/team-status';
+  static const callDetection = '/call-detection';
 
   // Legacy aliases (kept so old strings still resolve)
   static const attendance = time;
@@ -202,6 +204,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           path: Routes.teamStatus,
           parentNavigatorKey: rootNavigatorKey,
           builder: (_, _) => const TeamStatusScreen()),
+      GoRoute(
+          path: Routes.callDetection,
+          parentNavigatorKey: rootNavigatorKey,
+          builder: (_, _) => const CallDetectionScreen()),
     ],
   );
 });

@@ -19,6 +19,8 @@ class SecureStore {
   static const _kProfile = 'tcb.auth.profile';
   static const _kTenant = 'tcb.tenant';
   static const _kLeadsViewPrefs = 'tcb.leads.view_prefs';
+  static const _kCallDetectEnabled = 'tcb.call_detect.enabled';
+  static const _kCallDetectFirstSetup = 'tcb.call_detect.first_setup_done';
 
   Future<void> writeToken(String token) =>
       _storage.write(key: _kToken, value: token);
@@ -45,6 +47,18 @@ class SecureStore {
       _storage.write(key: _kLeadsViewPrefs, value: json);
   Future<String?> readLeadsViewPrefs() =>
       _storage.read(key: _kLeadsViewPrefs);
+
+  /// Master toggle for native call detection + recording (Phase D.2.1).
+  /// Stored as "1" / "0" strings to keep the API simple.
+  Future<void> writeCallDetectEnabled(bool enabled) =>
+      _storage.write(key: _kCallDetectEnabled, value: enabled ? '1' : '0');
+  Future<bool> readCallDetectEnabled() async =>
+      (await _storage.read(key: _kCallDetectEnabled)) == '1';
+
+  Future<void> writeCallDetectFirstSetupDone() =>
+      _storage.write(key: _kCallDetectFirstSetup, value: '1');
+  Future<bool> readCallDetectFirstSetupDone() async =>
+      (await _storage.read(key: _kCallDetectFirstSetup)) == '1';
 
   /// Sign-out: clears the auth token and cached profile. The tenant is
   /// intentionally preserved so the login screen stays pre-themed for the

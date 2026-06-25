@@ -1,3 +1,6 @@
+import 'dart:io' show Platform;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -46,6 +49,10 @@ class HomeScreen extends ConsumerWidget {
               if (profile.can('crm_lead') || profile.can('crm_deal')) ...[
                 const SizedBox(height: AppDimens.lg),
                 const _PipelineEntry(),
+                if (!kIsWeb && Platform.isAndroid) ...[
+                  const SizedBox(height: AppDimens.lg),
+                  const _CallDetectionEntry(),
+                ],
               ],
               if (profile.can('manager_view')) ...[
                 const SizedBox(height: AppDimens.lg),
@@ -695,6 +702,58 @@ class _PipelineEntry extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       "Funnel view — kaunsi leads / deals kaunsi stage me hain",
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right,
+                  size: 20, color: AppColors.onSurfaceVariant),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Compact CTA that opens the Call Detection + Recording settings screen.
+/// Android-only — iOS users skip this card entirely.
+class _CallDetectionEntry extends StatelessWidget {
+  const _CallDetectionEntry();
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppDimens.radiusXl),
+        onTap: () => context.push(Routes.callDetection),
+        child: Padding(
+          padding: const EdgeInsets.all(AppDimens.md),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.secondaryFixed,
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Icon(Icons.ring_volume_outlined,
+                    color: AppColors.primary, size: 22),
+              ),
+              const SizedBox(width: AppDimens.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Call detection",
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 2),
+                    Text(
+                      "Caller-ID popup + auto-recording fetch + AI summaries",
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
