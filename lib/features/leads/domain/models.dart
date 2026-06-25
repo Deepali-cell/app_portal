@@ -61,6 +61,37 @@ class Lead {
   String get title =>
       (leadName?.trim().isNotEmpty ?? false) ? leadName! : (organization ?? name);
 
+  /// Returns a copy with selected fields overridden — used by the Kanban
+  /// optimistic-update flow.
+  Lead copyWith({String? status}) => Lead(
+        name: name,
+        status: status ?? this.status,
+        leadName: leadName,
+        salutation: salutation,
+        firstName: firstName,
+        middleName: middleName,
+        lastName: lastName,
+        gender: gender,
+        organization: organization,
+        email: email,
+        mobileNo: mobileNo,
+        phone: phone,
+        website: website,
+        jobTitle: jobTitle,
+        noOfEmployees: noOfEmployees,
+        annualRevenue: annualRevenue,
+        industry: industry,
+        source: source,
+        territory: territory,
+        leadOwner: leadOwner,
+        image: image,
+        converted: converted,
+        assignees: assignees,
+        counts: counts,
+        lastContactAt: lastContactAt,
+        daysSinceContact: daysSinceContact,
+      );
+
   String get initials {
     final source = title.trim();
     if (source.isEmpty) return '?';

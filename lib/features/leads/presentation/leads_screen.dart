@@ -28,6 +28,11 @@ class LeadsScreen extends ConsumerWidget {
         title: const Text('Leads'),
         actions: [
           IconButton(
+            tooltip: 'Board view',
+            icon: Icon(Icons.view_kanban_outlined, color: AppColors.primary),
+            onPressed: () => context.push(Routes.leadKanban),
+          ),
+          IconButton(
             tooltip: 'Refresh',
             icon: Icon(Icons.refresh, color: AppColors.primary),
             onPressed: () =>
