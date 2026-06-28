@@ -49,6 +49,8 @@ object CallDetectBridge {
         sizeBytes: Long,
         folder: String,
         mtimeMs: Long,
+        direction: String = "outgoing",
+        contactNameHint: String? = null,
     ) {
         post(
             "onRecordingFound",
@@ -58,6 +60,8 @@ object CallDetectBridge {
                 "size_bytes" to sizeBytes,
                 "folder" to folder,
                 "mtime_ms" to mtimeMs,
+                "direction" to direction,
+                "contact_name_hint" to (contactNameHint ?: ""),
             ),
         )
     }

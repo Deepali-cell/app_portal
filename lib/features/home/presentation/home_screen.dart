@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../dashboard/presentation/sales_dashboard_section.dart';
+
 import '../../../core/format/money.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
@@ -45,6 +47,10 @@ class HomeScreen extends ConsumerWidget {
               if (profile.can('crm_lead')) ...[
                 const SizedBox(height: AppDimens.lg),
                 const TodaysPlanCard(),
+              ],
+              if (profile.can('crm_lead') || profile.can('crm_deal')) ...[
+                const SizedBox(height: AppDimens.lg),
+                const SalesDashboardSection(),
               ],
               if (profile.can('crm_lead') || profile.can('crm_deal')) ...[
                 const SizedBox(height: AppDimens.lg),

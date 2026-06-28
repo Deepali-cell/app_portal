@@ -44,7 +44,6 @@ class _CallDetectionScreenState extends ConsumerState<CallDetectionScreen> {
         continue;
       }
       if (!mounted) return;
-      // Brief explanation toast before each system dialog so user understands.
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('Permission needed: ${perm.label}'),
@@ -53,8 +52,39 @@ class _CallDetectionScreenState extends ConsumerState<CallDetectionScreen> {
       ));
       await Future<void>.delayed(const Duration(milliseconds: 600));
       await controller.requestPermission(perm);
-      // Tiny pause so user sees each dialog cleanly.
       await Future<void>.delayed(const Duration(milliseconds: 400));
+    }
+
+    // MANAGE_EXTERNAL_STORAGE is a SPECIAL permission — no runtime dialog,
+    // must open Settings → All files access. Check + prompt separately.
+    final bridge = ref.read(callEventBridgeProvider);
+    final hasAllFiles = await bridge.hasAllFilesAccess() ?? true;
+    if (!hasAllFiles && mounted) {
+      await showDialog<void>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Allow access to recording files'),
+          content: const Text(
+            "Android needs explicit 'All files access' for us to read the "
+            "call recording MP3 from your phone's recorder folder.\n\n"
+            "Tap Open Settings → toggle 'Allow access to manage all files' "
+            "ON → come back here. One-time setup.",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: const Text('Later'),
+            ),
+            FilledButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+                bridge.openAllFilesAccessSettings();
+              },
+              child: const Text('Open Settings'),
+            ),
+          ],
+        ),
+      );
     }
     if (!mounted) return;
     ref.invalidate(callDetectSnapshotProvider);

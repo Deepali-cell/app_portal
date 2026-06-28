@@ -58,6 +58,9 @@ class CallDetectionService : Service() {
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private var lastNumber: String? = null
+    // "incoming" if we ever saw RINGING for this call; "outgoing" otherwise.
+    // OFFHOOK alone after IDLE → outgoing dial. RINGING then OFFHOOK → incoming pickup.
+    private var lastDirection: String = "outgoing"
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -82,8 +85,7 @@ class CallDetectionService : Service() {
     }
 
     private fun handleRinging(numberFromIntent: String?) {
-        // CallLog often hasn't been written yet at RINGING. Try the intent
-        // value first; if null, schedule a delayed CallLog read.
+        lastDirection = "incoming"
         if (!numberFromIntent.isNullOrBlank()) {
             onNumberResolved(numberFromIntent, "incoming")
         } else {
@@ -95,7 +97,8 @@ class CallDetectionService : Service() {
         // OFFHOOK fires for both outgoing dial and incoming pickup. CallLog
         // is usually written by now for outgoing.
         if (lastNumber == null) {
-            mainHandler.postDelayed({ resolveFromCallLog("outgoing") }, 600)
+            // If we already marked incoming via RINGING, preserve that.
+            mainHandler.postDelayed({ resolveFromCallLog(lastDirection) }, 600)
         }
     }
 
@@ -118,7 +121,10 @@ class CallDetectionService : Service() {
     }
 
     private fun scanAndDispatch(numberAtCallEnd: String?, retried: Boolean) {
-        val hit = RecordingScanner.findLatest(windowSec = if (retried) 60 else 30)
+        val hit = RecordingScanner.findLatest(
+            windowSec = if (retried) 120 else 60,
+            hintNumber = numberAtCallEnd,
+        )
         if (hit == null) {
             if (!retried) {
                 // Try again after a longer write delay.
@@ -129,15 +135,24 @@ class CallDetectionService : Service() {
             }
             return
         }
-        Log.d("TcbCallSvc", "Recording found: ${hit.path}")
+        Log.d("TcbCallSvc", "Recording found: ${hit.path}  parsedContact=${hit.parsedContact}  parsedNumber=${hit.parsedNumber}")
         updateIdleNotification("Last call recording found — uploading…")
+        // Fallback chain for number: live CallLog value → filename-parsed
+        // number. If both empty, the parsed contact name (e.g. "Anuj Sharma")
+        // still helps the backend lookup via CRM Lead.lead_name LIKE.
+        val effectiveNumber = numberAtCallEnd.takeUnless { it.isNullOrBlank() }
+            ?: hit.parsedNumber
         CallDetectBridge.emitRecordingFound(
-            number = numberAtCallEnd,
+            number = effectiveNumber,
             path = hit.path,
             sizeBytes = hit.sizeBytes,
             folder = hit.folder,
             mtimeMs = hit.mtimeMs,
+            direction = lastDirection,
+            contactNameHint = hit.parsedContact,
         )
+        // Reset direction for the next call.
+        lastDirection = "outgoing"
     }
 
     private fun resolveFromCallLog(direction: String) {

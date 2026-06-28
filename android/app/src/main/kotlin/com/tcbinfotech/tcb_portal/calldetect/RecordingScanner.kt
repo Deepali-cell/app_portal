@@ -6,34 +6,50 @@ import java.io.File
 
 /**
  * Phase D.2.4 — Reads the OEM-recorded call MP3 from the device's
- * native recorder folder. Different OEMs write to different paths:
+ * native recorder folder.
  *
- *   * Samsung One UI: /storage/emulated/0/Recordings/Call/
- *                     or /storage/emulated/0/Sounds/Call/
- *   * Xiaomi/MIUI:    /storage/emulated/0/MIUI/sound_recorder/call_rec/
- *                     or /storage/emulated/0/Sounds/CallRecorder/
- *   * Realme/Oppo:    /storage/emulated/0/Music/Recordings/Call/
- *                     or /storage/emulated/0/Recordings/Call/
- *   * Vivo:           /storage/emulated/0/Record/Call/
- *                     or /storage/emulated/0/Music/Recordings/Call/
- *   * OnePlus:        /storage/emulated/0/Recordings/  (varies)
+ * Confirmed Realme 10 Pro+ Android 15 path:
+ *   /storage/emulated/0/Music/Recordings/Call Recordings/
+ *   Filename: <ContactNameOrPlusNumber>-<YYMMDDHHmm>.mp3
+ *   e.g. "Anuj Sharma-2606251545.mp3"  or  "+919876543210-2510171715.mp3"
  *
- * Strategy: scan ALL known paths, pick the most-recently-modified audio
- * file whose mtime is within `windowSec` of the moment the call ended.
- * Returns null if no file found (user's phone doesn't record OR recorder
- * disabled OR no permission).
+ * Other OEMs (verified via Runo / Kylas / TeleCRM docs):
+ *   * Samsung One UI: /Recordings/Call/    or  /Sounds/Call/
+ *   * Xiaomi/MIUI:    /MIUI/sound_recorder/call_rec/
+ *                     or /Sounds/CallRecorder/
+ *   * Oppo:           /Music/Recordings/Call Recordings/    (same as Realme)
+ *   * Vivo:           /Record/Call/  or  /Recordings/Call/
+ *   * OnePlus:        /Recordings/   (varies by OxygenOS version)
+ *
+ * Strategy:
+ *   1. Scan ALL known absolute paths
+ *   2. Pick the most-recently-modified audio file whose mtime is within
+ *      `windowSec` of the moment the call ended
+ *   3. If we have the call's phone number, prefer files whose filename
+ *      contains it (Realme/Oppo bake the number into the name)
  */
 object RecordingScanner {
 
     private const val TAG = "TcbRecordingScanner"
 
+    // Folder paths to scan, in priority order. Most specific OEM-confirmed
+    // paths first. All resolved against Environment.getExternalStorageDirectory().
     private val KNOWN_FOLDERS = listOf(
+        // Realme / Oppo ColorOS (CONFIRMED on RMX3686 / Android 15)
+        "Music/Recordings/Call Recordings",
+        "Music/Recordings/Call recordings",
+        "Recordings/Call Recordings",
+        "Recordings/CallRecordings",
+        "Music/Recordings/Call",
+        // Samsung One UI
         "Recordings/Call",
         "Sounds/Call",
-        "Sounds/CallRecorder",
+        // MIUI / HyperOS
         "MIUI/sound_recorder/call_rec",
-        "Music/Recordings/Call",
+        "Sounds/CallRecorder",
+        // Vivo
         "Record/Call",
+        // OnePlus / others
         "Recordings",
         "Call recordings",
         "CallRecordings",
@@ -46,21 +62,55 @@ object RecordingScanner {
         val mtimeMs: Long,
         val sizeBytes: Long,
         val folder: String,
+        val matchedByNumber: Boolean,
+        // Realme/Oppo bake the contact name or +91… number into the filename
+        // ("Anuj Sharma-2606251545.mp3" or "+919876543210-2510171715.mp3").
+        // We parse it as a fallback when the OS strips EXTRA_INCOMING_NUMBER
+        // and CallLog hasn't been written yet.
+        val parsedContact: String?,
+        val parsedNumber: String?,
     )
 
     /**
-     * Find the latest recording newer than (now - windowSec) seconds.
-     * Returns null if nothing matches.
+     * Pull contact-name and/or phone-number from the OEM-baked filename.
+     * Format: `<contact-name-or-plus-number>-<YYMMDDHHmm>.<ext>`
      */
-    fun findLatest(windowSec: Int = 60): Hit? {
+    private fun parseFilename(nameNoExt: String): Pair<String?, String?> {
+        // Trim trailing "-YYMMDDHHmm" timestamp (10 digits)
+        val tsRegex = Regex("-(\\d{10,12})$")
+        val match = tsRegex.find(nameNoExt) ?: return Pair(nameNoExt.trim(), null)
+        val prefix = nameNoExt.substring(0, match.range.first).trim()
+        return if (prefix.startsWith("+") || prefix.all { it.isDigit() }) {
+            // It's a phone number
+            Pair(null, prefix)
+        } else {
+            // It's a contact name
+            Pair(prefix, null)
+        }
+    }
+
+    /**
+     * Find the latest recording file.
+     *
+     * @param windowSec Look back this many seconds from now.
+     * @param hintNumber If non-null, prefer files whose name contains the
+     *                   last 7-10 digits of this number (Realme/Oppo embed
+     *                   the number in the filename).
+     */
+    fun findLatest(windowSec: Int = 90, hintNumber: String? = null): Hit? {
         val root = Environment.getExternalStorageDirectory()
         if (root == null || !root.exists()) {
-            Log.w(TAG, "External storage not accessible")
+            Log.w(TAG, "External storage not accessible — MANAGE_EXTERNAL_STORAGE granted?")
             return null
         }
         val cutoffMs = System.currentTimeMillis() - windowSec * 1000L
+        val numberTail = hintNumber
+            ?.replace(Regex("[^0-9]"), "")
+            ?.takeLast(10)
+            ?.takeIf { it.length >= 7 }
 
-        var best: Hit? = null
+        var byNumberHit: Hit? = null
+        var anyHit: Hit? = null
         for (rel in KNOWN_FOLDERS) {
             val dir = File(root, rel)
             if (!dir.exists() || !dir.isDirectory) continue
@@ -71,23 +121,41 @@ object RecordingScanner {
                     val ext = f.extension.lowercase()
                     if (ext !in AUDIO_EXTS) continue
                     if (f.lastModified() < cutoffMs) continue
-                    if (best == null || f.lastModified() > best.mtimeMs) {
-                        best = Hit(
-                            path = f.absolutePath,
-                            mtimeMs = f.lastModified(),
-                            sizeBytes = f.length(),
-                            folder = rel,
-                        )
+                    val (parsedContact, parsedNumber) = parseFilename(f.nameWithoutExtension)
+                    val hit = Hit(
+                        path = f.absolutePath,
+                        mtimeMs = f.lastModified(),
+                        sizeBytes = f.length(),
+                        folder = rel,
+                        matchedByNumber = numberTail != null &&
+                            f.nameWithoutExtension.replace(Regex("[^0-9]"), "")
+                                .contains(numberTail),
+                        parsedContact = parsedContact,
+                        parsedNumber = parsedNumber,
+                    )
+                    if (hit.matchedByNumber &&
+                        (byNumberHit == null || hit.mtimeMs > byNumberHit.mtimeMs)) {
+                        byNumberHit = hit
+                    }
+                    if (anyHit == null || hit.mtimeMs > anyHit.mtimeMs) {
+                        anyHit = hit
                     }
                 }
             } catch (e: Exception) {
                 Log.w(TAG, "Scan failed for $rel: ${e.message}")
             }
         }
+
+        val best = byNumberHit ?: anyHit
         if (best != null) {
-            Log.d(TAG, "Found recording: ${best.path} (${best.sizeBytes} bytes, folder=${best.folder})")
+            Log.d(
+                TAG,
+                "Found recording: ${best.path} (${best.sizeBytes}B, " +
+                    "matchedByNumber=${best.matchedByNumber}, folder=${best.folder})"
+            )
         } else {
-            Log.d(TAG, "No recording found in any known folder in last ${windowSec}s")
+            Log.d(TAG, "No recording in any known folder within last ${windowSec}s " +
+                "(hintNumber=${hintNumber ?: "—"})")
         }
         return best
     }

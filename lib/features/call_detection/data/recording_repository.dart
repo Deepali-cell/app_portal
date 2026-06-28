@@ -23,6 +23,10 @@ class CallRecording {
     this.transcript,
     this.keyPoints = const [],
     this.errorMessage,
+    this.callLog,
+    this.referenceDoctype,
+    this.referenceDocname,
+    this.matchedDisplay,
   });
 
   final String name;
@@ -39,6 +43,10 @@ class CallRecording {
   final String? transcript;
   final List<String> keyPoints;
   final String? errorMessage;
+  final String? callLog;
+  final String? referenceDoctype;
+  final String? referenceDocname;
+  final String? matchedDisplay;
 
   bool get isReady => status == 'Ready';
   bool get isFailed => status == 'Failed';
@@ -58,6 +66,10 @@ class CallRecording {
         transcript: j['transcript'] as String?,
         keyPoints: _strList(j['key_points_parsed'] ?? j['key_points']),
         errorMessage: j['error_message'] as String?,
+        callLog: j['call_log'] as String?,
+        referenceDoctype: j['reference_doctype'] as String?,
+        referenceDocname: j['reference_docname'] as String?,
+        matchedDisplay: j['matched_display'] as String?,
       );
 
   static DateTime? _date(dynamic v) =>
@@ -83,6 +95,9 @@ class RecordingRepository {
     String? phoneNumber,
     int? durationSeconds,
     String? sourceFolder,
+    String? direction, // "Incoming" | "Outgoing"
+    DateTime? startTime,
+    String? contactNameHint,
   }) async {
     final file = File(localPath);
     if (!await file.exists()) {
@@ -100,6 +115,9 @@ class RecordingRepository {
         if (durationSeconds != null)
           'duration_seconds': durationSeconds.toString(),
         if (sourceFolder != null) 'source_oem_folder': sourceFolder,
+        if (direction != null) 'direction': direction,
+        if (startTime != null) 'start_time': startTime.toIso8601String(),
+        if (contactNameHint != null) 'contact_name_hint': contactNameHint,
       });
       final resp = await _dio.post(ApiPaths.uploadRecording, data: form);
       final msg = (resp.data['message'] as Map).cast<String, dynamic>();

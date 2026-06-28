@@ -34,6 +34,10 @@ class ApiPaths {
   static const String teamStatus =
       '/api/method/tcb_portal_erp.api.team_status.get_team_status';
 
+  // Sales dashboard (Phase L.6)
+  static const String salesDashboard =
+      '/api/method/tcb_portal_erp.api.dashboard.get_sales_dashboard';
+
   // Call recording + AI pipeline (Phase D.2.4 + D.2.5)
   static const String uploadRecording =
       '/api/method/tcb_portal_erp.api.call_intelligence.upload_recording';
