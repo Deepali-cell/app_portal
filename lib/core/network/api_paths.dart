@@ -46,6 +46,11 @@ class ApiPaths {
   /// (Cloudflare 524 / mobile network drop after server commit).
   static const String findRecordingByClientId =
       '/api/method/tcb_portal_erp.api.call_intelligence.find_by_client_id';
+  /// Always-log endpoint — mobile calls this for every detected call
+  /// (connected or not) so the user has a complete call history even
+  /// when no OEM recording is produced. Auto-matches to a Lead/Deal.
+  static const String logCallAttempt =
+      '/api/method/tcb_portal_erp.api.call_intelligence.log_call_attempt';
   static const String getRecording =
       '/api/method/tcb_portal_erp.api.call_intelligence.get_recording';
   static const String listRecordingsFor =

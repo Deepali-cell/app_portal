@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/network/api_paths.dart';
 import '../../../core/providers.dart';
 import '../data/recording_repository.dart';
 
@@ -168,6 +169,15 @@ class CallEventBridge {
           final args = (call.arguments as Map).cast<String, dynamic>();
           _onRecordingFound(args);
           break;
+        case 'onCallLogReady':
+          // Fired post-IDLE after native re-queries CallLog. Persist a CRM
+          // Call Log row even if no recording is found — so every call
+          // attempt is on the activity timeline. The recording upload (if
+          // it arrives) will REPLACE the from/to and link to this row via
+          // the matched lead.
+          final args = (call.arguments as Map).cast<String, dynamic>();
+          _onCallLogReady(args);
+          break;
         default:
           break;
       }
@@ -240,6 +250,38 @@ class CallEventBridge {
         title: "Couldn't upload recording",
         body: "We saved the audio locally and will retry on next call.",
       );
+    }
+  }
+
+  /// Persist a CRM Call Log row for the just-ended call regardless of
+  /// whether a recording was found. Fires from native CallDetectionService
+  /// after the post-IDLE CallLog re-query — by this point we have the real
+  /// dialed number (not the OFFHOOK stale value). Backend matches the
+  /// number to a Lead/Deal by last-7-digit suffix.
+  Future<void> _onCallLogReady(Map<String, dynamic> args) async {
+    final number = (args['number'] ?? '').toString();
+    final direction = (args['direction'] ?? 'outgoing').toString();
+    final status = (args['status'] ?? 'Completed').toString();
+    final durationSec = (args['duration_sec'] as num?)?.toInt() ?? 0;
+    if (number.isEmpty) return; // Without a number we can't match anything.
+
+    try {
+      final dio = _ref.read(dioProvider);
+      final dirCap =
+          '${direction[0].toUpperCase()}${direction.substring(1).toLowerCase()}';
+      await dio.post(
+        ApiPaths.logCallAttempt,
+        data: {
+          'phone_number': number,
+          'direction': dirCap,
+          'status': status,
+          'duration_seconds': durationSec,
+        },
+      );
+    } catch (_) {
+      // Non-fatal — recording upload (if it arrives) will create a CRM
+      // Call Log too. This endpoint exists just to cover the no-recording
+      // cases (call didn't connect, OEM doesn't record outgoing, etc.).
     }
   }
 

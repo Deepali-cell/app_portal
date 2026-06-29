@@ -103,21 +103,121 @@ class CallDetectionService : Service() {
     }
 
     private fun handleIdle() {
-        val endedNumber = lastNumber
+        val initialNumber = lastNumber
         // Emit the end event immediately so the UI knows the call wrapped.
-        CallDetectBridge.emitCallEnded(endedNumber)
-        updateIdleNotification("Last call: ${endedNumber ?: "—"} — scanning for recording…")
+        CallDetectBridge.emitCallEnded(initialNumber)
+        updateIdleNotification("Last call: ${initialNumber ?: "…"} — resolving…")
 
-        // Phase D.2.4 — wait for the OEM recorder to finish writing the MP3,
-        // then scan known folders for the file and hand the path off to
-        // Flutter so it can upload + trigger the AI pipeline.
+        // CRITICAL: On Android 10+ the OS does NOT expose the dialed number
+        // for OUTGOING calls via PHONE_STATE extras (privacy restriction).
+        // The number lives only in CallLog, and CallLog's row for the just-
+        // ended call is typically written at call termination. So we MUST
+        // re-query CallLog AFTER IDLE — querying at OFFHOOK returns the
+        // previous call's row (or nothing) and gives us the wrong number.
         //
-        // Different OEMs take 2-8 seconds to flush the audio buffer; we wait
-        // 7s then scan, and retry once at 12s if nothing was found.
-        mainHandler.postDelayed({ scanAndDispatch(endedNumber, retried = false) }, 7_000)
-        // Keep the service alive long enough for both scan attempts.
+        // Sequence after IDLE:
+        //   t=0      emit end + update notif
+        //   t=1.5s   re-query CallLog for the freshly-written current row
+        //   t=3.5s   if still nothing, query again (some OEMs are slower)
+        //   t=7s     scan OEM recorder folder for the MP3, dispatch upload
+        //   t=20s    tear down the foreground service
+        mainHandler.postDelayed({ refreshFromCallLogPostIdle(attempt = 1) }, 1_500)
+        mainHandler.postDelayed({ refreshFromCallLogPostIdle(attempt = 2) }, 3_500)
+        mainHandler.postDelayed({
+            val numberAtCallEnd = lastNumber ?: initialNumber
+            // Also emit the CALL_LOG event so Flutter can persist a CRM
+            // Call Log row even when no recording is found (e.g. call
+            // didn't connect, OEM doesn't write a recording, etc.).
+            val (status, dur) = readLastCallStatusAndDuration()
+            CallDetectBridge.emitCallLogReady(
+                number = numberAtCallEnd,
+                direction = lastDirection,
+                status = status,
+                durationSec = dur,
+            )
+            scanAndDispatch(numberAtCallEnd, retried = false)
+        }, 7_000)
         mainHandler.postDelayed({ stopSelf() }, 20_000)
         lastNumber = null
+    }
+
+    /**
+     * Re-read the most-recent CallLog row right after IDLE fires. Mutates
+     * [lastNumber] in-place. Called twice on a delayed timer because Android
+     * + OEM stack flush at different speeds.
+     */
+    private fun refreshFromCallLogPostIdle(attempt: Int) {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CALL_LOG)
+            != PackageManager.PERMISSION_GRANTED) return
+        var cursor: Cursor? = null
+        try {
+            cursor = contentResolver.query(
+                CallLog.Calls.CONTENT_URI,
+                arrayOf(CallLog.Calls.NUMBER, CallLog.Calls.TYPE, CallLog.Calls.DATE,
+                    CallLog.Calls.DURATION),
+                null, null,
+                "${CallLog.Calls.DATE} DESC LIMIT 1",
+            )
+            if (cursor != null && cursor.moveToFirst()) {
+                val num = cursor.getString(cursor.getColumnIndexOrThrow(CallLog.Calls.NUMBER))
+                val type = cursor.getInt(cursor.getColumnIndexOrThrow(CallLog.Calls.TYPE))
+                if (!num.isNullOrBlank()) {
+                    lastNumber = num
+                    // Refine direction if we didn't already know it.
+                    val dir = when (type) {
+                        CallLog.Calls.INCOMING_TYPE -> "incoming"
+                        CallLog.Calls.OUTGOING_TYPE -> "outgoing"
+                        CallLog.Calls.MISSED_TYPE -> "incoming"
+                        CallLog.Calls.REJECTED_TYPE -> "incoming"
+                        else -> lastDirection
+                    }
+                    lastDirection = dir
+                    Log.d(TAG, "post-idle CallLog (attempt=$attempt) → $num [$dir]")
+                }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "post-idle CallLog query failed: ${e.message}", e)
+        } finally {
+            cursor?.close()
+        }
+    }
+
+    /**
+     * Read the last call's terminal status (Completed / No answer / Busy /
+     * Rejected) + duration from CallLog. Used to log a CRM Call Log even
+     * when no recording is found — so the user has a record of every call
+     * attempt, connected or not.
+     */
+    private fun readLastCallStatusAndDuration(): Pair<String, Int> {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CALL_LOG)
+            != PackageManager.PERMISSION_GRANTED) return "Completed" to 0
+        var cursor: Cursor? = null
+        try {
+            cursor = contentResolver.query(
+                CallLog.Calls.CONTENT_URI,
+                arrayOf(CallLog.Calls.TYPE, CallLog.Calls.DURATION),
+                null, null,
+                "${CallLog.Calls.DATE} DESC LIMIT 1",
+            )
+            if (cursor != null && cursor.moveToFirst()) {
+                val type = cursor.getInt(cursor.getColumnIndexOrThrow(CallLog.Calls.TYPE))
+                val dur = cursor.getLong(cursor.getColumnIndexOrThrow(CallLog.Calls.DURATION)).toInt()
+                val status = when {
+                    type == CallLog.Calls.MISSED_TYPE -> "No Answer"
+                    type == CallLog.Calls.REJECTED_TYPE -> "Rejected"
+                    type == CallLog.Calls.OUTGOING_TYPE && dur == 0 -> "No Answer"
+                    type == CallLog.Calls.INCOMING_TYPE && dur == 0 -> "No Answer"
+                    dur > 0 -> "Completed"
+                    else -> "Completed"
+                }
+                return status to dur
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "last-call status query failed: ${e.message}", e)
+        } finally {
+            cursor?.close()
+        }
+        return "Completed" to 0
     }
 
     private fun scanAndDispatch(numberAtCallEnd: String?, retried: Boolean) {

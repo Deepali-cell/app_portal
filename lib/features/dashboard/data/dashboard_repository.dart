@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/api_paths.dart';
 import '../../../core/providers.dart';
+import '../../auth/application/auth_controller.dart';
 import '../domain/models.dart';
 
 class DashboardRepository {
@@ -29,10 +30,18 @@ class DashboardRepository {
 final dashboardRepositoryProvider = Provider<DashboardRepository>(
     (ref) => DashboardRepository(ref.watch(dioProvider)));
 
-/// Mutable scope (My / Team) — managers can flip; non-managers locked to 'mine'.
+/// Mutable scope (My / Team) — managers can flip; non-managers locked to
+/// 'mine'. Managers default to 'team' so they immediately see meaningful
+/// numbers (they typically own 0 leads themselves; their value is the
+/// rollup). Sales users stay on 'mine' because that's their world.
 class DashboardScopeController extends Notifier<String> {
   @override
-  String build() => 'mine';
+  String build() {
+    final profile = ref.watch(authControllerProvider).profile;
+    final isManager = profile?.can('manager_view') ?? false;
+    return isManager ? 'team' : 'mine';
+  }
+
   void set(String s) => state = s;
 }
 

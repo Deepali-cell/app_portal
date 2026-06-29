@@ -43,6 +43,31 @@ object CallDetectBridge {
         post("onCallEnded", mapOf("number" to (number ?: "")))
     }
 
+    /**
+     * Fired after a call ends and the CallLog has been queried for the
+     * authoritative number + status. Flutter persists a CRM Call Log row
+     * even when no recording is found (call didn't connect, OEM doesn't
+     * record, etc.) — so the user has a record of every dial attempt.
+     *
+     * status ∈ {"Completed", "No Answer", "Busy", "Rejected"}
+     */
+    fun emitCallLogReady(
+        number: String?,
+        direction: String,
+        status: String,
+        durationSec: Int,
+    ) {
+        post(
+            "onCallLogReady",
+            mapOf(
+                "number" to (number ?: ""),
+                "direction" to direction,
+                "status" to status,
+                "duration_sec" to durationSec,
+            ),
+        )
+    }
+
     fun emitRecordingFound(
         number: String?,
         path: String,
