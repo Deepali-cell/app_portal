@@ -1,11 +1,19 @@
+import 'dart:async';
+import 'dart:developer' as developer;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers.dart';
 import '../../../core/router/app_router.dart';
+import '../../auth/application/auth_controller.dart';
 import '../application/call_event_bridge.dart';
 import '../data/recording_repository.dart';
+
+void _log(String msg) {
+  developer.log('[DeeplinkListener] $msg', name: 'tcb.deeplink');
+}
 
 /// Mounted at the app root. Watches [pendingDeeplinkProvider] for any
 /// deeplink string published by the native notification system and routes
@@ -29,6 +37,7 @@ class DeeplinkListener extends ConsumerStatefulWidget {
 
 class _DeeplinkListenerState extends ConsumerState<DeeplinkListener> {
   bool _coldChecked = false;
+  Timer? _retryTimer;
 
   @override
   void initState() {
@@ -37,38 +46,87 @@ class _DeeplinkListenerState extends ConsumerState<DeeplinkListener> {
       if (_coldChecked) return;
       _coldChecked = true;
       final cold = await ref.read(callEventBridgeProvider).consumePendingDeeplink();
+      _log('cold-start poll → ${cold ?? "(none)"}');
       if (cold != null && cold.isNotEmpty) {
         ref.read(pendingDeeplinkProvider.notifier).set(cold);
       }
     });
   }
 
-  Future<void> _handle(String deeplink) async {
-    // Clear immediately so we don't loop or double-fire.
-    ref.read(pendingDeeplinkProvider.notifier).clear();
+  @override
+  void dispose() {
+    _retryTimer?.cancel();
+    super.dispose();
+  }
 
+  /// Push the deeplink AS SOON AS the user is authenticated AND the router
+  /// has settled past the transient routes (splash/login/unlock). Without
+  /// this guard the redirect in [routerProvider] catches the push and
+  /// re-routes it to splash/login, silently losing the navigation.
+  Future<void> _handle(String deeplink) async {
+    _log('handle deeplink=$deeplink');
     final idx = deeplink.indexOf(':');
-    if (idx <= 0) return;
+    if (idx <= 0) {
+      ref.read(pendingDeeplinkProvider.notifier).clear();
+      return;
+    }
     final kind = deeplink.substring(0, idx).toLowerCase();
     final id = deeplink.substring(idx + 1).trim();
-    if (id.isEmpty) return;
-
-    final ctx = rootNavigatorKey.currentContext;
-    if (ctx == null) return;
-
-    switch (kind) {
-      case 'lead':
-        ctx.push(Routes.leadDetail, extra: id);
-        break;
-      case 'deal':
-        ctx.push(Routes.dealDetail, extra: id);
-        break;
-      case 'recording':
-        await _openRecording(ctx, id);
-        break;
-      default:
-        break;
+    if (id.isEmpty) {
+      ref.read(pendingDeeplinkProvider.notifier).clear();
+      return;
     }
+
+    // Poll auth + router-readiness; once green, do the push.
+    Future<void> tryPush() async {
+      final auth = ref.read(authControllerProvider);
+      final ctx = rootNavigatorKey.currentContext;
+      _log('try push: auth=${auth.status} ctxReady=${ctx != null}');
+      if (auth.status != AuthStatus.authenticated || ctx == null) return;
+      // Also wait until we're past the transient routes — read GoRouter's
+      // current location via GoRouterState.
+      final router = GoRouter.of(ctx);
+      final loc = router.routerDelegate.currentConfiguration.uri.path;
+      _log('current location=$loc');
+      const transient = {Routes.splash, Routes.login, Routes.unlock};
+      if (transient.contains(loc)) return; // not ready yet
+
+      // All green — clear, then push.
+      ref.read(pendingDeeplinkProvider.notifier).clear();
+      _retryTimer?.cancel();
+      _retryTimer = null;
+      _log('pushing $kind:$id');
+
+      switch (kind) {
+        case 'lead':
+          ctx.push(Routes.leadDetail, extra: id);
+          break;
+        case 'deal':
+          ctx.push(Routes.dealDetail, extra: id);
+          break;
+        case 'recording':
+          await _openRecording(ctx, id);
+          break;
+      }
+    }
+
+    // Try immediately; if not yet ready, retry every 250ms for up to 10s.
+    await tryPush();
+    if (ref.read(pendingDeeplinkProvider) == null) return; // pushed already
+    _retryTimer?.cancel();
+    var attempts = 0;
+    _retryTimer = Timer.periodic(const Duration(milliseconds: 250), (t) async {
+      attempts++;
+      await tryPush();
+      if (ref.read(pendingDeeplinkProvider) == null || attempts > 40) {
+        t.cancel();
+        _retryTimer = null;
+        if (attempts > 40) {
+          _log('giving up after 40 attempts');
+          ref.read(pendingDeeplinkProvider.notifier).clear();
+        }
+      }
+    });
   }
 
   Future<void> _openRecording(BuildContext ctx, String recordingName) async {

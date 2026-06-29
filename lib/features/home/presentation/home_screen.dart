@@ -44,15 +44,15 @@ class HomeScreen extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _WelcomeHero(profile: profile),
-              if (profile.can('crm_lead')) ...[
+              if (profile.can('leads')) ...[
                 const SizedBox(height: AppDimens.lg),
                 const TodaysPlanCard(),
               ],
-              if (profile.can('crm_lead') || profile.can('crm_deal')) ...[
+              if (profile.can('leads') || profile.can('deals')) ...[
                 const SizedBox(height: AppDimens.lg),
                 const SalesDashboardSection(),
               ],
-              if (profile.can('crm_lead') || profile.can('crm_deal')) ...[
+              if (profile.can('leads') || profile.can('deals')) ...[
                 const SizedBox(height: AppDimens.lg),
                 const _PipelineEntry(),
                 if (!kIsWeb && Platform.isAndroid) ...[

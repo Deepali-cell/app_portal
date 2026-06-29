@@ -2,6 +2,7 @@ package com.tcbinfotech.tcb_portal
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import com.tcbinfotech.tcb_portal.calldetect.AllFilesAccessHelper
 import com.tcbinfotech.tcb_portal.calldetect.CallDetectBridge
 import com.tcbinfotech.tcb_portal.calldetect.LocalNotifier
@@ -28,7 +29,11 @@ class MainActivity : FlutterFragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Capture deeplink from the launch intent (cold-start case).
-        intent?.getStringExtra(DEEPLINK_EXTRA)?.let { pendingDeeplink = it }
+        val coldDeeplink = intent?.getStringExtra(DEEPLINK_EXTRA)
+        Log.i("TcbDeeplink", "onCreate cold-start extra=$coldDeeplink")
+        if (!coldDeeplink.isNullOrBlank()) {
+            pendingDeeplink = coldDeeplink
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -38,6 +43,7 @@ class MainActivity : FlutterFragmentActivity() {
         // is alive; otherwise stash it for the next poll.
         setIntent(intent)
         val deeplink = intent.getStringExtra(DEEPLINK_EXTRA)
+        Log.i("TcbDeeplink", "onNewIntent warm-tap extra=$deeplink channelAlive=${deeplinkChannel != null}")
         if (!deeplink.isNullOrBlank()) {
             pendingDeeplink = deeplink
             deeplinkChannel?.invokeMethod(
@@ -81,10 +87,9 @@ class MainActivity : FlutterFragmentActivity() {
                     result.success(notifId)
                 }
                 "consumePendingDeeplink" -> {
-                    // Flutter polls on first frame; we return the pending one
-                    // (if any) and clear it so a second poll gets null.
                     val d = pendingDeeplink
                     pendingDeeplink = null
+                    Log.i("TcbDeeplink", "consumePendingDeeplink → $d")
                     result.success(d)
                 }
                 else -> result.notImplemented()
