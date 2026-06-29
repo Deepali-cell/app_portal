@@ -1,10 +1,25 @@
 import 'dart:io';
+import 'dart:math';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/api_paths.dart';
+
+/// Generate a UUID-ish v4 string for upload idempotency. The mobile
+/// generates one BEFORE the multipart POST and the backend stores it
+/// on Tcb Call Recording.client_upload_id. If Dio later throws (e.g.
+/// Cloudflare's 100s tunnel timeout fires before the server response
+/// reaches us), the client re-queries find_by_client_id(<uuid>) — if
+/// the server saved the row, we treat the upload as successful and
+/// suppress the "Couldn't upload" notification. No external `uuid`
+/// dependency, just dart:math + dart:io seed.
+String _newUploadId() {
+  final r = Random.secure();
+  String h(int n) => List.generate(n, (_) => r.nextInt(16).toRadixString(16)).join();
+  return '${h(8)}-${h(4)}-${h(4)}-${h(4)}-${h(12)}';
+}
 
 @immutable
 class CallRecording {
@@ -104,6 +119,7 @@ class RecordingRepository {
       throw const ApiException(
           ApiErrorKind.unknown, "Recording file disappeared before upload.");
     }
+    final uploadId = _newUploadId();
     try {
       final form = FormData.fromMap({
         'file': await MultipartFile.fromFile(localPath,
@@ -118,6 +134,7 @@ class RecordingRepository {
         if (direction != null) 'direction': direction,
         if (startTime != null) 'start_time': startTime.toIso8601String(),
         if (contactNameHint != null) 'contact_name_hint': contactNameHint,
+        'client_upload_id': uploadId,
       });
       // Multipart MP3 uploads can take 30-60s on slow mobile networks —
       // override Dio's default timeouts so we don't fire a false-positive
@@ -133,10 +150,41 @@ class RecordingRepository {
       final msg = (resp.data['message'] as Map).cast<String, dynamic>();
       return CallRecording.fromJson(msg);
     } on DioException catch (e) {
+      // Cloudflare tunnels enforce a 100s edge timeout regardless of our
+      // Dio settings. If the server already saved the row but Cloudflare
+      // returned 524 before our response arrived, we'd otherwise post a
+      // false-positive "Couldn't upload" notification. Verify via the
+      // idempotency key before giving up.
+      final recovered = await _confirmByUploadId(uploadId);
+      if (recovered != null) return recovered;
       throw e.error is ApiException
           ? e.error as ApiException
           : ApiException.fromDio(e);
     }
+  }
+
+  /// Look up a recording the backend already saved under this client-side
+  /// upload id. Polls a few times because the backend insert + commit
+  /// might still be in flight when Dio throws. Returns null if the upload
+  /// genuinely didn't reach the server.
+  Future<CallRecording?> _confirmByUploadId(String uploadId) async {
+    for (var i = 0; i < 6; i++) {
+      try {
+        final resp = await _dio.get(
+          ApiPaths.findRecordingByClientId,
+          queryParameters: {'client_upload_id': uploadId},
+          options: Options(receiveTimeout: const Duration(seconds: 10)),
+        );
+        final msg = resp.data['message'];
+        if (msg is Map && msg.isNotEmpty) {
+          return CallRecording.fromJson(msg.cast<String, dynamic>());
+        }
+      } on DioException {
+        // swallow — we're already in a retry loop
+      }
+      await Future.delayed(Duration(seconds: 2 + i));
+    }
+    return null;
   }
 
   /// Latest state of a single recording (used to poll until status==Ready).

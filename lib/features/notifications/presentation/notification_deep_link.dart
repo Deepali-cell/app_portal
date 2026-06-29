@@ -1,7 +1,10 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/providers.dart';
 import '../../../core/router/app_router.dart';
+import '../../call_detection/data/recording_repository.dart';
 import '../../invoices/domain/models.dart' show InvoiceKind;
 import '../../invoices/presentation/invoice_detail_screen.dart'
     show InvoiceDetailArgs;
@@ -9,13 +12,23 @@ import '../domain/models.dart';
 
 /// Open the document the notification refers to.
 ///
-/// Maps Frappe DocType -> mobile route. Returns true if a route was pushed,
-/// false if the notification has no destination (in which case the caller
-/// should fall back to just marking it read).
+/// Maps Frappe DocType to its mobile route. Returns true if a route was
+/// pushed (or queued for async push), false if the notification has no
+/// usable destination — in which case the caller falls back to just
+/// marking it read.
 ///
-/// Unknown DocTypes return false instead of guessing — better to do nothing
-/// than to land the user on the wrong screen.
-bool openNotificationTarget(BuildContext context, NotificationItem item) {
+/// For `Tcb Call Recording` we don't have a dedicated detail screen —
+/// instead we fetch the recording's linked Lead/Deal and open that. The
+/// Calls tab of the parent record renders the recording card with its
+/// AI summary + suggested status.
+///
+/// Unknown DocTypes return false instead of guessing — better to do
+/// nothing than to land the user on the wrong screen.
+bool openNotificationTarget(
+  BuildContext context,
+  WidgetRef ref,
+  NotificationItem item,
+) {
   final docType = item.documentType;
   final docName = item.documentName;
   if (docType == null || docName == null || docName.isEmpty) return false;
@@ -45,6 +58,9 @@ bool openNotificationTarget(BuildContext context, NotificationItem item) {
     case 'CRM Deal':
       context.push(Routes.dealDetail, extra: docName);
       return true;
+    case 'Tcb Call Recording':
+      _openRecordingLinked(context, ref, docName);
+      return true;
     case 'Timesheet':
       context.push(Routes.timesheetDetail, extra: docName);
       return true;
@@ -69,5 +85,41 @@ bool openNotificationTarget(BuildContext context, NotificationItem item) {
       return true;
     default:
       return false;
+  }
+}
+
+/// Fetch the Tcb Call Recording and navigate to its linked Lead/Deal.
+/// If the recording is unlinked (no phone match + no contact match), we
+/// surface a snackbar — better than a silent no-op.
+Future<void> _openRecordingLinked(
+  BuildContext context,
+  WidgetRef ref,
+  String recordingName,
+) async {
+  try {
+    final repo = RecordingRepository(ref.read(dioProvider));
+    final rec = await repo.get(recordingName);
+    final dt = rec.referenceDoctype;
+    final dn = rec.referenceDocname;
+    if (!context.mounted) return;
+    if (dt == 'Lead' && (dn ?? '').isNotEmpty) {
+      context.push(Routes.leadDetail, extra: dn);
+      return;
+    }
+    if (dt == 'CRM Deal' && (dn ?? '').isNotEmpty) {
+      context.push(Routes.dealDetail, extra: dn);
+      return;
+    }
+    // Unlinked recording — friendly message so the tap isn't silent.
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text("Recording $recordingName isn't linked to a lead/deal "
+          "yet. Check the Tcb Call Recording in the desk."),
+      duration: const Duration(seconds: 4),
+    ));
+  } catch (e) {
+    if (!context.mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text("Couldn't open the recording: $e"),
+    ));
   }
 }

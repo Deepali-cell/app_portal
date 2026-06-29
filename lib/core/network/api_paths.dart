@@ -41,6 +41,11 @@ class ApiPaths {
   // Call recording + AI pipeline (Phase D.2.4 + D.2.5)
   static const String uploadRecording =
       '/api/method/tcb_portal_erp.api.call_intelligence.upload_recording';
+  /// Idempotency lookup — used by the mobile after a multipart-upload
+  /// DioException to confirm whether the server already saved the row
+  /// (Cloudflare 524 / mobile network drop after server commit).
+  static const String findRecordingByClientId =
+      '/api/method/tcb_portal_erp.api.call_intelligence.find_by_client_id';
   static const String getRecording =
       '/api/method/tcb_portal_erp.api.call_intelligence.get_recording';
   static const String listRecordingsFor =

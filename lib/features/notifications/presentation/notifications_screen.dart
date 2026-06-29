@@ -139,7 +139,7 @@ class _NotificationTile extends ConsumerWidget {
                 .read(notificationsListProvider.notifier)
                 .markRead(item.name);
           }
-          openNotificationTarget(context, item);
+          openNotificationTarget(context, ref, item);
         },
         child: Padding(
           padding: const EdgeInsets.all(AppDimens.md),
