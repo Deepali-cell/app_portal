@@ -119,7 +119,17 @@ class RecordingRepository {
         if (startTime != null) 'start_time': startTime.toIso8601String(),
         if (contactNameHint != null) 'contact_name_hint': contactNameHint,
       });
-      final resp = await _dio.post(ApiPaths.uploadRecording, data: form);
+      // Multipart MP3 uploads can take 30-60s on slow mobile networks —
+      // override Dio's default timeouts so we don't fire a false-positive
+      // "couldn't upload" notification when the server is just being slow.
+      final resp = await _dio.post(
+        ApiPaths.uploadRecording,
+        data: form,
+        options: Options(
+          sendTimeout: const Duration(minutes: 3),
+          receiveTimeout: const Duration(minutes: 3),
+        ),
+      );
       final msg = (resp.data['message'] as Map).cast<String, dynamic>();
       return CallRecording.fromJson(msg);
     } on DioException catch (e) {
