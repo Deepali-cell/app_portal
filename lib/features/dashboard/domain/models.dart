@@ -113,6 +113,49 @@ class QuickCounts {
 }
 
 @immutable
+class PerRepCard {
+  const PerRepCard({
+    required this.user,
+    required this.fullName,
+    this.image,
+    this.leadsOwned = 0,
+    this.leadsStale = 0,
+    this.callsToday = 0,
+    this.tasksDue = 0,
+    this.tasksOverdue = 0,
+    this.dealsWonMonth = 0,
+  });
+  final String user;
+  final String fullName;
+  final String? image;
+  final int leadsOwned;
+  final int leadsStale;
+  final int callsToday;
+  final int tasksDue;
+  final int tasksOverdue;
+  final int dealsWonMonth;
+
+  factory PerRepCard.fromJson(Map<String, dynamic> j) => PerRepCard(
+        user: (j['user'] ?? '').toString(),
+        fullName: (j['full_name'] ?? '').toString(),
+        image: j['image'] as String?,
+        leadsOwned: (j['leads_owned'] as num?)?.toInt() ?? 0,
+        leadsStale: (j['leads_stale'] as num?)?.toInt() ?? 0,
+        callsToday: (j['calls_today'] as num?)?.toInt() ?? 0,
+        tasksDue: (j['tasks_due'] as num?)?.toInt() ?? 0,
+        tasksOverdue: (j['tasks_overdue'] as num?)?.toInt() ?? 0,
+        dealsWonMonth: (j['deals_won_month'] as num?)?.toInt() ?? 0,
+      );
+
+  String get initials {
+    final parts = fullName.split(RegExp(r'\s+')).where((s) => s.isNotEmpty);
+    if (parts.isEmpty) return '?';
+    if (parts.length == 1) return parts.first[0].toUpperCase();
+    return (parts.first[0] + parts.last[0]).toUpperCase();
+  }
+}
+
+@immutable
 class SalesDashboard {
   const SalesDashboard({
     required this.scope,
@@ -125,6 +168,7 @@ class SalesDashboard {
     required this.dealStatuses,
     required this.recentSummaries,
     required this.quickCounts,
+    required this.perRep,
     this.asOf,
   });
   final String scope;
@@ -137,6 +181,7 @@ class SalesDashboard {
   final List<StatusBucket> dealStatuses;
   final List<RecentSummary> recentSummaries;
   final QuickCounts quickCounts;
+  final List<PerRepCard> perRep;
   final DateTime? asOf;
 
   factory SalesDashboard.fromJson(Map<String, dynamic> j) => SalesDashboard(
@@ -159,6 +204,9 @@ class SalesDashboard {
             .toList(),
         quickCounts: QuickCounts.fromJson(
             (j['quick_counts'] as Map?)?.cast<String, dynamic>() ?? {}),
+        perRep: ((j['per_rep'] as List?) ?? [])
+            .map((e) => PerRepCard.fromJson((e as Map).cast<String, dynamic>()))
+            .toList(),
         asOf: _parseDate(j['as_of']),
       );
 }

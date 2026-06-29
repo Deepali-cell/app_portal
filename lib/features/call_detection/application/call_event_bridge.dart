@@ -23,6 +23,20 @@ class CallDetectEvent {
 
 enum CallEventKind { detected, ended, recordingFound, recordingUploaded, recordingFailed }
 
+/// Most-recent deeplink string ("recording:CALL-REC-...", "lead:CRM-LEAD-...",
+/// "lookup:+91...") received from the native notification system. The router
+/// observes this provider and pushes the appropriate Flutter route.
+class PendingDeeplinkController extends Notifier<String?> {
+  @override
+  String? build() => null;
+  void set(String? v) => state = v;
+  void clear() => state = null;
+}
+
+final pendingDeeplinkProvider =
+    NotifierProvider<PendingDeeplinkController, String?>(
+        PendingDeeplinkController.new);
+
 /// Latest recording-upload progress so the UI banner can show "Uploading…"
 /// → "Uploaded, AI processing…" → "Ready" without each screen subscribing
 /// to the bridge directly.
@@ -89,6 +103,17 @@ class CallEventBridge {
     } catch (_) {/* swallow */}
   }
 
+  /// Pull any deeplink that arrived via notification tap BEFORE the channel
+  /// was alive (cold-start case). The native side caches it; this consumes
+  /// + clears it. Returns null if nothing was pending.
+  Future<String?> consumePendingDeeplink() async {
+    try {
+      return await _channel.invokeMethod<String>('consumePendingDeeplink');
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Posts a system-tray notification via the native LocalNotifier. Used
   /// to surface call-capture + AI-summary alerts even when the app is
   /// backgrounded (the in-app banner only fires when the screen is open).
@@ -114,6 +139,13 @@ class CallEventBridge {
   void start() {
     _channel.setMethodCallHandler((call) async {
       switch (call.method) {
+        case 'onDeeplink':
+          final args = (call.arguments as Map).cast<String, dynamic>();
+          final dl = (args['deeplink'] ?? '').toString();
+          if (dl.isNotEmpty) {
+            _ref.read(pendingDeeplinkProvider.notifier).set(dl);
+          }
+          break;
         case 'onCallDetected':
           final args = (call.arguments as Map).cast<String, dynamic>();
           _ref.read(lastCallEventProvider.notifier).set(CallDetectEvent(

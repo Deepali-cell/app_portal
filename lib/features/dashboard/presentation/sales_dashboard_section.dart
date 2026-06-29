@@ -102,6 +102,19 @@ class _DashboardBody extends ConsumerWidget {
               onTap: (s) => context.push(Routes.deals)),
           const SizedBox(height: AppDimens.lg),
         ],
+        if (snapshot.perRep.isNotEmpty) ...[
+          _SectionHeader(
+            title: 'Sales team — today',
+            subtitle:
+                "${snapshot.perRep.length} reps · sorted by activity",
+          ),
+          const SizedBox(height: 6),
+          for (final rep in snapshot.perRep) ...[
+            _PerRepCard(rep: rep),
+            const SizedBox(height: 6),
+          ],
+          const SizedBox(height: AppDimens.lg),
+        ],
         if (snapshot.recentSummaries.isNotEmpty) ...[
           _SectionHeader(
             title: 'AI summaries',
@@ -389,6 +402,107 @@ class _StatusCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _PerRepCard extends StatelessWidget {
+  const _PerRepCard({required this.rep});
+  final PerRepCard rep;
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(AppDimens.md),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(AppDimens.radiusLg),
+        border: Border.all(color: AppColors.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: AppColors.secondaryFixed,
+            backgroundImage: (rep.image == null || rep.image!.isEmpty)
+                ? null
+                : NetworkImage(rep.image!),
+            child: (rep.image == null || rep.image!.isEmpty)
+                ? Text(rep.initials,
+                    style: TextStyle(
+                        color: AppColors.onSecondaryFixed,
+                        fontWeight: FontWeight.w800))
+                : null,
+          ),
+          const SizedBox(width: AppDimens.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(rep.fullName,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: AppColors.onSurface,
+                        fontWeight: FontWeight.w700)),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    _RepStat(icon: Icons.person_search_outlined,
+                        value: '${rep.leadsOwned}', label: 'leads'),
+                    if (rep.leadsStale > 0)
+                      _RepStat(
+                          icon: Icons.error_outline,
+                          value: '${rep.leadsStale}',
+                          label: 'stale',
+                          color: const Color(0xFFB23A48)),
+                    _RepStat(icon: Icons.call,
+                        value: '${rep.callsToday}', label: 'calls today'),
+                    if (rep.tasksDue > 0)
+                      _RepStat(icon: Icons.event_available,
+                          value: '${rep.tasksDue}', label: 'due today'),
+                    if (rep.tasksOverdue > 0)
+                      _RepStat(icon: Icons.warning_amber,
+                          value: '${rep.tasksOverdue}',
+                          label: 'overdue',
+                          color: const Color(0xFFB87800)),
+                    if (rep.dealsWonMonth > 0)
+                      _RepStat(icon: Icons.emoji_events_outlined,
+                          value: '${rep.dealsWonMonth}',
+                          label: 'won this month',
+                          color: const Color(0xFF1B7F4D)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RepStat extends StatelessWidget {
+  const _RepStat({
+    required this.icon,
+    required this.value,
+    required this.label,
+    this.color,
+  });
+  final IconData icon;
+  final String value;
+  final String label;
+  final Color? color;
+  @override
+  Widget build(BuildContext context) {
+    final c = color ?? AppColors.onSurfaceVariant;
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(icon, size: 12, color: c),
+      const SizedBox(width: 3),
+      Text('$value ',
+          style: TextStyle(
+              color: c, fontWeight: FontWeight.w800, fontSize: 12)),
+      Text(label,
+          style: TextStyle(color: c, fontSize: 11)),
+    ]);
   }
 }
 
