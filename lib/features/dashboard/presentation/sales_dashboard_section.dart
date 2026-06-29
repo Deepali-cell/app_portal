@@ -335,9 +335,12 @@ class _StatusGrid extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
-        mainAxisSpacing: 8,
-        crossAxisSpacing: 8,
-        childAspectRatio: 1.9,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        // Slightly less wide so the count + value row breathes vertically;
+        // 2.1 was producing the cramped "₹10Cr crammed against bottom"
+        // layout the user flagged.
+        childAspectRatio: 2.1,
       ),
       itemCount: buckets.length,
       itemBuilder: (_, i) => _StatusCard(bucket: buckets[i], onTap: onTap),
@@ -351,17 +354,23 @@ class _StatusCard extends StatelessWidget {
   final void Function(StatusBucket) onTap;
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return InkWell(
       onTap: () => onTap(bucket),
       borderRadius: BorderRadius.circular(AppDimens.radiusLg),
       child: Container(
-        padding: const EdgeInsets.all(AppDimens.md),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppDimens.md, vertical: 10),
         decoration: BoxDecoration(
           color: bucket.color.withValues(alpha: 0.08),
           borderRadius: BorderRadius.circular(AppDimens.radiusLg),
           border: Border.all(color: bucket.color.withValues(alpha: 0.30)),
         ),
+        // Title row on top, count + value on a single bottom row with the
+        // value right-aligned + muted so it reads as a secondary stat instead
+        // of competing with the big count number for attention.
         child: Column(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
@@ -369,8 +378,10 @@ class _StatusCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     bucket.status,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: bucket.color, fontWeight: FontWeight.w700),
+                    style: theme.textTheme.labelLarge?.copyWith(
+                        color: bucket.color,
+                        fontWeight: FontWeight.w700,
+                        height: 1.1),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -378,7 +389,7 @@ class _StatusCard extends StatelessWidget {
                 if (bucket.staleCount > 0)
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 5, vertical: 1),
+                        horizontal: 6, vertical: 1),
                     decoration: BoxDecoration(
                       color: const Color(0xFFB23A48).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(999),
@@ -391,13 +402,24 @@ class _StatusCard extends StatelessWidget {
                   ),
               ],
             ),
-            const SizedBox(height: 4),
-            Text('${bucket.count}',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    color: bucket.color, fontWeight: FontWeight.w800)),
-            if (bucket.value > 0)
-              Text(moneyShort(bucket.value),
-                  style: Theme.of(context).textTheme.bodySmall),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text('${bucket.count}',
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                        color: bucket.color,
+                        fontWeight: FontWeight.w800,
+                        height: 1.0)),
+                if (bucket.value > 0) ...[
+                  const Spacer(),
+                  Text(moneyShort(bucket.value),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                          color: bucket.color.withValues(alpha: 0.75),
+                          fontWeight: FontWeight.w600)),
+                ],
+              ],
+            ),
           ],
         ),
       ),
