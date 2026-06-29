@@ -39,7 +39,7 @@ bool openNotificationTarget(BuildContext context, NotificationItem item) {
         extra: InvoiceDetailArgs(name: docName, kind: InvoiceKind.purchase),
       );
       return true;
-    case 'CRM Lead':
+    case 'Lead':
       context.push(Routes.leadDetail, extra: docName);
       return true;
     case 'CRM Deal':

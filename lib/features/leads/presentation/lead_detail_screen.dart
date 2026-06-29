@@ -50,7 +50,7 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen>
   };
   String? _status;
 
-  CrmRef get _ref => CrmRef(doctype: 'CRM Lead', name: widget.name);
+  CrmRef get _ref => CrmRef(doctype: 'Lead', name: widget.name);
 
   @override
   void dispose() {
@@ -484,7 +484,7 @@ class _QuickContact extends StatelessWidget {
     actions.add(_Quick(Icons.phone_callback, 'Log call', () async {
       final newId = await showCallOutcomeSheet(
         context,
-        referenceDoctype: 'CRM Lead',
+        referenceDoctype: 'Lead',
         referenceDocname: lead.name,
         parentLabel: lead.title,
       );

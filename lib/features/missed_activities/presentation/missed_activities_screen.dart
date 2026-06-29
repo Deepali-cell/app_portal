@@ -445,7 +445,7 @@ class _CrmTaskTile extends StatelessWidget {
   void _openLinked(BuildContext context) {
     final dt = task.referenceDoctype;
     final dn = task.referenceDocname;
-    if (dt == 'CRM Lead' && dn != null) {
+    if (dt == 'Lead' && dn != null) {
       context.push(Routes.leadDetail, extra: dn);
     } else if (dt == 'CRM Deal' && dn != null) {
       context.push(Routes.dealDetail, extra: dn);

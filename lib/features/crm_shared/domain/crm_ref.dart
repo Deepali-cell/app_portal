@@ -6,7 +6,7 @@ import 'package:flutter/foundation.dart';
 @immutable
 class CrmRef {
   const CrmRef({required this.doctype, required this.name});
-  final String doctype; // "CRM Lead" or "CRM Deal"
+  final String doctype; // "Lead" or "CRM Deal"
   final String name;
 
   Map<String, dynamic> get queryParams =>

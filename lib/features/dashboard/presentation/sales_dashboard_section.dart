@@ -402,7 +402,7 @@ class _SummaryCard extends ConsumerWidget {
       onTap: () {
         // Tap → open the linked lead/deal so the user lands on the
         // Calls tab where the full summary card is rendered.
-        if (summary.referenceDoctype == 'CRM Lead' &&
+        if (summary.referenceDoctype == 'Lead' &&
             summary.referenceDocname != null) {
           context.push(Routes.leadDetail, extra: summary.referenceDocname);
         } else if (summary.referenceDoctype == 'CRM Deal' &&

@@ -526,7 +526,7 @@ class _RecordingCard extends ConsumerWidget {
                         style: Theme.of(context).textTheme.bodySmall),
                   ],
                   const SizedBox(height: 8),
-                  if (crmRef.doctype == 'CRM Lead')
+                  if (crmRef.doctype == 'Lead')
                     Align(
                       alignment: Alignment.centerRight,
                       child: FilledButton.tonalIcon(

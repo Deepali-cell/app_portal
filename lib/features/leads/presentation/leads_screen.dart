@@ -305,7 +305,7 @@ class _LeadRow extends StatelessWidget {
             _LeadStatusChip(status: lead.status),
             QuickCallIconButton(
               phoneNumber: lead.mobileNo ?? lead.phone,
-              referenceDoctype: 'CRM Lead',
+              referenceDoctype: 'Lead',
               referenceDocname: lead.name,
               parentLabel: lead.title,
             ),

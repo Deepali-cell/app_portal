@@ -418,7 +418,7 @@ class _CrmTaskRow extends StatelessWidget {
   void _openLinked(BuildContext context) {
     final dt = task.referenceDoctype;
     final dn = task.referenceDocname;
-    if (dt == 'CRM Lead' && dn != null) {
+    if (dt == 'Lead' && dn != null) {
       context.push(Routes.leadDetail, extra: dn);
     } else if (dt == 'CRM Deal' && dn != null) {
       context.push(Routes.dealDetail, extra: dn);
@@ -430,7 +430,7 @@ class _CrmTaskRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isFollowup = task.referenceDoctype == 'CRM Lead' ||
+    final isFollowup = task.referenceDoctype == 'Lead' ||
         task.referenceDoctype == 'CRM Deal';
     return InkWell(
       onTap: () => _openLinked(context),
