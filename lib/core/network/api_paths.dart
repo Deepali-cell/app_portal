@@ -143,8 +143,11 @@ class ApiPaths {
       '/api/method/tcb_portal_erp.api.leads.get_detail';
   static const String leadCreate = '/api/method/tcb_portal_erp.api.leads.create';
   static const String leadUpdate = '/api/method/tcb_portal_erp.api.leads.update';
+  // Post-2026-06-29 migration: leads convert to ERPNext Customer (unlocking
+  // Quotation → Sales Order → Sales Invoice). The endpoint name kept as
+  // convert_to_customer; convert_to_deal is a backwards-compat shim.
   static const String leadConvert =
-      '/api/method/tcb_portal_erp.api.leads.convert_to_deal';
+      '/api/method/tcb_portal_erp.api.leads.convert_to_customer';
 
   // CRM Deals
   static const String dealsContext =

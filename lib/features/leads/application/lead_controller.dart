@@ -32,13 +32,18 @@ class LeadsController extends AsyncNotifier<LeadsContext> {
     await reload();
   }
 
-  /// Returns the new Deal's name on success.
-  Future<String> convertToDeal(String name) async {
-    final deal = await ref.read(leadRepositoryProvider).convertToDeal(name);
+  /// Convert this Lead to an ERPNext Customer (post-2026-06-29 migration).
+  /// Returns the new Customer's name on success.
+  Future<String> convertToCustomer(String name) async {
+    final customer =
+        await ref.read(leadRepositoryProvider).convertToCustomer(name);
     ref.invalidate(leadDetailProvider(name));
     await reload();
-    return deal;
+    return customer;
   }
+
+  /// Backwards-compat alias — kept so older callers keep compiling.
+  Future<String> convertToDeal(String name) => convertToCustomer(name);
 }
 
 /// Detail for a single lead, fetched on demand by name.

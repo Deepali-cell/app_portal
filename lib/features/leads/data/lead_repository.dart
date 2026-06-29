@@ -45,14 +45,21 @@ class LeadRepository {
     }
   }
 
-  Future<String> convertToDeal(String name) async {
+  /// Convert this lead to an ERPNext Customer (post-2026-06-29 migration).
+  /// Unlocks the regular ERP flow: Customer → Quotation → Sales Order →
+  /// Sales Invoice. Returns the new Customer's name.
+  Future<String> convertToCustomer(String name) async {
     try {
       final resp = await _dio.post(ApiPaths.leadConvert, data: {'name': name});
-      return (resp.data['message']['deal'] ?? '') as String;
+      final m = resp.data['message'] as Map?;
+      return (m?['customer'] ?? m?['deal'] ?? '') as String;
     } on DioException catch (e) {
       throw _err(e);
     }
   }
+
+  /// Backwards-compat alias — older code paths still call convertToDeal.
+  Future<String> convertToDeal(String name) => convertToCustomer(name);
 
   ApiException _err(DioException e) =>
       e.error is ApiException ? e.error as ApiException : ApiException.fromDio(e);

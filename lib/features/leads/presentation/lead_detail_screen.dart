@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../shared/widgets/followup_gap_badge.dart';
 import '../../call_outcome/presentation/call_outcome_sheet.dart';
-import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../../shared/widgets/brand_button.dart';
@@ -106,26 +104,33 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen>
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Convert to deal?'),
+        title: const Text('Convert to Customer?'),
         content: const Text(
-            'A new CRM Deal will be created from this lead. The lead will be marked converted.'),
+            "An ERPNext Customer will be created from this lead. After conversion "
+            "the regular sales flow opens up: Customer → Quotation → Sales Order "
+            "→ Sales Invoice. The lead will be marked 'Converted'."),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Convert')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Convert')),
         ],
       ),
     );
     if (ok != true) return;
     setState(() => _converting = true);
     try {
-      final deal = await ref
+      final customer = await ref
           .read(leadsControllerProvider.notifier)
-          .convertToDeal(widget.name);
+          .convertToCustomer(widget.name);
       if (!mounted) return;
-      _snack('Created $deal');
-      if (deal.isNotEmpty) {
-        context.pushReplacement(Routes.dealDetail, extra: deal);
-      }
+      _snack(customer.isNotEmpty
+          ? 'Created customer: $customer'
+          : 'Lead converted');
+      // Keep the user on the lead screen; the status now shows Converted
+      // and the linked Customer is available in ERPNext desk for quotations.
     } on ApiException catch (e) {
       _snack(e.message);
     } finally {
@@ -170,7 +175,7 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen>
           ],
           if (onDetailsTab && lead != null && !_editing && !lead.converted)
             IconButton(
-              tooltip: 'Convert to deal',
+              tooltip: 'Convert to Customer',
               icon: _converting
                   ? const SizedBox(width: 18, height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2))
@@ -225,7 +230,7 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen>
               padding: const EdgeInsets.fromLTRB(AppDimens.lg, AppDimens.sm,
                   AppDimens.lg, AppDimens.lg),
               child: BrandButton(
-                label: 'Convert to deal',
+                label: 'Convert to Customer',
                 icon: Icons.swap_horiz,
                 loading: _converting,
                 onPressed: _convert,
