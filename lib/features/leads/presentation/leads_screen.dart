@@ -477,6 +477,11 @@ class _NewLeadSheetState extends ConsumerState<_NewLeadSheet> {
       setState(() => _error = 'First name is required.');
       return;
     }
+    if (_mobile.text.trim().isEmpty) {
+      setState(() => _error =
+          'Mobile number is required — every lead must be reachable.');
+      return;
+    }
     setState(() {
       _submitting = true;
       _error = null;
@@ -518,7 +523,7 @@ class _NewLeadSheetState extends ConsumerState<_NewLeadSheet> {
                   child: TextField(
                       controller: _first,
                       decoration:
-                          const InputDecoration(labelText: 'First name'))),
+                          const InputDecoration(labelText: 'First name *'))),
               const SizedBox(width: AppDimens.md),
               Expanded(
                   child: TextField(
@@ -540,7 +545,7 @@ class _NewLeadSheetState extends ConsumerState<_NewLeadSheet> {
             TextField(
                 controller: _mobile,
                 keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: 'Mobile')),
+                decoration: const InputDecoration(labelText: 'Mobile *')),
             const SizedBox(height: AppDimens.lg),
             DropdownButtonFormField<String>(
               initialValue: _status,

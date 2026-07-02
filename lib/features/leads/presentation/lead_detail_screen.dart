@@ -83,13 +83,19 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen>
 
   Future<void> _save() async {
     setState(() => _saving = true);
+    // Send the field value as the user typed it, INCLUDING empty strings.
+    // Previously we mapped empty to null, but the backend patch endpoint
+    // treats `None` as "no change to this field" — so clearing mobile/phone
+    // saved 200 but silently kept the old value (user saw 'Saved' then
+    // reopen restored the original). Empty string = "clear this field".
     final fields = <String, dynamic>{
-      for (final e in _ctrls.entries)
-        e.key: e.value.text.trim().isEmpty ? null : e.value.text.trim(),
+      for (final e in _ctrls.entries) e.key: e.value.text.trim(),
       if (_status != null) 'status': _status,
     };
+    // annual_revenue is numeric — empty means "clear", non-empty parses.
+    final revText = (fields['annual_revenue'] as String?)?.trim() ?? '';
     fields['annual_revenue'] =
-        double.tryParse((fields['annual_revenue'] ?? '').toString());
+        revText.isEmpty ? 0 : (double.tryParse(revText) ?? 0);
     try {
       await ref.read(leadsControllerProvider.notifier).save(widget.name, fields);
       if (mounted) setState(() => _editing = false);
