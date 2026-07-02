@@ -65,6 +65,21 @@ final leadsViewPrefsProvider =
     NotifierProvider<LeadsViewPrefsController, LeadsViewPrefs>(
         LeadsViewPrefsController.new);
 
+/// Pending status pre-filter — set by the dashboard when the user taps a
+/// bucket (`"New"`, `"Contacted"`, `"Junk"`, etc.), then read + cleared by
+/// LeadsScreen on its first build so the list opens filtered to that
+/// bucket. Null means "no filter, show all".
+class LeadStatusFilterController extends Notifier<String?> {
+  @override
+  String? build() => null;
+  void set(String? status) => state = status;
+  void clear() => state = null;
+}
+
+final pendingLeadStatusFilterProvider =
+    NotifierProvider<LeadStatusFilterController, String?>(
+        LeadStatusFilterController.new);
+
 class LeadsViewPrefsController extends Notifier<LeadsViewPrefs> {
   @override
   LeadsViewPrefs build() {

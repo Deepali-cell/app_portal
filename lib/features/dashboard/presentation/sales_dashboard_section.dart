@@ -7,6 +7,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
+import '../../leads/application/leads_view_prefs.dart';
 import '../data/dashboard_repository.dart';
 import '../domain/models.dart';
 
@@ -87,7 +88,15 @@ class _DashboardBody extends ConsumerWidget {
               buckets: snapshot.leadStatuses
                   .where((s) => s.count > 0 || s.status.toLowerCase() == 'new')
                   .toList(),
-              onTap: (s) => context.push(Routes.leads)),
+              onTap: (s) {
+                // Drill-in — set the pending status filter, then push
+                // Leads. LeadsScreen reads + clears this on first build
+                // so the list opens pre-filtered to the bucket's status.
+                ref
+                    .read(pendingLeadStatusFilterProvider.notifier)
+                    .set(s.status);
+                context.push(Routes.leads);
+              }),
           const SizedBox(height: AppDimens.lg),
         ],
         if (snapshot.canDeal && snapshot.dealStatuses.isNotEmpty) ...[

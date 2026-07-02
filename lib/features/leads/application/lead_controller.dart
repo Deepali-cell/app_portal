@@ -28,7 +28,12 @@ class LeadsController extends AsyncNotifier<LeadsContext> {
 
   Future<void> save(String name, Map<String, dynamic> fields) async {
     await ref.read(leadRepositoryProvider).update(name, fields);
+    // Invalidate + await the refetch synchronously so the caller only
+    // returns after the fresh detail is in the provider. Otherwise the
+    // detail screen's next _prime() can run against the STALE cached
+    // value — that was the "save shows once, reopen reverts" bug.
     ref.invalidate(leadDetailProvider(name));
+    await ref.read(leadDetailProvider(name).future);
     await reload();
   }
 
@@ -46,7 +51,12 @@ class LeadsController extends AsyncNotifier<LeadsContext> {
   Future<String> convertToDeal(String name) => convertToCustomer(name);
 }
 
-/// Detail for a single lead, fetched on demand by name.
-final leadDetailProvider = FutureProvider.family<Lead, String>(
+/// Detail for a single lead, fetched on demand by name. `.autoDispose` so
+/// the cached value is thrown away when the last listener leaves the
+/// screen — re-opening the same lead always re-fetches from the backend.
+/// Without autoDispose the cache retained the pre-edit value even after
+/// invalidate(), which surfaced as "save shows saved once but reopens
+/// to the old value".
+final leadDetailProvider = FutureProvider.autoDispose.family<Lead, String>(
   (ref, name) => ref.read(leadRepositoryProvider).getDetail(name),
 );

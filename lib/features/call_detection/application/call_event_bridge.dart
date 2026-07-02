@@ -260,10 +260,14 @@ class CallEventBridge {
   /// number to a Lead/Deal by last-7-digit suffix.
   Future<void> _onCallLogReady(Map<String, dynamic> args) async {
     final number = (args['number'] ?? '').toString();
+    final contactName = (args['contact_name'] ?? '').toString();
     final direction = (args['direction'] ?? 'outgoing').toString();
     final status = (args['status'] ?? 'Completed').toString();
     final durationSec = (args['duration_sec'] as num?)?.toInt() ?? 0;
-    if (number.isEmpty) return; // Without a number we can't match anything.
+    // We now fire even when number is empty — the backend uses
+    // contact_name for a name-based Lead lookup so the row still lands
+    // with a proper reference. Only bail if BOTH are missing.
+    if (number.isEmpty && contactName.isEmpty) return;
 
     try {
       final dio = _ref.read(dioProvider);
@@ -273,6 +277,7 @@ class CallEventBridge {
         ApiPaths.logCallAttempt,
         data: {
           'phone_number': number,
+          'contact_name': contactName,
           'direction': dirCap,
           'status': status,
           'duration_seconds': durationSec,

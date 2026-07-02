@@ -472,11 +472,17 @@ class _QuickContact extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final actions = <_Quick>[];
-    if (lead.mobileNo != null && lead.mobileNo!.isNotEmpty) {
-      actions.add(_Quick(Icons.phone, 'Call', () => _launch(Uri(scheme: 'tel', path: lead.mobileNo!), context)));
-    }
-    if (lead.phone != null && lead.phone!.isNotEmpty && lead.phone != lead.mobileNo) {
-      actions.add(_Quick(Icons.call_outlined, 'Phone', () => _launch(Uri(scheme: 'tel', path: lead.phone!), context)));
+    // Single Call button — dials mobile if present, else the office phone.
+    // The two used to render as separate quick actions ("Call" + "Phone"),
+    // but that made the row look duplicated and users kept mis-tapping.
+    // The secondary number is still visible in the CONTACT section for
+    // long-press copy.
+    final primaryDialable = (lead.mobileNo?.isNotEmpty == true)
+        ? lead.mobileNo!
+        : (lead.phone?.isNotEmpty == true ? lead.phone! : null);
+    if (primaryDialable != null) {
+      actions.add(_Quick(Icons.phone, 'Call',
+          () => _launch(Uri(scheme: 'tel', path: primaryDialable), context)));
     }
     if (lead.email != null && lead.email!.isNotEmpty) {
       actions.add(_Quick(Icons.mail_outline, 'Email', () => _launch(Uri(scheme: 'mailto', path: lead.email!), context)));

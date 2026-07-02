@@ -102,68 +102,136 @@ class CallDetectionService : Service() {
         }
     }
 
+    // Captured contact name from CallLog / filename — used as a fallback
+    // identifier + for ContactsContract lookup when the number is null.
+    @Volatile
+    private var lastContactName: String? = null
+    private val idleStartedAt: Long
+        get() = System.currentTimeMillis()
+
     private fun handleIdle() {
         val initialNumber = lastNumber
+        val idleAt = System.currentTimeMillis()
         // Emit the end event immediately so the UI knows the call wrapped.
         CallDetectBridge.emitCallEnded(initialNumber)
         updateIdleNotification("Last call: ${initialNumber ?: "…"} — resolving…")
 
-        // CRITICAL: On Android 10+ the OS does NOT expose the dialed number
-        // for OUTGOING calls via PHONE_STATE extras (privacy restriction).
-        // The number lives only in CallLog, and CallLog's row for the just-
-        // ended call is typically written at call termination. So we MUST
-        // re-query CallLog AFTER IDLE — querying at OFFHOOK returns the
-        // previous call's row (or nothing) and gives us the wrong number.
-        //
-        // Sequence after IDLE:
-        //   t=0      emit end + update notif
-        //   t=1.5s   re-query CallLog for the freshly-written current row
-        //   t=3.5s   if still nothing, query again (some OEMs are slower)
-        //   t=7s     scan OEM recorder folder for the MP3, dispatch upload
-        //   t=20s    tear down the foreground service
-        mainHandler.postDelayed({ refreshFromCallLogPostIdle(attempt = 1) }, 1_500)
-        mainHandler.postDelayed({ refreshFromCallLogPostIdle(attempt = 2) }, 3_500)
+        // Multi-stage number resolution — CallLog write on Android 15 / Realme
+        // takes 500ms-4s, and PHONE_STATE strips the outgoing number entirely
+        // on Android 10+. We fan out lookups so at least one succeeds:
+        //   1s / 2s / 4s / 6s / 8s   → poll CallLog by DATE ≥ idle-start (only
+        //                              rows from THIS call, not any previous)
+        //   post-poll                → resolve contact name from CallLog
+        //                              CACHED_NAME, then look up the phone
+        //                              number via ContactsContract if
+        //                              CallLog.NUMBER is still blank/null
+        //   10s                      → emit CALL_LOG event with best-known
+        //                              (number, contactName) and scan for MP3
+        for (delay in listOf(1_000L, 2_000L, 4_000L, 6_000L, 8_000L)) {
+            mainHandler.postDelayed({ refreshFromCallLogPostIdle(idleAt) }, delay)
+        }
         mainHandler.postDelayed({
+            // If still no number, try ContactsContract with the contact name
+            // (Realme OEM writes filename like "Home-YYMMDDHHMM..." — the
+            // parser gives us "Home" as contactNameHint).
+            if (lastNumber.isNullOrBlank() && !lastContactName.isNullOrBlank()) {
+                val fromContacts = resolveNumberFromContacts(lastContactName!!)
+                if (!fromContacts.isNullOrBlank()) {
+                    lastNumber = fromContacts
+                    Log.d(TAG, "resolved via ContactsContract: $lastContactName → $fromContacts")
+                }
+            }
             val numberAtCallEnd = lastNumber ?: initialNumber
-            // Also emit the CALL_LOG event so Flutter can persist a CRM
-            // Call Log row even when no recording is found (e.g. call
-            // didn't connect, OEM doesn't write a recording, etc.).
             val (status, dur) = readLastCallStatusAndDuration()
+            // Fire CALL_LOG event even if number is null — Flutter side will
+            // fall back to contactName so the CRM Call Log row still exists
+            // (with 'to' = "Home" or whoever) rather than being lost entirely.
             CallDetectBridge.emitCallLogReady(
                 number = numberAtCallEnd,
                 direction = lastDirection,
                 status = status,
                 durationSec = dur,
+                contactName = lastContactName,
             )
             scanAndDispatch(numberAtCallEnd, retried = false)
-        }, 7_000)
-        mainHandler.postDelayed({ stopSelf() }, 20_000)
+        }, 10_000)
+        mainHandler.postDelayed({ stopSelf() }, 25_000)
+        // Reset direction + contact so the next call starts fresh; leave
+        // lastNumber alone so scanAndDispatch can still read it.
         lastNumber = null
     }
 
     /**
-     * Re-read the most-recent CallLog row right after IDLE fires. Mutates
-     * [lastNumber] in-place. Called twice on a delayed timer because Android
-     * + OEM stack flush at different speeds.
+     * Look up a saved contact's phone number by their display name. Uses
+     * ContactsContract — requires READ_CONTACTS. Returns the first phone
+     * associated with the name, or null if not found / no permission.
+     * This is the "hail Mary" path for OEM recorders that bake only the
+     * contact name into the filename (Realme, Oppo).
      */
-    private fun refreshFromCallLogPostIdle(attempt: Int) {
+    private fun resolveNumberFromContacts(displayName: String): String? {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CONTACTS)
+            != PackageManager.PERMISSION_GRANTED) return null
+        var cursor: Cursor? = null
+        try {
+            cursor = contentResolver.query(
+                android.provider.ContactsContract.CommonDataKinds.Phone.CONTENT_URI,
+                arrayOf(android.provider.ContactsContract.CommonDataKinds.Phone.NUMBER),
+                "${android.provider.ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME} = ?",
+                arrayOf(displayName),
+                null,
+            )
+            if (cursor != null && cursor.moveToFirst()) {
+                return cursor.getString(0)?.takeIf { it.isNotBlank() }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "ContactsContract lookup failed for '$displayName': ${e.message}", e)
+        } finally {
+            cursor?.close()
+        }
+        return null
+    }
+
+    /**
+     * Read the CallLog row for the just-ended call. Called five times on
+     * an escalating delay because OEMs flush at different speeds — Realme
+     * Android 15 is particularly slow, sometimes 3-4 seconds after IDLE.
+     *
+     * Guards:
+     *   * Only accepts rows with `date >= idleAt - 60s` so we can't pick
+     *     up a stale previous-call row (the LIMIT 1 approach was fragile).
+     *   * Also captures CACHED_NAME (contact name) so we can fall back to
+     *     ContactsContract if NUMBER is somehow blank.
+     */
+    private fun refreshFromCallLogPostIdle(idleAt: Long) {
+        // Already resolved — nothing to do.
+        if (!lastNumber.isNullOrBlank()) return
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_CALL_LOG)
             != PackageManager.PERMISSION_GRANTED) return
+        val minDate = idleAt - 60_000L
         var cursor: Cursor? = null
         try {
             cursor = contentResolver.query(
                 CallLog.Calls.CONTENT_URI,
-                arrayOf(CallLog.Calls.NUMBER, CallLog.Calls.TYPE, CallLog.Calls.DATE,
-                    CallLog.Calls.DURATION),
-                null, null,
+                arrayOf(
+                    CallLog.Calls.NUMBER,
+                    CallLog.Calls.CACHED_NAME,
+                    CallLog.Calls.TYPE,
+                    CallLog.Calls.DATE,
+                    CallLog.Calls.DURATION,
+                ),
+                "${CallLog.Calls.DATE} >= ?",
+                arrayOf(minDate.toString()),
                 "${CallLog.Calls.DATE} DESC LIMIT 1",
             )
             if (cursor != null && cursor.moveToFirst()) {
                 val num = cursor.getString(cursor.getColumnIndexOrThrow(CallLog.Calls.NUMBER))
+                val cachedName = cursor.getString(cursor.getColumnIndexOrThrow(CallLog.Calls.CACHED_NAME))
                 val type = cursor.getInt(cursor.getColumnIndexOrThrow(CallLog.Calls.TYPE))
+                if (!cachedName.isNullOrBlank()) {
+                    lastContactName = cachedName
+                }
                 if (!num.isNullOrBlank()) {
                     lastNumber = num
-                    // Refine direction if we didn't already know it.
                     val dir = when (type) {
                         CallLog.Calls.INCOMING_TYPE -> "incoming"
                         CallLog.Calls.OUTGOING_TYPE -> "outgoing"
@@ -172,7 +240,7 @@ class CallDetectionService : Service() {
                         else -> lastDirection
                     }
                     lastDirection = dir
-                    Log.d(TAG, "post-idle CallLog (attempt=$attempt) → $num [$dir]")
+                    Log.d(TAG, "post-idle CallLog → num=$num cachedName=$cachedName [$dir]")
                 }
             }
         } catch (e: Exception) {
@@ -237,11 +305,19 @@ class CallDetectionService : Service() {
         }
         Log.d("TcbCallSvc", "Recording found: ${hit.path}  parsedContact=${hit.parsedContact}  parsedNumber=${hit.parsedNumber}")
         updateIdleNotification("Last call recording found — uploading…")
-        // Fallback chain for number: live CallLog value → filename-parsed
-        // number. If both empty, the parsed contact name (e.g. "Anuj Sharma")
-        // still helps the backend lookup via CRM Lead.lead_name LIKE.
-        val effectiveNumber = numberAtCallEnd.takeUnless { it.isNullOrBlank() }
-            ?: hit.parsedNumber
+        // Fallback chain for number:
+        //   1. numberAtCallEnd (from CallLog re-query in handleIdle)
+        //   2. hit.parsedNumber (filename bakes number on some OEMs)
+        //   3. ContactsContract lookup on hit.parsedContact (Realme/Oppo case)
+        var effectiveNumber = numberAtCallEnd.takeUnless { it.isNullOrBlank() }
+            ?: hit.parsedNumber?.takeUnless { it.isBlank() }
+        val contactHint = hit.parsedContact ?: lastContactName
+        if (effectiveNumber.isNullOrBlank() && !contactHint.isNullOrBlank()) {
+            effectiveNumber = resolveNumberFromContacts(contactHint)
+            if (!effectiveNumber.isNullOrBlank()) {
+                Log.d("TcbCallSvc", "recording number resolved from contacts: $contactHint → $effectiveNumber")
+            }
+        }
         CallDetectBridge.emitRecordingFound(
             number = effectiveNumber,
             path = hit.path,
@@ -249,7 +325,7 @@ class CallDetectionService : Service() {
             folder = hit.folder,
             mtimeMs = hit.mtimeMs,
             direction = lastDirection,
-            contactNameHint = hit.parsedContact,
+            contactNameHint = contactHint,
         )
         // Reset direction for the next call.
         lastDirection = "outgoing"

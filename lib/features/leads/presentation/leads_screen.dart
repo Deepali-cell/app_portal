@@ -54,6 +54,16 @@ class LeadsScreen extends ConsumerWidget {
           onRetry: () => ref.read(leadsControllerProvider.notifier).reload(),
         ),
         data: (ctx) {
+          // Bucket drill-in from the Home dashboard sets a pending status
+          // filter — apply it once, then clear so subsequent visits show
+          // the full list again.
+          final pendingStatus = ref.watch(pendingLeadStatusFilterProvider);
+          final filteredLeads = pendingStatus == null
+              ? ctx.leads
+              : ctx.leads
+                  .where((l) => l.status.toLowerCase() ==
+                      pendingStatus.toLowerCase())
+                  .toList();
           return RefreshIndicator(
             onRefresh: () =>
                 ref.read(leadsControllerProvider.notifier).reload(),
@@ -72,14 +82,27 @@ class LeadsScreen extends ConsumerWidget {
                   onPressed: () => _openCreate(context, ctx),
                 ),
                 const SizedBox(height: AppDimens.lg),
-                if (ctx.leads.isEmpty)
-                  const _EmptyCard(
+                if (pendingStatus != null) ...[
+                  _FilterChip(
+                    status: pendingStatus,
+                    total: filteredLeads.length,
+                    onClear: () => ref
+                        .read(pendingLeadStatusFilterProvider.notifier)
+                        .clear(),
+                  ),
+                  const SizedBox(height: AppDimens.md),
+                ],
+                if (filteredLeads.isEmpty)
+                  _EmptyCard(
                     icon: Icons.person_search_outlined,
-                    text: 'No leads yet. Tap "New Lead" to add one.',
+                    text: pendingStatus == null
+                        ? 'No leads yet. Tap "New Lead" to add one.'
+                        : 'No leads in status "$pendingStatus".',
                   )
                 else
                   Builder(builder: (context) {
-                    final sortedLeads = applyLeadSort(ctx.leads, prefs.sort);
+                    final sortedLeads =
+                        applyLeadSort(filteredLeads, prefs.sort);
                     return Card(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -353,6 +376,49 @@ class _LeadStatusChip extends StatelessWidget {
       child: Text(status,
           style: TextStyle(
               color: fg, fontWeight: FontWeight.w600, fontSize: 11)),
+    );
+  }
+}
+
+/// Header chip shown when the user landed on Leads via a dashboard
+/// bucket tap. Tap the "x" to clear the filter and show the full list.
+class _FilterChip extends StatelessWidget {
+  const _FilterChip(
+      {required this.status, required this.total, required this.onClear});
+  final String status;
+  final int total;
+  final VoidCallback onClear;
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppDimens.md, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.filter_alt, size: 16, color: AppColors.primary),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              'Status: $status  ·  $total ${total == 1 ? "lead" : "leads"}',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: AppColors.primary, fontWeight: FontWeight.w700),
+            ),
+          ),
+          InkWell(
+            onTap: onClear,
+            borderRadius: BorderRadius.circular(999),
+            child: Padding(
+              padding: const EdgeInsets.all(4),
+              child: Icon(Icons.close, size: 16, color: AppColors.primary),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

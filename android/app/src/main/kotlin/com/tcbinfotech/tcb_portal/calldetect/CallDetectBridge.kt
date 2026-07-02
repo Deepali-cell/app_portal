@@ -56,11 +56,13 @@ object CallDetectBridge {
         direction: String,
         status: String,
         durationSec: Int,
+        contactName: String? = null,
     ) {
         post(
             "onCallLogReady",
             mapOf(
                 "number" to (number ?: ""),
+                "contact_name" to (contactName ?: ""),
                 "direction" to direction,
                 "status" to status,
                 "duration_sec" to durationSec,
