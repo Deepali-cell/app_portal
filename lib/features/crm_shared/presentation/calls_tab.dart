@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -68,7 +70,10 @@ class _CallsTabBody extends ConsumerWidget {
             child: Text(e is ApiException ? e.message : 'Could not load calls.')),
         data: (calls) {
           return RefreshIndicator(
-            onRefresh: () async => ref.invalidate(callsProvider(crmRef)),
+            onRefresh: () async {
+              ref.invalidate(callsProvider(crmRef));
+              ref.invalidate(_recordingsProvider(crmRef));
+            },
             child: ListView(
               padding: const EdgeInsets.fromLTRB(
                   AppDimens.screenPadding,
@@ -394,17 +399,54 @@ final _recordingsProvider = FutureProvider.autoDispose
   );
 });
 
-class _RecordingsSection extends ConsumerWidget {
+/// Non-terminal recording states: while ANY row on this Lead sits in one
+/// of these, the section auto-polls the backend every 5s so the user sees
+/// the summary + AI-suggested next status card the moment the worker
+/// finishes — without pull-to-refresh.
+const _inProgressStatuses = {'Uploaded', 'Transcribing', 'Summarizing'};
+
+class _RecordingsSection extends ConsumerStatefulWidget {
   const _RecordingsSection({required this.crmRef});
   final CrmRef crmRef;
+  @override
+  ConsumerState<_RecordingsSection> createState() =>
+      _RecordingsSectionState();
+}
+
+class _RecordingsSectionState extends ConsumerState<_RecordingsSection> {
+  Timer? _poll;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(_recordingsProvider(crmRef));
+  void dispose() {
+    _poll?.cancel();
+    super.dispose();
+  }
+
+  /// Kick off / stop polling based on the latest snapshot. Called from
+  /// build() after Riverpod hands us fresh data, so we always look at
+  /// what the user is actually seeing.
+  void _syncPoll(List<CallRecording> recs) {
+    final anyInProgress =
+        recs.any((r) => _inProgressStatuses.contains(r.status));
+    if (anyInProgress) {
+      _poll ??= Timer.periodic(const Duration(seconds: 5), (_) {
+        if (!mounted) return;
+        ref.invalidate(_recordingsProvider(widget.crmRef));
+      });
+    } else {
+      _poll?.cancel();
+      _poll = null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final async = ref.watch(_recordingsProvider(widget.crmRef));
     return async.when(
       loading: () => const SizedBox.shrink(),
       error: (_, _) => const SizedBox.shrink(),
       data: (recs) {
+        _syncPoll(recs);
         if (recs.isEmpty) return const SizedBox.shrink();
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -422,7 +464,7 @@ class _RecordingsSection extends ConsumerWidget {
               ]),
             ),
             for (final r in recs) ...[
-              _RecordingCard(rec: r, crmRef: crmRef),
+              _RecordingCard(rec: r, crmRef: widget.crmRef),
               const SizedBox(height: 8),
             ],
           ],
@@ -494,6 +536,23 @@ class _RecordingCard extends ConsumerWidget {
                           style: Theme.of(context).textTheme.bodySmall)),
                 ]),
               ),
+          ],
+          if (rec.isReady) ...[
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  minimumSize: const Size(0, 32),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  foregroundColor: AppColors.primary,
+                ),
+                icon: const Icon(Icons.article_outlined, size: 16),
+                label: const Text('View transcript'),
+                onPressed: () => _openTranscript(context, ref),
+              ),
+            ),
           ],
           if (rec.suggestedStatus != null && rec.suggestedStatus!.isNotEmpty) ...[
             const SizedBox(height: 10),
@@ -573,6 +632,19 @@ class _RecordingCard extends ConsumerWidget {
     return m > 0 ? '${m}m ${s.toString().padLeft(2, '0')}s' : '${s}s';
   }
 
+  Future<void> _openTranscript(BuildContext context, WidgetRef ref) async {
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppDimens.radiusXl)),
+      ),
+      builder: (_) => _TranscriptSheet(recordingName: rec.name),
+    );
+  }
+
   Future<void> _apply(BuildContext context, WidgetRef ref) async {
     try {
       final repo = RecordingRepository(ref.read(dioProvider));
@@ -594,5 +666,130 @@ class _RecordingCard extends ConsumerWidget {
         ));
       }
     }
+  }
+}
+
+/// Modal bottom sheet showing the full transcript for one recording.
+/// The list endpoint (`list_recordings_for`) trims the transcript to keep
+/// the payload small, so we lazy-fetch the full doc here via `get(name)`.
+class _TranscriptSheet extends ConsumerWidget {
+  const _TranscriptSheet({required this.recordingName});
+  final String recordingName;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final future =
+        RecordingRepository(ref.watch(dioProvider)).get(recordingName);
+    return DraggableScrollableSheet(
+      initialChildSize: 0.75,
+      minChildSize: 0.4,
+      maxChildSize: 0.95,
+      expand: false,
+      builder: (ctx, scroll) => Padding(
+        padding: const EdgeInsets.fromLTRB(
+            AppDimens.xl, AppDimens.md, AppDimens.xl, AppDimens.md),
+        child: FutureBuilder<CallRecording>(
+          future: future,
+          builder: (ctx, snap) {
+            if (!snap.hasData && !snap.hasError) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snap.hasError) {
+              return Center(
+                child: Text(
+                  snap.error is ApiException
+                      ? (snap.error as ApiException).message
+                      : "Couldn't load transcript.",
+                  style: TextStyle(color: AppColors.danger),
+                ),
+              );
+            }
+            final rec = snap.data!;
+            final transcript = (rec.transcript ?? '').trim();
+            return ListView(
+              controller: scroll,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.line,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: AppDimens.md),
+                Row(children: [
+                  Icon(Icons.article_outlined,
+                      color: AppColors.primary, size: 20),
+                  const SizedBox(width: 8),
+                  Text('Call transcript',
+                      style:
+                          Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w700)),
+                ]),
+                if (rec.aiProcessedAt != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Processed ${_ts.format(rec.aiProcessedAt!.toLocal())}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+                const SizedBox(height: AppDimens.lg),
+                if (rec.summary != null && rec.summary!.isNotEmpty) ...[
+                  Text('Summary',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: AppColors.onSurfaceVariant,
+                          fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 6),
+                  Text(rec.summary!,
+                      style: Theme.of(context).textTheme.bodyMedium),
+                  const SizedBox(height: AppDimens.lg),
+                ],
+                Row(children: [
+                  Text('Transcript',
+                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                          color: AppColors.onSurfaceVariant,
+                          fontWeight: FontWeight.w700)),
+                  const Spacer(),
+                  if (transcript.isNotEmpty)
+                    TextButton.icon(
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
+                        minimumSize: const Size(0, 32),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      icon: const Icon(Icons.copy_outlined, size: 14),
+                      label: const Text('Copy'),
+                      onPressed: () async {
+                        await Clipboard.setData(
+                            ClipboardData(text: transcript));
+                        if (ctx.mounted) {
+                          ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+                              content: Text('Transcript copied'),
+                              behavior: SnackBarBehavior.floating));
+                        }
+                      },
+                    ),
+                ]),
+                const SizedBox(height: 6),
+                if (transcript.isEmpty)
+                  Text('No transcript captured for this recording.',
+                      style: Theme.of(context)
+                          .textTheme
+                          .bodySmall
+                          ?.copyWith(fontStyle: FontStyle.italic))
+                else
+                  SelectableText(transcript,
+                      style: Theme.of(context).textTheme.bodyMedium),
+                const SizedBox(height: AppDimens.xl),
+              ],
+            );
+          },
+        ),
+      ),
+    );
   }
 }
