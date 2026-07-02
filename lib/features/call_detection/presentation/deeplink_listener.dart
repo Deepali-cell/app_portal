@@ -38,6 +38,14 @@ class DeeplinkListener extends ConsumerStatefulWidget {
 class _DeeplinkListenerState extends ConsumerState<DeeplinkListener> {
   bool _coldChecked = false;
   Timer? _retryTimer;
+  // Re-entry guard: while true, listener rebuilds that fire on the same
+  // deeplink value are ignored. Cleared once we push (or bail out) so a
+  // later, DIFFERENT deeplink can still route.
+  bool _handling = false;
+  // The deeplink currently being handled — used to dedupe when the same
+  // string is re-emitted (rare, but happens if native re-posts a cached
+  // deeplink on warm-resume before we've cleared the provider).
+  String? _inflight;
 
   @override
   void initState() {
@@ -65,6 +73,25 @@ class _DeeplinkListenerState extends ConsumerState<DeeplinkListener> {
   /// re-routes it to splash/login, silently losing the navigation.
   Future<void> _handle(String deeplink) async {
     _log('handle deeplink=$deeplink');
+    // Re-entry guard. If a previous _handle for the SAME deeplink is
+    // still in flight (e.g. waiting on repo.get inside _openRecording),
+    // ignore this rebuild — otherwise we'd push the same route twice
+    // and Navigator throws '!keyReservation.contains(key)'.
+    if (_handling && _inflight == deeplink) {
+      _log('drop reentrant handle for same deeplink');
+      return;
+    }
+    _handling = true;
+    _inflight = deeplink;
+    try {
+      await _handleImpl(deeplink);
+    } finally {
+      _handling = false;
+      _inflight = null;
+    }
+  }
+
+  Future<void> _handleImpl(String deeplink) async {
     final idx = deeplink.indexOf(':');
     if (idx <= 0) {
       ref.read(pendingDeeplinkProvider.notifier).clear();
@@ -99,10 +126,10 @@ class _DeeplinkListenerState extends ConsumerState<DeeplinkListener> {
 
       switch (kind) {
         case 'lead':
-          ctx.push(Routes.leadDetail, extra: id);
+          _safePush(ctx, Routes.leadDetail, id);
           break;
         case 'deal':
-          ctx.push(Routes.dealDetail, extra: id);
+          _safePush(ctx, Routes.dealDetail, id);
           break;
         case 'recording':
           await _openRecording(ctx, id);
@@ -129,6 +156,27 @@ class _DeeplinkListenerState extends ConsumerState<DeeplinkListener> {
     });
   }
 
+  /// Push [path] with [extra] IF the router isn't already sitting on that
+  /// exact route + extra combination. Fixes the Navigator assertion
+  /// '!keyReservation.contains(key)' that fired when a notification for
+  /// the currently-open lead re-triggered a duplicate push.
+  ///
+  /// GoRouter doesn't expose a single "current extra" API, so we check
+  /// the current path first, then trust GoRouter's own deduping for
+  /// deep-linked entries by using go() when the path already matches
+  /// (go replaces the stack top, side-stepping the double-key crash).
+  void _safePush(BuildContext ctx, String path, String extra) {
+    final router = GoRouter.of(ctx);
+    final loc = router.routerDelegate.currentConfiguration.uri.path;
+    if (loc == path) {
+      // Already on this kind of screen — replace so the extra becomes
+      // the new value (user may be re-opening a different lead).
+      ctx.go(path, extra: extra);
+    } else {
+      ctx.push(path, extra: extra);
+    }
+  }
+
   Future<void> _openRecording(BuildContext ctx, String recordingName) async {
     try {
       final repo = RecordingRepository(ref.read(dioProvider));
@@ -145,9 +193,9 @@ class _DeeplinkListenerState extends ConsumerState<DeeplinkListener> {
       }
       if (!ctx.mounted) return;
       if (dt == 'Lead') {
-        ctx.push(Routes.leadDetail, extra: dn);
+        _safePush(ctx, Routes.leadDetail, dn);
       } else if (dt == 'CRM Deal') {
-        ctx.push(Routes.dealDetail, extra: dn);
+        _safePush(ctx, Routes.dealDetail, dn);
       }
     } catch (e) {
       if (ctx.mounted) {
