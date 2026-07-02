@@ -33,36 +33,46 @@ bool openNotificationTarget(
   final docName = item.documentName;
   if (docType == null || docName == null || docName.isEmpty) return false;
 
+  // Notifications sits on the ROOT navigator; the target detail routes
+  // (leadDetail, dealDetail, invoiceDetail, etc.) live inside
+  // StatefulShellBranch children. Using `context.push` from the root nav
+  // onto a shell-branch route causes GoRouter's page-key reservation to
+  // collide → Navigator asserts '!keyReservation.contains(key)' and the
+  // app red-screens. `context.go` navigates the router state cleanly
+  // (switches the shell to the right branch, opens the detail on top),
+  // so back-swipe lands on the branch's list — the correct UX anyway
+  // since the user came here through a notification, not through the
+  // list.
   switch (docType) {
     case 'Leave Application':
-      context.push(Routes.leaveDetail, extra: docName);
+      context.go(Routes.leaveDetail, extra: docName);
       return true;
     case 'Salary Slip':
-      context.push(Routes.payslipDetail, extra: docName);
+      context.go(Routes.payslipDetail, extra: docName);
       return true;
     case 'Sales Invoice':
-      context.push(
+      context.go(
         Routes.invoiceDetail,
         extra: InvoiceDetailArgs(name: docName, kind: InvoiceKind.sales),
       );
       return true;
     case 'Purchase Invoice':
-      context.push(
+      context.go(
         Routes.invoiceDetail,
         extra: InvoiceDetailArgs(name: docName, kind: InvoiceKind.purchase),
       );
       return true;
     case 'Lead':
-      context.push(Routes.leadDetail, extra: docName);
+      context.go(Routes.leadDetail, extra: docName);
       return true;
     case 'CRM Deal':
-      context.push(Routes.dealDetail, extra: docName);
+      context.go(Routes.dealDetail, extra: docName);
       return true;
     case 'Tcb Call Recording':
       _openRecordingLinked(context, ref, docName);
       return true;
     case 'Timesheet':
-      context.push(Routes.timesheetDetail, extra: docName);
+      context.go(Routes.timesheetDetail, extra: docName);
       return true;
     // DocTypes without a dedicated detail screen — land on the list.
     case 'Task':
@@ -103,11 +113,11 @@ Future<void> _openRecordingLinked(
     final dn = rec.referenceDocname;
     if (!context.mounted) return;
     if (dt == 'Lead' && (dn ?? '').isNotEmpty) {
-      context.push(Routes.leadDetail, extra: dn);
+      context.go(Routes.leadDetail, extra: dn);
       return;
     }
     if (dt == 'CRM Deal' && (dn ?? '').isNotEmpty) {
-      context.push(Routes.dealDetail, extra: dn);
+      context.go(Routes.dealDetail, extra: dn);
       return;
     }
     // Unlinked recording — friendly message so the tap isn't silent.

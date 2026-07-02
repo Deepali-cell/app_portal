@@ -52,6 +52,12 @@ class _UnlockScreenState extends ConsumerState<UnlockScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
+      // The native BiometricPrompt overlay covers the bottom portion of the
+      // screen. With Scaffold's default resizeToAvoidBottomInset=true, that
+      // overlay is treated like a soft-keyboard, shrinking the body and
+      // squishing our content into the bottom-left corner while the prompt
+      // is visible. Disabling the inset resize keeps our layout stable.
+      resizeToAvoidBottomInset: false,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(AppDimens.screenPadding),

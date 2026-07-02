@@ -12,6 +12,10 @@ class SplashScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.canvas,
+      // Prevent Scaffold from treating the biometric-prompt overlay as a
+      // soft keyboard (which would shrink the body and cluster content in
+      // the bottom-left while the prompt is up).
+      resizeToAvoidBottomInset: false,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
