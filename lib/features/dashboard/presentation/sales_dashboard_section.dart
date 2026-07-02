@@ -85,9 +85,16 @@ class _DashboardBody extends ConsumerWidget {
           ),
           const SizedBox(height: 6),
           _StatusGrid(
-              buckets: snapshot.leadStatuses
-                  .where((s) => s.count > 0 || s.status.toLowerCase() == 'new')
-                  .toList(),
+              // Always show the two "action target" buckets — New (fresh
+              // inbound) and Follow-up (rep-scheduled callback) — even
+              // when empty. Both are places reps drop leads into, so the
+              // card must exist for the drop target to be discoverable.
+              // Other buckets hide at count 0 to keep the grid short.
+              buckets: snapshot.leadStatuses.where((s) {
+                if (s.count > 0) return true;
+                final k = s.status.toLowerCase();
+                return k == 'new' || k == 'follow-up';
+              }).toList(),
               onTap: (s) {
                 // Drill-in — set the pending status filter, then push
                 // Leads. LeadsScreen reads + clears this on first build
