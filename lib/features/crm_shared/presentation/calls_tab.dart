@@ -12,6 +12,7 @@ import '../../../core/theme/app_dimens.dart';
 import '../../../core/providers.dart';
 import '../../../shared/widgets/brand_button.dart';
 import '../../call_detection/data/recording_repository.dart';
+import '../../leads/application/lead_controller.dart' show leadDetailProvider;
 import '../application/providers.dart';
 import '../domain/crm_ref.dart';
 import '../domain/models.dart';
@@ -554,50 +555,8 @@ class _RecordingCard extends ConsumerWidget {
               ),
             ),
           ],
-          if (rec.suggestedStatus != null && rec.suggestedStatus!.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: AppColors.primary.withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(AppDimens.radiusLg),
-                border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.30)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('AI suggests',
-                      style: TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.4)),
-                  const SizedBox(height: 4),
-                  Text('Status → ${rec.suggestedStatus}',
-                      style: TextStyle(
-                          color: AppColors.onSurface,
-                          fontWeight: FontWeight.w600)),
-                  if (rec.suggestedNextAction != null &&
-                      rec.suggestedNextAction!.isNotEmpty) ...[
-                    const SizedBox(height: 2),
-                    Text(rec.suggestedNextAction!,
-                        style: Theme.of(context).textTheme.bodySmall),
-                  ],
-                  const SizedBox(height: 8),
-                  if (crmRef.doctype == 'Lead')
-                    Align(
-                      alignment: Alignment.centerRight,
-                      child: FilledButton.tonalIcon(
-                        icon: const Icon(Icons.check, size: 16),
-                        label: Text('Apply ${rec.suggestedStatus}'),
-                        onPressed: () => _apply(context, ref),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ],
+          if (rec.suggestedStatus != null && rec.suggestedStatus!.isNotEmpty)
+            _AiSuggestsBox(rec: rec, crmRef: crmRef, onApply: () => _apply(context, ref)),
           if (rec.errorMessage != null && rec.errorMessage!.isNotEmpty) ...[
             const SizedBox(height: 8),
             Text(rec.errorMessage!,
@@ -650,6 +609,11 @@ class _RecordingCard extends ConsumerWidget {
       final repo = RecordingRepository(ref.read(dioProvider));
       await repo.applySuggestedStatus(rec.name);
       ref.invalidate(_recordingsProvider(crmRef));
+      // Also invalidate the parent lead so its status field + chip
+      // updates immediately (previously stayed stale until refresh).
+      if (crmRef.doctype == 'Lead') {
+        ref.invalidate(leadDetailProvider(crmRef.name));
+      }
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text('Lead status → ${rec.suggestedStatus}'),
@@ -788,6 +752,93 @@ class _TranscriptSheet extends ConsumerWidget {
               ],
             );
           },
+        ),
+      ),
+    );
+  }
+}
+
+/// AI-suggested-status card. Watches the parent Lead's current status
+/// (when this is on a Lead detail) so the "Apply X" button only appears
+/// when the lead ISN'T already at X. If the lead is already at the
+/// suggested status, the box shrinks to a check + "Already at X" line —
+/// this is what fired for the user tapping Apply New on a lead that was
+/// already New and being confused why the button stayed there.
+class _AiSuggestsBox extends ConsumerWidget {
+  const _AiSuggestsBox({
+    required this.rec,
+    required this.crmRef,
+    required this.onApply,
+  });
+  final CallRecording rec;
+  final CrmRef crmRef;
+  final VoidCallback onApply;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final suggested = rec.suggestedStatus!.trim();
+    // Read the parent Lead's current status when we're on a Lead detail.
+    // .valueOrNull so we degrade to "show Apply" while the lead is still
+    // loading — no flicker, no crash.
+    String? currentStatus;
+    if (crmRef.doctype == 'Lead') {
+      currentStatus =
+          ref.watch(leadDetailProvider(crmRef.name)).value?.status;
+    }
+    final alreadyApplied = currentStatus != null &&
+        currentStatus.toLowerCase() == suggested.toLowerCase();
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Container(
+        padding: const EdgeInsets.all(10),
+        decoration: BoxDecoration(
+          color: AppColors.primary.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(AppDimens.radiusLg),
+          border: Border.all(color: AppColors.primary.withValues(alpha: 0.30)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('AI suggests',
+                style: TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.4)),
+            const SizedBox(height: 4),
+            Text('Status → $suggested',
+                style: TextStyle(
+                    color: AppColors.onSurface,
+                    fontWeight: FontWeight.w600)),
+            if (rec.suggestedNextAction != null &&
+                rec.suggestedNextAction!.isNotEmpty) ...[
+              const SizedBox(height: 2),
+              Text(rec.suggestedNextAction!,
+                  style: Theme.of(context).textTheme.bodySmall),
+            ],
+            const SizedBox(height: 8),
+            if (crmRef.doctype == 'Lead')
+              Align(
+                alignment: Alignment.centerRight,
+                child: alreadyApplied
+                    ? Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Icons.check_circle_outline,
+                            size: 16, color: AppColors.success),
+                        const SizedBox(width: 6),
+                        Text('Already at $suggested',
+                            style: TextStyle(
+                                color: AppColors.success,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13)),
+                      ])
+                    : FilledButton.tonalIcon(
+                        icon: const Icon(Icons.check, size: 16),
+                        label: Text('Apply $suggested'),
+                        onPressed: onApply,
+                      ),
+              ),
+          ],
         ),
       ),
     );
