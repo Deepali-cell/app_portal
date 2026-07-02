@@ -54,13 +54,18 @@ class FollowupGapBadge extends StatelessWidget {
         children: [
           Icon(t.icon, size: dense ? 12 : 16, color: t.fg),
           const SizedBox(width: 4),
-          Text(
-            '${days}d since last contact',
-            style: TextStyle(
-              color: t.fg,
-              fontSize: dense ? 11 : 13,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.1,
+          Flexible(
+            child: Text(
+              '${days}d since last contact',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+              style: TextStyle(
+                color: t.fg,
+                fontSize: dense ? 11 : 13,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.1,
+              ),
             ),
           ),
         ],
