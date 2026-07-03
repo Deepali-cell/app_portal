@@ -758,12 +758,47 @@ class _TranscriptSheet extends ConsumerWidget {
   }
 }
 
-/// AI-suggested-status card. Watches the parent Lead's current status
-/// (when this is on a Lead detail) so the "Apply X" button only appears
-/// when the lead ISN'T already at X. If the lead is already at the
-/// suggested status, the box shrinks to a check + "Already at X" line —
-/// this is what fired for the user tapping Apply New on a lead that was
-/// already New and being confused why the button stayed there.
+/// Ordered SMB sales workflow. Position maps to how "advanced" a status
+/// is in the pipeline — used to decide whether a suggestion is still
+/// actionable ("Apply Nurture" on a Contacted lead) or the lead has
+/// already outrun it ("Apply New" on a Nurture lead — meaningless).
+///
+/// Terminal states (Junk / Unqualified / Converted) get very large
+/// positions so anything is considered "past" them. Unknown statuses
+/// return null → we skip the ordering check and default to Apply so a
+/// misconfigured tenant doesn't silently swallow the button.
+int? _statusOrderPosition(String status) {
+  const order = <String, int>{
+    'new': 0,
+    'contacted': 1,
+    'follow-up': 2,
+    'nurture': 3,
+    'responded': 4,
+    'discovery scheduled': 5,
+    'qualified': 6,
+    'hot': 7,
+    // Terminal — anything qualifies as "past" these once they're set.
+    'unqualified': 900,
+    'junk': 901,
+    'converted': 902,
+  };
+  return order[status.trim().toLowerCase()];
+}
+
+/// AI-suggested-status card — 4-state machine:
+///
+///   1. **Applied** — `rec.suggestionAppliedAt` is stamped. Shows
+///      "✓ Applied: {from} → {suggested}". Never re-offers Apply.
+///   2. **Already at target** — lead's current status equals suggested
+///      (not applied). "✓ Already at {suggested}".
+///   3. **Lead moved past** — lead's current position > suggested
+///      position in the workflow (not applied). "→ Lead moved past —
+///      currently {current}". No button — applying would rewind.
+///   4. **Actionable** — none of the above. Renders the Apply button.
+///
+/// State selection is order-dependent: 1 > 2 > 3 > 4. So if a lead was
+/// applied then later moved further, we still surface the audit trail
+/// (Applied: X → Y) rather than the current mismatch.
 class _AiSuggestsBox extends ConsumerWidget {
   const _AiSuggestsBox({
     required this.rec,
@@ -777,16 +812,43 @@ class _AiSuggestsBox extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final suggested = rec.suggestedStatus!.trim();
-    // Read the parent Lead's current status when we're on a Lead detail.
-    // .valueOrNull so we degrade to "show Apply" while the lead is still
-    // loading — no flicker, no crash.
     String? currentStatus;
     if (crmRef.doctype == 'Lead') {
       currentStatus =
           ref.watch(leadDetailProvider(crmRef.name)).value?.status;
     }
-    final alreadyApplied = currentStatus != null &&
-        currentStatus.toLowerCase() == suggested.toLowerCase();
+
+    // State selection.
+    final Widget trailing;
+    if (rec.suggestionAppliedAt != null) {
+      // State 1 — applied. Prefer the stamped from-status; fall back to
+      // "—" only if the stamp somehow missed (shouldn't happen post-fix).
+      final from =
+          (rec.suggestionAppliedFromStatus ?? '').trim().isNotEmpty
+              ? rec.suggestionAppliedFromStatus!
+              : '—';
+      trailing = _appliedRow(from: from, to: suggested);
+    } else if (currentStatus != null &&
+        currentStatus.toLowerCase() == suggested.toLowerCase()) {
+      // State 2 — already at target (independent of user action).
+      trailing = _alreadyAtRow(status: suggested);
+    } else if (crmRef.doctype == 'Lead' &&
+        _hasMovedPast(currentStatus, suggested)) {
+      // State 3 — lead progressed past the suggestion. Applying would
+      // rewind, which is never right for a sales pipeline.
+      trailing = _movedPastRow(currentStatus: currentStatus!);
+    } else if (crmRef.doctype == 'Lead') {
+      // State 4 — actionable.
+      trailing = FilledButton.tonalIcon(
+        icon: const Icon(Icons.check, size: 16),
+        label: Text('Apply $suggested'),
+        onPressed: onApply,
+      );
+    } else {
+      // Non-Lead crmRef (e.g. Deal) — apply flow is Lead-only; render
+      // the suggestion as read-only info.
+      trailing = const SizedBox.shrink();
+    }
 
     return Padding(
       padding: const EdgeInsets.only(top: 10),
@@ -818,29 +880,57 @@ class _AiSuggestsBox extends ConsumerWidget {
                   style: Theme.of(context).textTheme.bodySmall),
             ],
             const SizedBox(height: 8),
-            if (crmRef.doctype == 'Lead')
-              Align(
-                alignment: Alignment.centerRight,
-                child: alreadyApplied
-                    ? Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(Icons.check_circle_outline,
-                            size: 16, color: AppColors.success),
-                        const SizedBox(width: 6),
-                        Text('Already at $suggested',
-                            style: TextStyle(
-                                color: AppColors.success,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13)),
-                      ])
-                    : FilledButton.tonalIcon(
-                        icon: const Icon(Icons.check, size: 16),
-                        label: Text('Apply $suggested'),
-                        onPressed: onApply,
-                      ),
-              ),
+            Align(alignment: Alignment.centerRight, child: trailing),
           ],
         ),
       ),
     );
   }
+
+  bool _hasMovedPast(String? current, String suggested) {
+    if (current == null) return false;
+    final cp = _statusOrderPosition(current);
+    final sp = _statusOrderPosition(suggested);
+    if (cp == null || sp == null) return false;
+    return cp > sp;
+  }
+
+  Widget _appliedRow({required String from, required String to}) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.check_circle_outline, size: 16, color: AppColors.success),
+          const SizedBox(width: 6),
+          Text('Applied: $from → $to',
+              style: TextStyle(
+                  color: AppColors.success,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13)),
+        ],
+      );
+
+  Widget _alreadyAtRow({required String status}) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.check_circle_outline, size: 16, color: AppColors.success),
+          const SizedBox(width: 6),
+          Text('Already at $status',
+              style: TextStyle(
+                  color: AppColors.success,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13)),
+        ],
+      );
+
+  Widget _movedPastRow({required String currentStatus}) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.arrow_forward, size: 16, color: AppColors.onSurfaceVariant),
+          const SizedBox(width: 6),
+          Text('Lead moved past — now $currentStatus',
+              style: TextStyle(
+                  color: AppColors.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 13)),
+        ],
+      );
 }

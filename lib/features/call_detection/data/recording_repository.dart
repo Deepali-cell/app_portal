@@ -33,6 +33,8 @@ class CallRecording {
     this.sentiment,
     this.suggestedStatus,
     this.suggestedNextAction,
+    this.suggestionAppliedAt,
+    this.suggestionAppliedFromStatus,
     this.aiConfidence,
     this.aiProcessedAt,
     this.transcript,
@@ -53,6 +55,13 @@ class CallRecording {
   final String? sentiment;
   final String? suggestedStatus;
   final String? suggestedNextAction;
+  /// Set atomically inside apply_suggested_status when the user taps
+  /// "Apply {status}". Null means the suggestion is still actionable.
+  final DateTime? suggestionAppliedAt;
+  /// Lead's status snapshotted at the moment the user applied the
+  /// suggestion. Used to render "Applied: {from} → {suggested}" after
+  /// the fact, without having to inspect the lead's version history.
+  final String? suggestionAppliedFromStatus;
   final double? aiConfidence;
   final DateTime? aiProcessedAt;
   final String? transcript;
@@ -76,6 +85,9 @@ class CallRecording {
         sentiment: j['sentiment'] as String?,
         suggestedStatus: j['suggested_status'] as String?,
         suggestedNextAction: j['suggested_next_action'] as String?,
+        suggestionAppliedAt: _date(j['suggestion_applied_at']),
+        suggestionAppliedFromStatus:
+            j['suggestion_applied_from_status'] as String?,
         aiConfidence: (j['ai_confidence'] as num?)?.toDouble(),
         aiProcessedAt: _date(j['ai_processed_at']),
         transcript: j['transcript'] as String?,
