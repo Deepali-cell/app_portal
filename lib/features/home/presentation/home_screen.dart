@@ -6,7 +6,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../dashboard/data/dashboard_repository.dart' show salesDashboardProvider;
 import '../../dashboard/presentation/sales_dashboard_section.dart';
+import '../../todays_plan/application/todays_plan_controller.dart' show todaysPlanControllerProvider;
 
 import '../../../core/format/money.dart';
 import '../../../core/router/app_router.dart';
@@ -36,11 +38,23 @@ class HomeScreen extends ConsumerWidget {
       appBar: _HomeAppBar(profile: profile),
       body: SafeArea(
         top: false,
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.fromLTRB(
-              AppDimens.screenPadding, AppDimens.md, AppDimens.screenPadding,
-              AppDimens.lg),
-          child: Column(
+        child: RefreshIndicator(
+          color: AppColors.primary,
+          onRefresh: () async {
+            ref.invalidate(salesDashboardProvider);
+            ref.invalidate(todaysPlanControllerProvider);
+            ref.invalidate(attendanceControllerProvider);
+            ref.invalidate(leaveControllerProvider);
+            ref.invalidate(payslipListProvider);
+            ref.invalidate(unreadCountProvider);
+            await Future<void>.delayed(const Duration(milliseconds: 400));
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.fromLTRB(
+                AppDimens.screenPadding, AppDimens.md, AppDimens.screenPadding,
+                AppDimens.lg),
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               _WelcomeHero(profile: profile),
@@ -71,6 +85,7 @@ class HomeScreen extends ConsumerWidget {
               const SizedBox(height: AppDimens.lg),
               const _RecentActivity(),
             ],
+          ),
           ),
         ),
       ),

@@ -39,7 +39,14 @@ class PipelineScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: ListView(
+      body: RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: () async {
+          ref.invalidate(pipelineSnapshotProvider);
+          await Future<void>.delayed(const Duration(milliseconds: 400));
+        },
+        child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(
             AppDimens.screenPadding, AppDimens.md, AppDimens.screenPadding, AppDimens.xl),
         children: [
@@ -68,6 +75,7 @@ class PipelineScreen extends ConsumerWidget {
             data: (s) => _Funnel(snapshot: s, kind: query.kind),
           ),
         ],
+        ),
       ),
     );
   }

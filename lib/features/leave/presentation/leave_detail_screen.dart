@@ -31,20 +31,30 @@ class LeaveDetailScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: async.when(
+      body: RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: () async {
+          ref.invalidate(leaveApplicationDetailProvider(name));
+          await Future<void>.delayed(const Duration(milliseconds: 400));
+        },
+        child: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(AppDimens.xl),
-            child: Text(
-              e is ApiException
-                  ? e.message
-                  : 'Could not open the leave application.',
-              textAlign: TextAlign.center,
+        error: (e, _) => ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppDimens.xl),
+              child: Text(
+                e is ApiException
+                    ? e.message
+                    : 'Could not open the leave application.',
+                textAlign: TextAlign.center,
+              ),
             ),
-          ),
+          ],
         ),
         data: (d) => ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
           padding: const EdgeInsets.fromLTRB(AppDimens.screenPadding,
               AppDimens.lg, AppDimens.screenPadding, AppDimens.xl),
           children: [
@@ -95,6 +105,7 @@ class LeaveDetailScreen extends ConsumerWidget {
               ),
             ],
           ],
+        ),
         ),
       ),
     );

@@ -88,16 +88,26 @@ class _PayslipDetailScreenState extends ConsumerState<PayslipDetailScreen> {
           ),
         ],
       ),
-      body: async.when(
+      body: RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: () async {
+          ref.invalidate(payslipDetailProvider(widget.name));
+          await Future<void>.delayed(const Duration(milliseconds: 400));
+        },
+        child: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(AppDimens.xl),
-            child: Text(e is ApiException ? e.message : 'Could not load payslip.',
-                textAlign: TextAlign.center),
-          ),
+        error: (e, _) => ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppDimens.xl),
+              child: Text(e is ApiException ? e.message : 'Could not load payslip.',
+                  textAlign: TextAlign.center),
+            ),
+          ],
         ),
         data: (d) => _Detail(d: d),
+        ),
       ),
     );
   }
@@ -110,6 +120,7 @@ class _Detail extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(AppDimens.screenPadding),
       children: [
         _NetCard(d: d),

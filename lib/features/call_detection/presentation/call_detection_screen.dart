@@ -128,11 +128,26 @@ class _CallDetectionScreenState extends ConsumerState<CallDetectionScreen>
       ),
       body: !isAndroid
           ? const _IosNotice()
-          : snap.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Center(child: Text('Error: $e')),
-              data: (s) => _AndroidBody(snapshot: s),
+          : RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: () async {
+                ref.invalidate(callDetectSnapshotProvider);
+                await Future<void>.delayed(const Duration(milliseconds: 400));
+              },
+              child: snap.when(
+                loading: () =>
+                    const Center(child: CircularProgressIndicator()),
+                error: (e, _) => ListView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Center(child: Text('Error: $e')),
+                    ),
+                  ],
+                ),
+                data: (s) => _AndroidBody(snapshot: s),
+              ),
             ),
     );
   }
@@ -145,6 +160,7 @@ class _AndroidBody extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(
           AppDimens.screenPadding,
           AppDimens.md,

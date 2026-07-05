@@ -34,7 +34,12 @@ class ProfileScreen extends ConsumerWidget {
       ),
       body: profile == null
           ? const Center(child: CircularProgressIndicator())
-          : ListView(
+          : RefreshIndicator(
+              color: AppColors.primary,
+              onRefresh: () =>
+                  ref.read(authControllerProvider.notifier).refresh(),
+              child: ListView(
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(
                   AppDimens.screenPadding,
                   AppDimens.md,
@@ -86,6 +91,7 @@ class ProfileScreen extends ConsumerWidget {
                     ),
                   ),
               ],
+              ),
             ),
     );
   }
