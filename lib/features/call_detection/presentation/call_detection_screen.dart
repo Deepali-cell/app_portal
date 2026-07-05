@@ -17,15 +17,33 @@ class CallDetectionScreen extends ConsumerStatefulWidget {
       _CallDetectionScreenState();
 }
 
-class _CallDetectionScreenState extends ConsumerState<CallDetectionScreen> {
+class _CallDetectionScreenState extends ConsumerState<CallDetectionScreen>
+    with WidgetsBindingObserver {
   bool _wizardRan = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     // Auto-request all ungranted permissions in sequence right after the
-    // screen opens — addresses the "no permission popup" feedback.
+    // screen opens; addresses the "no permission popup" feedback.
     WidgetsBinding.instance.addPostFrameCallback((_) => _runPermissionWizard());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // User just came back from system Settings (e.g. after granting All
+    // Files Access or the overlay permission). Re-read the snapshot so the
+    // badges flip from "Grant" to "Granted" without a manual refresh.
+    if (state == AppLifecycleState.resumed && mounted) {
+      ref.invalidate(callDetectSnapshotProvider);
+    }
   }
 
   Future<void> _runPermissionWizard() async {

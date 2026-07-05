@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
 
 import '../domain/permission_status.dart';
@@ -12,9 +13,17 @@ import '../domain/permission_status.dart';
 class CallDetectPermissionService {
   bool get _isAndroid => !kIsWeb && Platform.isAndroid;
 
+  // Storage on Android 11+ needs MANAGE_EXTERNAL_STORAGE, which has no
+  // runtime dialog — must open a dedicated Settings screen. The native
+  // side (AllFilesAccessHelper) handles both the check and the launch.
+  static const _nativeChannel = MethodChannel('tcb_portal/call_detect');
+
   /// Fetch the current status of a single permission.
   Future<PermissionState> check(CallDetectPermission p) async {
     if (!_isAndroid) return PermissionState.notApplicable;
+    if (p == CallDetectPermission.storage) {
+      return _checkAllFilesAccess();
+    }
     final perm = _map(p);
     if (perm == null) return PermissionState.notApplicable;
     final status = await perm.status;
@@ -29,9 +38,16 @@ class CallDetectPermissionService {
   }
 
   /// Request a permission. Returns the new state after the dialog flow.
-  /// SYSTEM_ALERT_WINDOW opens system Settings rather than a dialog.
+  /// Storage + SYSTEM_ALERT_WINDOW open a system Settings page rather than
+  /// a runtime dialog; state is re-verified when the user returns.
   Future<PermissionState> request(CallDetectPermission p) async {
     if (!_isAndroid) return PermissionState.notApplicable;
+    if (p == CallDetectPermission.storage) {
+      try {
+        await _nativeChannel.invokeMethod('openAllFilesAccessSettings');
+      } catch (_) {/* ignore — screen will re-check on resume */}
+      return _checkAllFilesAccess();
+    }
     final perm = _map(p);
     if (perm == null) return PermissionState.notApplicable;
     final newStatus = await perm.request();
@@ -42,6 +58,18 @@ class CallDetectPermissionService {
   Future<bool> openSystemAppSettings() async {
     if (!_isAndroid) return false;
     return ph.openAppSettings();
+  }
+
+  Future<PermissionState> _checkAllFilesAccess() async {
+    try {
+      final granted =
+          await _nativeChannel.invokeMethod<bool>('hasAllFilesAccess');
+      return (granted ?? false)
+          ? PermissionState.granted
+          : PermissionState.denied;
+    } catch (_) {
+      return PermissionState.denied;
+    }
   }
 
   // ---- internals ----
@@ -55,7 +83,9 @@ class CallDetectPermissionService {
         // request READ_CALL_LOG via a platform channel if OEM requires it.
         return ph.Permission.phone;
       case CallDetectPermission.storage:
-        return ph.Permission.storage;
+        // Handled via the native MANAGE_EXTERNAL_STORAGE bridge instead of
+        // permission_handler; this branch is unreachable in practice.
+        return null;
       case CallDetectPermission.systemAlertWindow:
         return ph.Permission.systemAlertWindow;
       case CallDetectPermission.notifications:
