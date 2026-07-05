@@ -707,7 +707,7 @@ class _PipelineEntry extends StatelessWidget {
                             fontWeight: FontWeight.w700)),
                     const SizedBox(height: 2),
                     Text(
-                      "Funnel view: kaunsi leads / deals kaunsi stage me hain",
+                      "See which leads and deals are stuck at each stage",
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
