@@ -40,7 +40,7 @@ class TeamMemberStatus {
         fullName: (j['full_name'] ?? '').toString(),
         roleLabel: (j['role_label'] ?? 'Sales').toString(),
         presence: _parsePresence(j['presence'] as String?),
-        lastActiveLabel: (j['last_active_label'] ?? '—').toString(),
+        lastActiveLabel: (j['last_active_label'] ?? '-').toString(),
         callsToday: (j['calls_today'] as num?)?.toInt() ?? 0,
         outcomesToday: (j['outcomes_today'] as num?)?.toInt() ?? 0,
         leadsOwned: (j['leads_owned'] as num?)?.toInt() ?? 0,

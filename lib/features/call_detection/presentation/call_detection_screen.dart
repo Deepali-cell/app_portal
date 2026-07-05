@@ -262,7 +262,7 @@ class _UploadBanner extends ConsumerWidget {
       case 'uploaded':
         color = const Color(0xFF1B7F4D);
         icon = Icons.cloud_done_outlined;
-        title = 'Recording uploaded — AI summary processing';
+        title = 'Recording uploaded. AI summary processing.';
         body = 'Tap to view once ready (~30s for a 2-min call).';
       case 'failed':
         color = const Color(0xFFB23A48);
@@ -387,19 +387,41 @@ class _PermissionRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final (badgeColor, badgeText, badgeIcon) = _badge(status.state);
-    return ListTile(
-      contentPadding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.md, vertical: 6),
-      title: Text(status.permission.label,
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: AppColors.onSurface, fontWeight: FontWeight.w600)),
-      subtitle: Padding(
-        padding: const EdgeInsets.only(top: 4),
-        child: Text(status.permission.rationale,
-            style: Theme.of(context).textTheme.bodySmall),
+    // Manual Row + Expanded layout instead of ListTile. ListTile's
+    // intrinsic width machinery can starve the title/subtitle text
+    // column when the trailing widget is wide, producing the
+    // character-per-line vertical text seen on some devices. Wrapping
+    // the label + rationale in Expanded guarantees they get all
+    // remaining horizontal space, and the trailing is right-clamped
+    // in a ConstrainedBox so it never overruns the row.
+    return Padding(
+      padding: const EdgeInsets.symmetric(
+          horizontal: AppDimens.md, vertical: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(status.permission.label,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: AppColors.onSurface,
+                        fontWeight: FontWeight.w600)),
+                const SizedBox(height: 4),
+                Text(status.permission.rationale,
+                    style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ),
+          ),
+          const SizedBox(width: AppDimens.md),
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 130),
+            child: _trailingFor(
+                context, ref, status, badgeColor, badgeText, badgeIcon),
+          ),
+        ],
       ),
-      trailing: _trailingFor(context, ref, status, badgeColor, badgeText, badgeIcon),
-      isThreeLine: true,
     );
   }
 
@@ -432,7 +454,7 @@ class _PermissionRow extends ConsumerWidget {
       );
     }
     if (s.state == PermissionState.notApplicable) {
-      return Text('—', style: TextStyle(color: AppColors.onSurfaceVariant));
+      return Text('-', style: TextStyle(color: AppColors.onSurfaceVariant));
     }
     return FilledButton(
       onPressed: () => ref
@@ -467,7 +489,7 @@ class _PermissionRow extends ConsumerWidget {
         );
       case PermissionState.notApplicable:
       case PermissionState.unknown:
-        return (AppColors.outline, '—', Icons.help_outline);
+        return (AppColors.outline, '-', Icons.help_outline);
     }
   }
 }

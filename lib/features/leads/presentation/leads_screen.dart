@@ -479,7 +479,7 @@ class _NewLeadSheetState extends ConsumerState<_NewLeadSheet> {
     }
     if (_mobile.text.trim().isEmpty) {
       setState(() => _error =
-          'Mobile number is required — every lead must be reachable.');
+          'Mobile number is required. Every lead must be reachable.');
       return;
     }
     setState(() {

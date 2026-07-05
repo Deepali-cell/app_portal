@@ -36,7 +36,7 @@ class AssigneesTab extends ConsumerWidget {
             return const Center(
               child: Padding(
                 padding: EdgeInsets.all(AppDimens.xl),
-                child: Text('No one assigned yet — tap "Assign" to add someone.'),
+                child: Text('No one assigned yet. Tap "Assign" to add someone.'),
               ),
             );
           }

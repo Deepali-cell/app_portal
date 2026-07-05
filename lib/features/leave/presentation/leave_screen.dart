@@ -892,7 +892,7 @@ class _ApplyCompOffSheetState extends ConsumerState<_ApplyCompOffSheet> {
               decoration: const InputDecoration(
                 labelText: 'Why did you work that day?',
                 alignLabelWithHint: true,
-                hintText: 'Required — at least 4 characters',
+                hintText: 'Required, at least 4 characters',
               ),
             ),
 

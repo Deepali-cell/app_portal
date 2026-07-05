@@ -183,7 +183,7 @@ class _RecordPaymentSheetState extends ConsumerState<RecordPaymentSheet> {
               data: (list) {
                 if (list.isEmpty) {
                   return Text(
-                      'No modes of payment configured — payment will use the default.',
+                      'No modes of payment configured. Payment will use the default.',
                       style: Theme.of(context).textTheme.bodySmall);
                 }
                 return DropdownButtonFormField<String>(
@@ -240,7 +240,7 @@ class _RecordPaymentSheetState extends ConsumerState<RecordPaymentSheet> {
             TextField(
               controller: _referenceNo,
               decoration: const InputDecoration(
-                labelText: 'Reference no (cheque / UTR / txn id — optional)',
+                labelText: 'Reference no (cheque / UTR / txn id, optional)',
               ),
             ),
 

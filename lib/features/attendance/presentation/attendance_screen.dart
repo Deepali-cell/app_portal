@@ -103,7 +103,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       if (!mounted) return;
       if (result.status == MarkStatus.queued) {
         _snack(
-            'No connection — ${result.logType.label.toLowerCase()} saved and will sync.');
+            'No connection. ${result.logType.label} saved and will sync.');
       } else if (offsite) {
         _snack(
             '${result.logType.label} recorded off-site. HR will see the reason on the desk.');
@@ -366,7 +366,7 @@ class _ClockCard extends ConsumerWidget {
                         style: Theme.of(context).textTheme.labelSmall),
                     Text(
                         state.context.todaysLogs.isEmpty
-                            ? '—'
+                            ? '-'
                             : _timeOnly.format(state.context.todaysLogs.last
                                 .time
                                 .toLocal()),
@@ -591,7 +591,7 @@ class _TodayStats extends StatelessWidget {
             value: state.insideGeofence ? 'Inside' : 'Outside',
             trailing: Text(
               state.nearest == null
-                  ? '—'
+                  ? '-'
                   : '${state.distanceM?.round() ?? "?"} m',
               style: Theme.of(context).textTheme.labelSmall,
             ),

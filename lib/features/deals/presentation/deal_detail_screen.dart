@@ -303,7 +303,7 @@ class _DetailsTab extends StatelessWidget {
                 ),
                 Expanded(
                   child: Text(
-                    (value == null || value.isEmpty) ? '—' : value,
+                    (value == null || value.isEmpty) ? '-' : value,
                     style: TextStyle(
                         color: AppColors.ink, fontWeight: FontWeight.w500),
                   ),

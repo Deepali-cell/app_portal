@@ -64,7 +64,7 @@ class _CommentsTabState extends ConsumerState<CommentsTab> {
                 return const Center(
                   child: Padding(
                     padding: EdgeInsets.all(AppDimens.xl),
-                    child: Text('No comments yet — start the conversation.'),
+                    child: Text('No comments yet. Start the conversation.'),
                   ),
                 );
               }

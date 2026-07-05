@@ -240,7 +240,7 @@ class _Hero extends StatelessWidget {
                 color: AppColors.primaryFixedDim.withValues(alpha: 0.25)),
             Expanded(
                 child:
-                    _kv(context, 'Status', d.status.isEmpty ? '—' : d.status)),
+                    _kv(context, 'Status', d.status.isEmpty ? '-' : d.status)),
             Container(
                 width: 1,
                 height: 32,

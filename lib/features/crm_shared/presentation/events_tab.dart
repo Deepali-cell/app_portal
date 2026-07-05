@@ -316,7 +316,7 @@ class _EventSheetState extends ConsumerState<_EventSheet> {
                   },
                   child: InputDecorator(
                     decoration: const InputDecoration(labelText: 'Ends'),
-                    child: Text(_ends == null ? '—' : _dt.format(_ends!)),
+                    child: Text(_ends == null ? '-' : _dt.format(_ends!)),
                   ),
                 ),
               ),

@@ -45,7 +45,7 @@ class _InvoiceDetailScreenState extends ConsumerState<InvoiceDetailScreen> {
       builder: (ctx) => AlertDialog(
         title: const Text('Submit invoice?'),
         content: Text(
-            'This will submit ${d.name}. Once submitted, the invoice cannot be edited — only cancelled.'),
+            'This will submit ${d.name}. Once submitted, the invoice cannot be edited, only cancelled.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),

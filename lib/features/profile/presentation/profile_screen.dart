@@ -204,7 +204,7 @@ class _Row extends StatelessWidget {
         ),
         const SizedBox(width: AppDimens.sm),
         Expanded(
-          child: Text(value == null || value!.isEmpty ? '—' : value!,
+          child: Text(value == null || value!.isEmpty ? '-' : value!,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                   color: AppColors.onSurface, fontWeight: FontWeight.w500)),
         ),

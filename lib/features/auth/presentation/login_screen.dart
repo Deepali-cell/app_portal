@@ -86,7 +86,7 @@ class _CompanyIdStepState extends ConsumerState<_CompanyIdStep> {
     } catch (_) {
       if (mounted) {
         setState(() => _error =
-            "Couldn't connect to the TCB server. Check your internet, then try again — contact TCB Infotech if this keeps happening.");
+            "Couldn't connect to the TCB server. Check your internet, then try again. Contact TCB Infotech if this keeps happening.");
       }
     } finally {
       if (mounted) setState(() => _submitting = false);

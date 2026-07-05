@@ -186,7 +186,7 @@ class _DeeplinkListenerState extends ConsumerState<DeeplinkListener> {
       if (dt == null || dn == null || dn.isEmpty) {
         if (ctx.mounted) {
           ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-            content: Text('Recording $recordingName — no linked lead/deal'),
+            content: Text('Recording $recordingName has no linked lead or deal.'),
           ));
         }
         return;

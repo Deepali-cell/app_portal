@@ -119,7 +119,7 @@ class _PhoneLookupSheetState extends ConsumerState<_PhoneLookupSheet> {
           const SizedBox(height: 2),
           Center(
             child: Text(
-              "Type a number — we'll find the matching lead or deal.",
+              "Type a number to find the matching lead or deal.",
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall,
             ),

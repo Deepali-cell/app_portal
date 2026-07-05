@@ -228,7 +228,7 @@ class _CallOutcomeSheetState extends ConsumerState<_CallOutcomeSheet> {
                 ),
                 child: Text(
                   _followUp == null
-                      ? 'None — no follow-up task will be created'
+                      ? 'None. No follow-up task will be created.'
                       : _dateFmt.format(_followUp!),
                 ),
               ),

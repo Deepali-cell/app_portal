@@ -11,8 +11,9 @@ enum ApiErrorKind { network, timeout, unauthorized, forbidden, notFound, server,
 /// status code when no server message is available.
 ///
 /// Design principle: every [message] should tell the user (a) WHAT went
-/// wrong in plain language and (b) WHAT to try next. Never "Something went
-/// wrong" — always say which side the problem is on and what they can do.
+/// wrong in plain language and (b) WHAT to try next. No raw HTTP codes,
+/// no "Something went wrong". Always say which side the problem is on
+/// and what they can do about it.
 class ApiException implements Exception {
   const ApiException(this.kind, this.message, {this.statusCode});
 
@@ -25,7 +26,7 @@ class ApiException implements Exception {
 
   factory ApiException.fromDio(DioException e) {
     switch (e.type) {
-      // -------------------- Network / transport errors --------------------
+      // Network / transport errors
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
         return const ApiException(
@@ -43,12 +44,12 @@ class ApiException implements Exception {
       case DioExceptionType.badCertificate:
         return const ApiException(
           ApiErrorKind.network,
-          "Secure connection failed — the server's certificate could not be verified. Contact TCB Infotech if this keeps happening.",
+          "Secure connection failed. The server's certificate could not be verified. Contact TCB Infotech if this keeps happening.",
         );
       case DioExceptionType.cancel:
         return const ApiException(ApiErrorKind.unknown, 'Request cancelled.');
 
-      // -------------------- HTTP status responses --------------------
+      // HTTP status responses
       case DioExceptionType.badResponse:
         final code = e.response?.statusCode ?? 0;
         final serverMsg = _extractMessage(e.response?.data);
@@ -60,7 +61,7 @@ class ApiException implements Exception {
   ///
   /// Dio collapses both into [DioExceptionType.connectionError] (and sometimes
   /// [DioExceptionType.unknown]) but the underlying `SocketException` text
-  /// is different — and the user-facing fix is different too. "Check your
+  /// is different, and the user-facing fix is different too. "Check your
   /// Wi-Fi" is the wrong message when the device is online but the server
   /// URL is wrong / unreachable.
   static ApiException _fromConnectionError(DioException e) {
@@ -76,16 +77,16 @@ class ApiException implements Exception {
       );
     }
 
-    // DNS resolution failed — could be flaky connectivity OR the server
+    // DNS resolution failed. Could be flaky connectivity, or the server
     // hostname is wrong / no longer exists.
     if (under.contains('failed host lookup')) {
       return const ApiException(
         ApiErrorKind.network,
-        "Can't reach the server — the address could not be looked up. Check your internet, or contact TCB Infotech if you keep seeing this.",
+        "Can't reach the server. The address could not be looked up. Check your internet, or contact TCB Infotech if you keep seeing this.",
       );
     }
 
-    // Reachable but the port is closed — server is down OR the URL is wrong.
+    // Reachable but the port is closed: server is down OR the URL is wrong.
     // (e.g. a tenant configured with http://127.0.0.1:8002 that the phone
     // can never reach.)
     if (under.contains('connection refused') ||
@@ -97,7 +98,7 @@ class ApiException implements Exception {
       );
     }
 
-    // Connection timed out — server is reachable but didn't respond in time,
+    // Connection timed out: server is reachable but didn't respond in time,
     // or the route to it is slow.
     if (under.contains('timed out') || under.contains('timeout')) {
       return const ApiException(
@@ -106,11 +107,11 @@ class ApiException implements Exception {
       );
     }
 
-    // Generic — don't know which side it's on. Tell the user honestly that
-    // it could be either, and what to try.
+    // Generic case: don't know which side it's on. Tell the user honestly
+    // that it could be either, and what to try.
     return const ApiException(
       ApiErrorKind.network,
-      "Couldn't reach the server. This could be a network problem on your side, or the server is unavailable. Try again — contact TCB Infotech if this keeps happening.",
+      "Couldn't reach the server. This could be a network problem on your side, or the server is unavailable. Try again, or contact TCB Infotech if this keeps happening.",
     );
   }
 
@@ -166,7 +167,7 @@ class ApiException implements Exception {
         return ApiException(
           ApiErrorKind.server,
           serverMsg ??
-              'The TCB server hit an unexpected error. Please try again — if it keeps happening, contact TCB Infotech.',
+              'The server hit an unexpected problem. Please try again, or contact TCB Infotech if this keeps happening.',
           statusCode: code,
         );
       case 502:
@@ -176,36 +177,58 @@ class ApiException implements Exception {
         return ApiException(
           ApiErrorKind.server,
           serverMsg ??
-              "Can't reach the TCB server right now. The server may be temporarily down. Try again in a few minutes — contact TCB Infotech if this keeps happening.",
+              "The server is not responding right now. Please try again in a few minutes, or contact TCB Infotech if this keeps happening.",
           statusCode: code,
         );
       case 503:
         return ApiException(
           ApiErrorKind.server,
           serverMsg ??
-              'The TCB server is temporarily unavailable, likely for maintenance. Please try again shortly.',
+              'The server is temporarily unavailable, likely for maintenance. Please try again shortly.',
           statusCode: code,
         );
       case 504:
         return ApiException(
           ApiErrorKind.timeout,
           serverMsg ??
-              'The TCB server is taking too long to respond. Please try again in a moment.',
+              'The server is taking too long to respond. Please try again in a moment.',
           statusCode: code,
         );
+
+      // Cloudflare-specific edge codes. Cloudflare returns these when its
+      // edge can't reach or negotiate with our origin server. To the end
+      // user this is functionally the same problem as a plain 502/503:
+      // the server they wanted is unreachable through the proxy. Never
+      // surface the raw code, it means nothing to the salesperson.
+      case 520: // Web server returned unknown error
+      case 521: // Web server is down
+      case 522: // Connection timed out (edge to origin)
+      case 523: // Origin unreachable
+      case 524: // Timeout occurred (origin took too long)
+      case 525: // SSL handshake failed
+      case 526: // Invalid SSL certificate at origin
+      case 530: // Origin DNS error / origin down
+        return ApiException(
+          ApiErrorKind.server,
+          serverMsg ??
+              'The server is temporarily unreachable. Please try again in a minute. If this keeps happening, contact TCB Infotech.',
+          statusCode: code,
+        );
+
       default:
         if (code >= 500) {
           return ApiException(
             ApiErrorKind.server,
             serverMsg ??
-                'The TCB server returned an error (HTTP $code). Please try again — if it keeps happening, contact TCB Infotech.',
+                'The server is having trouble right now. Please try again in a moment, or contact TCB Infotech if this keeps happening.',
             statusCode: code,
           );
         }
         if (code >= 400) {
           return ApiException(
             ApiErrorKind.unknown,
-            serverMsg ?? 'Request failed (HTTP $code). Please try again.',
+            serverMsg ??
+                'The request could not be completed. Please try again, or contact TCB Infotech if this keeps happening.',
             statusCode: code,
           );
         }

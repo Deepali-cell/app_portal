@@ -625,7 +625,7 @@ class _RecordingCard extends ConsumerWidget {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text(e is ApiException
               ? e.message
-              : "Couldn't apply status — try again."),
+              : "Couldn't apply status. Try again."),
           backgroundColor: AppColors.errorContainer,
         ));
       }
@@ -821,20 +821,21 @@ class _AiSuggestsBox extends ConsumerWidget {
     // State selection.
     final Widget trailing;
     if (rec.suggestionAppliedAt != null) {
-      // State 1 — applied. Prefer the stamped from-status; fall back to
-      // "—" only if the stamp somehow missed (shouldn't happen post-fix).
+      // State 1: applied. Prefer the stamped from-status; fall back to
+      // a plain dash only if the stamp somehow missed (shouldn't happen
+      // post-fix).
       final from =
           (rec.suggestionAppliedFromStatus ?? '').trim().isNotEmpty
               ? rec.suggestionAppliedFromStatus!
-              : '—';
+              : '-';
       trailing = _appliedRow(from: from, to: suggested);
     } else if (currentStatus != null &&
         currentStatus.toLowerCase() == suggested.toLowerCase()) {
-      // State 2 — already at target (independent of user action).
+      // State 2: already at target (independent of user action).
       trailing = _alreadyAtRow(status: suggested);
     } else if (crmRef.doctype == 'Lead' &&
         _hasMovedPast(currentStatus, suggested)) {
-      // State 3 — lead progressed past the suggestion. Applying would
+      // State 3: lead progressed past the suggestion. Applying would
       // rewind, which is never right for a sales pipeline.
       trailing = _movedPastRow(currentStatus: currentStatus!);
     } else if (crmRef.doctype == 'Lead') {
@@ -926,7 +927,7 @@ class _AiSuggestsBox extends ConsumerWidget {
         children: [
           Icon(Icons.arrow_forward, size: 16, color: AppColors.onSurfaceVariant),
           const SizedBox(width: 6),
-          Text('Lead moved past — now $currentStatus',
+          Text('Lead moved past. Now $currentStatus',
               style: TextStyle(
                   color: AppColors.onSurfaceVariant,
                   fontWeight: FontWeight.w600,

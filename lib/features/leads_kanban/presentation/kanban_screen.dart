@@ -123,7 +123,7 @@ class _LeadKanbanScreenState extends ConsumerState<LeadKanbanScreen> {
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text(e is ApiException
             ? "Couldn't move: ${e.message}"
-            : "Couldn't move ${lead.title} — try again"),
+            : "Couldn't move ${lead.title}. Try again."),
         backgroundColor: AppColors.errorContainer,
         behavior: SnackBarBehavior.floating,
       ));

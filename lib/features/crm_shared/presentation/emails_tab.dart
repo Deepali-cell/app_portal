@@ -42,7 +42,7 @@ class EmailsTab extends ConsumerWidget {
                 Icon(Icons.mail_outline,
                     size: 40, color: AppColors.inkFaint),
                 const SizedBox(height: AppDimens.md),
-                Text('No emails yet — tap "Compose" to send the first.',
+                Text('No emails yet. Tap "Compose" to send the first.',
                     style: Theme.of(context).textTheme.bodyMedium,
                     textAlign: TextAlign.center),
               ]),
@@ -117,7 +117,7 @@ class _EmailCard extends StatelessWidget {
               const SizedBox(height: 2),
               Text(
                 email.sent
-                    ? 'To: ${email.recipients ?? "—"}'
+                    ? 'To: ${email.recipients ?? "-"}'
                     : 'From: ${email.senderFullName ?? email.sender}',
                 style: Theme.of(context).textTheme.bodySmall,
                 maxLines: 1,
@@ -156,7 +156,7 @@ class _EmailCard extends StatelessWidget {
                 const SizedBox(height: AppDimens.xs),
                 Text(
                     '${email.sent ? "From" : "From"}: ${email.sender}\n'
-                    'To: ${email.recipients ?? "—"}\n'
+                    'To: ${email.recipients ?? "-"}\n'
                     '${_ts.format(email.creation.toLocal())}',
                     style: Theme.of(context).textTheme.bodySmall),
                 const Divider(),

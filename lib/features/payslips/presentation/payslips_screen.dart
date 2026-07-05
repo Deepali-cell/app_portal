@@ -475,7 +475,7 @@ class _BreakdownCard extends ConsumerWidget {
                     color: AppColors.primary, fontWeight: FontWeight.w700)),
             const SizedBox(height: AppDimens.sm),
             if (lines.isEmpty)
-              Text('—', style: Theme.of(context).textTheme.bodySmall)
+              Text('-', style: Theme.of(context).textTheme.bodySmall)
             else
               for (final l in lines.take(4))
                 Padding(

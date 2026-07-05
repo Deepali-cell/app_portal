@@ -120,7 +120,7 @@ class _DashboardBody extends ConsumerWidget {
         ],
         if (snapshot.perRep.isNotEmpty) ...[
           _SectionHeader(
-            title: 'Sales team — today',
+            title: 'Sales team today',
             subtitle:
                 "${snapshot.perRep.length} reps · sorted by activity",
           ),
@@ -134,7 +134,7 @@ class _DashboardBody extends ConsumerWidget {
         if (snapshot.recentSummaries.isNotEmpty) ...[
           _SectionHeader(
             title: 'AI summaries',
-            subtitle: "Latest call analyses — tap to view",
+            subtitle: "Latest call analyses. Tap to view.",
           ),
           const SizedBox(height: 6),
           for (final s in snapshot.recentSummaries) ...[

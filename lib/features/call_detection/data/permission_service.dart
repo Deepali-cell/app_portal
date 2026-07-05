@@ -90,11 +90,11 @@ class DeviceSupportProbe {
     final brandLabel = brand ?? 'Unknown';
     final hint = m.isEmpty ? brandLabel : '$brandLabel $m';
     if (_unsupportedBrands.any((x) => b.contains(x))) {
-      return (false, '$hint — OEM call recording not supported');
+      return (false, '$hint: OEM call recording not supported');
     }
     if (_supportedBrands.any((x) => b.contains(x))) {
-      return (true, '$hint — supported');
+      return (true, '$hint: supported');
     }
-    return (true, '$hint — likely supported, will verify');
+    return (true, '$hint: likely supported, will verify');
   }
 }

@@ -250,7 +250,7 @@ class _StopTimerSheetState extends ConsumerState<StopTimerSheet> {
               decoration: const InputDecoration(
                 labelText: 'What did you work on?',
                 alignLabelWithHint: true,
-                hintText: 'Required — at least 4 characters',
+                hintText: 'Required, at least 4 characters',
               ),
             ),
             if (_error != null) ...[
@@ -541,7 +541,7 @@ class _LogPastTimeSheetState extends ConsumerState<LogPastTimeSheet> {
               decoration: const InputDecoration(
                 labelText: 'What did you work on?',
                 alignLabelWithHint: true,
-                hintText: 'Required — at least 4 characters',
+                hintText: 'Required, at least 4 characters',
               ),
             ),
             if (_error != null) ...[

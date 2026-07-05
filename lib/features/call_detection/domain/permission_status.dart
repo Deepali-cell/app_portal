@@ -28,7 +28,7 @@ extension CallDetectPermissionX on CallDetectPermission {
         CallDetectPermission.phoneState =>
             'Tells us when your phone rings so we can identify the caller before you pick up.',
         CallDetectPermission.callLog =>
-            'Reads the incoming number from the system call log — required on Android 10+.',
+            'Reads the incoming number from the system call log. Required on Android 10 and above.',
         CallDetectPermission.storage =>
             "Reads the recording MP3 from your phone's built-in recorder folder.",
         CallDetectPermission.systemAlertWindow =>

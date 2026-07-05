@@ -244,7 +244,7 @@ class _EmptyState extends StatelessWidget {
                       color: AppColors.primary,
                       fontWeight: FontWeight.w700)),
               const SizedBox(height: 2),
-              Text("You're all clear — no overdue items or new leads.",
+              Text("You're all clear. No overdue items or new leads.",
                   style: Theme.of(context).textTheme.bodySmall),
             ],
           ),

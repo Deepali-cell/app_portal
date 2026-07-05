@@ -214,7 +214,7 @@ class _Funnel extends StatelessWidget {
                     Expanded(
                       child: Text(
                         snapshot.scope == 'team'
-                            ? 'Team — ${kind.label}'
+                            ? 'Team ${kind.label}'
                             : 'My ${kind.label}',
                         style: Theme.of(context)
                             .textTheme

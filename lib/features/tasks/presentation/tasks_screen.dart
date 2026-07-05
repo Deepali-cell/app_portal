@@ -667,7 +667,7 @@ class _EditTaskSheetState extends ConsumerState<_EditTaskSheet> {
                         const InputDecoration(labelText: 'Project'),
                     items: [
                       const DropdownMenuItem<String?>(
-                          value: null, child: Text('— None —')),
+                          value: null, child: Text('(None)')),
                       ...widget.ctx.projects.map((p) =>
                           DropdownMenuItem<String?>(
                               value: p.name, child: Text(p.label))),
