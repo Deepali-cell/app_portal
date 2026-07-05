@@ -551,7 +551,7 @@ class _IosNotice extends StatelessWidget {
                   "Apple's iOS sandbox prevents third-party apps from "
                   "intercepting phone calls or accessing call audio. "
                   "Manual call logging (post-call outcome sheet) continues "
-                  "to work — open any lead and tap 'Log call' to capture "
+                  "to work. Open any lead and tap 'Log call' to capture "
                   "the call details.",
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.bodyMedium,

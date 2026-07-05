@@ -59,7 +59,7 @@ class _DashboardBody extends ConsumerWidget {
         _SectionHeader(
           title: 'Today',
           subtitle:
-              "Live snapshot — refresh anytime",
+              "Live snapshot. Refresh anytime.",
         ),
         const SizedBox(height: 6),
         _TodayStrip(today: snapshot.today),
@@ -68,9 +68,9 @@ class _DashboardBody extends ConsumerWidget {
           _SectionHeader(
             title: 'Follow-ups',
             subtitle: snapshot.followups.dueToday > 0
-                ? "${snapshot.followups.dueToday} due today — get on these first"
+                ? "${snapshot.followups.dueToday} due today. Get on these first."
                 : (snapshot.followups.overdue > 0
-                    ? "${snapshot.followups.overdue} overdue — handle ASAP"
+                    ? "${snapshot.followups.overdue} overdue. Handle ASAP."
                     : "All caught up"),
           ),
           const SizedBox(height: 6),

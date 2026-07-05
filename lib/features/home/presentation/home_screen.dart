@@ -707,7 +707,7 @@ class _PipelineEntry extends StatelessWidget {
                             fontWeight: FontWeight.w700)),
                     const SizedBox(height: 2),
                     Text(
-                      "Funnel view — kaunsi leads / deals kaunsi stage me hain",
+                      "Funnel view: kaunsi leads / deals kaunsi stage me hain",
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
@@ -811,7 +811,7 @@ class _TeamStatusEntry extends StatelessWidget {
                             fontWeight: FontWeight.w700)),
                     const SizedBox(height: 2),
                     Text(
-                      "Live — kaun online hai, kisne kitne calls kiye aaj",
+                      "Live: kaun online hai, kisne kitne calls kiye aaj",
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],
@@ -862,7 +862,7 @@ class _LeaderboardEntry extends StatelessWidget {
                             fontWeight: FontWeight.w700)),
                     const SizedBox(height: 2),
                     Text(
-                      "Team performance for this month — tap to drill in",
+                      "Team performance for this month. Tap to drill in.",
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],

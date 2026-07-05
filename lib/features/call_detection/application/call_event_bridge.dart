@@ -230,7 +230,7 @@ class CallEventBridge {
           : (number.isEmpty ? "call" : number);
       await postLocalNotification(
         title: "Call captured: $captured",
-        body: "AI summary processing — you'll be alerted when it's ready.",
+        body: "AI summary processing. You'll be alerted when it's ready.",
         deeplink: "recording:${r.name}",
         id: r.name.hashCode & 0x7fffffff,
       );

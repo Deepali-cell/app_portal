@@ -196,7 +196,7 @@ class _SignInStepState extends ConsumerState<_SignInStep> {
     } catch (_) {
       if (mounted) {
         setState(() => _error =
-            "Sign-in failed for an unknown reason. Please try again — if it keeps failing, contact TCB Infotech.");
+            "Sign-in failed for an unknown reason. Please try again. If it keeps failing, contact TCB Infotech.");
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
