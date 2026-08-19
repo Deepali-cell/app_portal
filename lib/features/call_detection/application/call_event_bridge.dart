@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_paths.dart';
 import '../../../core/providers.dart';
+import '../../phone_lookup/data/lookup_repository.dart';
 import '../data/recording_repository.dart';
 
 /// Single event emitted from native (D.2.2 — Kotlin foreground service)
@@ -86,6 +87,55 @@ class CallEventBridge {
 
   CallEventBridge(this._ref);
   final Ref _ref;
+
+  // Short-lived memory cache of "is this number linked to a Lead/Deal?"
+  // Both `onCallLogReady` and `onRecordingFound` may fire back-to-back
+  // for the same call; this stops us from hitting lookup_by_phone twice.
+  // TTL is deliberately short so a newly-added lead is picked up quickly.
+  static const _lookupTtl = Duration(minutes: 5);
+  final Map<String, ({bool matched, DateTime at})> _lookupCache = {};
+
+  /// Strip formatting, spaces, and the +91 India country code so a raw
+  /// dialer string ("+91 98765-43210") and the CRM's stored number
+  /// ("9876543210") collapse to the same 10-digit key. Numbers shorter
+  /// than 7 digits are returned as-is; the backend rejects those anyway.
+  String _normalizeNumber(String raw) {
+    final digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.length > 10 && digits.startsWith('91')) {
+      return digits.substring(digits.length - 10);
+    }
+    return digits;
+  }
+
+  /// True iff the given phone number belongs to a Lead or Deal owned by
+  /// the current user (or team, when manager scope is on). On network
+  /// failure we return FALSE — a spam call with no lookup is worse than
+  /// a missed genuine call, and the user can always retry manually.
+  Future<bool> _isKnownLeadOrDeal(String number) async {
+    final normalized = _normalizeNumber(number);
+    if (normalized.length < 7) return false;
+
+    final cached = _lookupCache[normalized];
+    if (cached != null &&
+        DateTime.now().difference(cached.at) < _lookupTtl) {
+      return cached.matched;
+    }
+
+    try {
+      final repo = PhoneLookupRepository(_ref.read(dioProvider));
+      final result = await repo.lookup(normalized);
+      _lookupCache[normalized] =
+          (matched: result.matched, at: DateTime.now());
+      return result.matched;
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint(
+            '[CallDetect] lookup_by_phone failed for $normalized ($e); '
+            'treating as unknown and skipping.');
+      }
+      return false;
+    }
+  }
 
   /// Native → Flutter: ask whether MANAGE_EXTERNAL_STORAGE is granted.
   /// Returns null on non-Android.
@@ -188,6 +238,11 @@ class CallEventBridge {
   /// Native told us "here's the OEM-written MP3 for the call that just ended".
   /// Immediately upload + auto-create call log (server-side) + fire two
   /// local notifications: one when captured, one when AI summary is ready.
+  ///
+  /// GATE: If the number isn't linked to any Lead or Deal we drop the whole
+  /// pipeline right here — no upload, no AI processing, no notification,
+  /// no CRM Call Log row. Spam and personal calls should be invisible to
+  /// the app.
   Future<void> _onRecordingFound(Map<String, dynamic> args) async {
     final path = (args['path'] ?? '').toString();
     final number = (args['number'] ?? '').toString();
@@ -195,6 +250,15 @@ class CallEventBridge {
     final direction = (args['direction'] ?? '').toString();
     final contactHint = (args['contact_name_hint'] ?? '').toString();
     if (path.isEmpty) return;
+
+    if (number.isEmpty || !await _isKnownLeadOrDeal(number)) {
+      if (kDebugMode) {
+        debugPrint(
+            '[CallDetect] Ignoring recording — number "$number" is not '
+            'linked to any Lead or Deal.');
+      }
+      return;
+    }
 
     _ref.read(recordingUploadProvider.notifier).set(
           RecordingUploadProgress(
@@ -253,21 +317,30 @@ class CallEventBridge {
     }
   }
 
-  /// Persist a CRM Call Log row for the just-ended call regardless of
-  /// whether a recording was found. Fires from native CallDetectionService
-  /// after the post-IDLE CallLog re-query — by this point we have the real
-  /// dialed number (not the OFFHOOK stale value). Backend matches the
-  /// number to a Lead/Deal by last-7-digit suffix.
+  /// Persist a CRM Call Log row for the just-ended call. Fires from
+  /// native CallDetectionService after the post-IDLE CallLog re-query,
+  /// by which point we have the real dialed number (not the OFFHOOK
+  /// stale value).
+  ///
+  /// GATE: Same rule as _onRecordingFound. Only log the call when the
+  /// number matches a Lead or Deal. Spam calls, personal calls, and
+  /// missed calls to unknown numbers stay out of the CRM entirely.
   Future<void> _onCallLogReady(Map<String, dynamic> args) async {
     final number = (args['number'] ?? '').toString();
     final contactName = (args['contact_name'] ?? '').toString();
     final direction = (args['direction'] ?? 'outgoing').toString();
     final status = (args['status'] ?? 'Completed').toString();
     final durationSec = (args['duration_sec'] as num?)?.toInt() ?? 0;
-    // We now fire even when number is empty — the backend uses
-    // contact_name for a name-based Lead lookup so the row still lands
-    // with a proper reference. Only bail if BOTH are missing.
     if (number.isEmpty && contactName.isEmpty) return;
+
+    if (number.isEmpty || !await _isKnownLeadOrDeal(number)) {
+      if (kDebugMode) {
+        debugPrint(
+            '[CallDetect] Ignoring call log: number "$number" is not '
+            'linked to any Lead or Deal.');
+      }
+      return;
+    }
 
     try {
       final dio = _ref.read(dioProvider);
