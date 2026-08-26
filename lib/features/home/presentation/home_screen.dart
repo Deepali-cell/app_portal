@@ -8,6 +8,9 @@ import 'package:intl/intl.dart';
 
 import '../../dashboard/data/dashboard_repository.dart' show salesDashboardProvider;
 import '../../dashboard/presentation/sales_dashboard_section.dart';
+import '../../role_dashboards/data/role_dashboards_repository.dart'
+    show hrSummaryProvider, projectsSummaryProvider, accountsSummaryProvider;
+import '../../role_dashboards/presentation/role_dashboards_sections.dart';
 import '../../todays_plan/application/todays_plan_controller.dart' show todaysPlanControllerProvider;
 
 import '../../../core/format/money.dart';
@@ -42,6 +45,9 @@ class HomeScreen extends ConsumerWidget {
           color: AppColors.primary,
           onRefresh: () async {
             ref.invalidate(salesDashboardProvider);
+            ref.invalidate(hrSummaryProvider);
+            ref.invalidate(projectsSummaryProvider);
+            ref.invalidate(accountsSummaryProvider);
             ref.invalidate(todaysPlanControllerProvider);
             ref.invalidate(attendanceControllerProvider);
             ref.invalidate(leaveControllerProvider);
@@ -62,17 +68,27 @@ class HomeScreen extends ConsumerWidget {
                 const SizedBox(height: AppDimens.lg),
                 const TodaysPlanCard(),
               ],
-              if (profile.can('leads') || profile.can('deals')) ...[
+              if (profile.can('sees_sales')) ...[
                 const SizedBox(height: AppDimens.lg),
                 const SalesDashboardSection(),
-              ],
-              if (profile.can('leads') || profile.can('deals')) ...[
                 const SizedBox(height: AppDimens.lg),
                 const _PipelineEntry(),
                 if (!kIsWeb && Platform.isAndroid) ...[
                   const SizedBox(height: AppDimens.lg),
                   const _CallDetectionEntry(),
                 ],
+              ],
+              if (profile.can('sees_hr')) ...[
+                const SizedBox(height: AppDimens.lg),
+                const HrDashboardSection(),
+              ],
+              if (profile.can('sees_projects')) ...[
+                const SizedBox(height: AppDimens.lg),
+                const ProjectsDashboardSection(),
+              ],
+              if (profile.can('sees_accounts')) ...[
+                const SizedBox(height: AppDimens.lg),
+                const AccountsDashboardSection(),
               ],
               if (profile.can('manager_view')) ...[
                 const SizedBox(height: AppDimens.lg),

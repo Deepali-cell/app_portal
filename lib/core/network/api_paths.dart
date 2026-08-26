@@ -38,6 +38,15 @@ class ApiPaths {
   static const String salesDashboard =
       '/api/method/tcb_portal_erp.api.dashboard.get_sales_dashboard';
 
+  // Role-specific home sections — one endpoint per role. Each takes a
+  // `period` (today | week | month | custom) and optional from_date/to_date.
+  static const String hrDashboard =
+      '/api/method/tcb_portal_erp.api.hr_dashboard.get_summary';
+  static const String projectsDashboard =
+      '/api/method/tcb_portal_erp.api.projects_dashboard.get_summary';
+  static const String accountsDashboard =
+      '/api/method/tcb_portal_erp.api.accounts_dashboard.get_summary';
+
   // Call recording + AI pipeline (Phase D.2.4 + D.2.5)
   static const String uploadRecording =
       '/api/method/tcb_portal_erp.api.call_intelligence.upload_recording';
