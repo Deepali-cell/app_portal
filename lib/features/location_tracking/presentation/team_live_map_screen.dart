@@ -153,6 +153,12 @@ class _PinButton extends StatelessWidget {
         LiveStatus.online => const Color(0xFF1B7F4D),
         LiveStatus.stale => const Color(0xFFE65100),
         LiveStatus.offline => const Color(0xFF6E7480),
+        // "Needs attention" statuses share a red hue so managers can spot
+        // them at a glance across all pins.
+        LiveStatus.noPermission => const Color(0xFFB23A48),
+        LiveStatus.locationOff => const Color(0xFFB23A48),
+        LiveStatus.gpsUnavailable => const Color(0xFFE65100),
+        LiveStatus.networkError => const Color(0xFF6E7480),
       };
 
   @override
@@ -215,14 +221,9 @@ class _PeopleStrip extends StatelessWidget {
             horizontal: AppDimens.md, vertical: AppDimens.sm),
         itemBuilder: (_, i) {
           final p = people[i];
-          final status = switch (p.status) {
-            LiveStatus.online => 'online',
-            LiveStatus.stale => 'stale',
-            LiveStatus.offline => 'offline',
-          };
           final subtitle = p.minutesAgo == null
               ? 'No pings yet'
-              : '${p.minutesAgo!.toStringAsFixed(0)} min ago  ·  $status';
+              : '${p.minutesAgo!.toStringAsFixed(0)} min ago  ·  ${p.status.label}';
           return GestureDetector(
             onTap: () => onTap(p),
             child: Container(

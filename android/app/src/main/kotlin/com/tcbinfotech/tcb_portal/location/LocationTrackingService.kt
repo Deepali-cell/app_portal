@@ -47,9 +47,12 @@ class LocationTrackingService : Service() {
         private const val CHANNEL_NAME = "Location sharing"
         private const val NOTIF_ID = 4711
 
-        // 1-min pings, min-distance 20 m. Locked with the user 2026-08-26.
-        private const val INTERVAL_MS = 60_000L
-        private const val MIN_DISTANCE_M = 20f
+        // 10-min pings, min-distance 100 m. Locked with the user
+        // 2026-08-26 (evening). Trades freshness for battery: a field
+        // sales rep who moves rarely will burn far less battery, and
+        // the last known position is always visible to the manager.
+        private const val INTERVAL_MS = 600_000L
+        private const val MIN_DISTANCE_M = 100f
 
         private const val TAG = "LocationTrackingSvc"
     }

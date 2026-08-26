@@ -23,6 +23,16 @@ class LocationTrackingRepository {
     return TrackingStatus.fromJson(data);
   }
 
+  Future<Map<String, dynamic>> recordHeartbeat({
+    required String reason,
+    int? batteryLevel,
+  }) async {
+    return _post(ApiPaths.locRecordHeartbeat, {
+      'reason': reason,
+      if (batteryLevel != null) 'battery_level': batteryLevel,
+    });
+  }
+
   Future<Map<String, dynamic>> recordPing({
     required double latitude,
     required double longitude,

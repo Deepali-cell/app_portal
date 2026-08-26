@@ -56,6 +56,8 @@ class ApiPaths {
       '/api/method/tcb_portal_erp.api.location_tracking.record_ping';
   static const String locRecordPingsBatch =
       '/api/method/tcb_portal_erp.api.location_tracking.record_pings_batch';
+  static const String locRecordHeartbeat =
+      '/api/method/tcb_portal_erp.api.location_tracking.record_heartbeat';
   static const String locMyTeamLive =
       '/api/method/tcb_portal_erp.api.location_tracking.my_team_live';
   static const String locPersonCurrent =

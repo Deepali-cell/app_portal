@@ -9,8 +9,8 @@ import 'package:intl/intl.dart';
 import '../../dashboard/data/dashboard_repository.dart' show salesDashboardProvider;
 import '../../dashboard/presentation/sales_dashboard_section.dart';
 import '../../location_tracking/data/location_tracking_repository.dart'
-    show trackingStatusProvider, teamLiveProvider;
-import '../../location_tracking/presentation/tracking_toggle_card.dart';
+    show teamLiveProvider;
+import '../../location_tracking/presentation/location_status_banner.dart';
 import '../../role_dashboards/data/role_dashboards_repository.dart'
     show hrSummaryProvider, projectsSummaryProvider, accountsSummaryProvider;
 import '../../role_dashboards/presentation/role_dashboards_sections.dart';
@@ -51,7 +51,6 @@ class HomeScreen extends ConsumerWidget {
             ref.invalidate(hrSummaryProvider);
             ref.invalidate(projectsSummaryProvider);
             ref.invalidate(accountsSummaryProvider);
-            ref.invalidate(trackingStatusProvider);
             ref.invalidate(teamLiveProvider);
             ref.invalidate(todaysPlanControllerProvider);
             ref.invalidate(attendanceControllerProvider);
@@ -105,10 +104,12 @@ class HomeScreen extends ConsumerWidget {
                   const _FieldTeamEntry(),
                 ],
               ],
-              if (!kIsWeb && Platform.isAndroid) ...[
-                const SizedBox(height: AppDimens.lg),
-                const TrackingToggleCard(),
-              ],
+              // Sales users only see this: a subtle banner that surfaces when
+              // location sharing is broken (permission revoked, location
+              // service off) so the user knows to fix it. There is NO toggle;
+              // tracking is a policy for the sales team, not a choice.
+              if (!kIsWeb && Platform.isAndroid && profile.can('sees_sales'))
+                const LocationStatusBanner(),
               const SizedBox(height: AppDimens.lg),
               const _BentoGrid(),
               const SizedBox(height: AppDimens.lg),

@@ -124,7 +124,8 @@ class _Header extends StatelessWidget {
         : latest.minutesAgo! < 1
             ? 'just now'
             : '${latest.minutesAgo!.toStringAsFixed(0)} min ago';
-    final status = current.trackingEnabled ? 'Sharing on' : 'Sharing off';
+    final needsAttention = current.status.needsAttention;
+    final statusLabel = current.status.label;
     return Container(
       padding: const EdgeInsets.all(AppDimens.md),
       color: AppColors.surfaceContainerLowest,
@@ -156,8 +157,11 @@ class _Header extends StatelessWidget {
                       style: Theme.of(context).textTheme.bodySmall),
                 const SizedBox(height: 2),
                 Text(
-                  'Last update $ago  ·  $status  ·  ${latest.accuracyM.toStringAsFixed(0)} m accuracy',
-                  style: Theme.of(context).textTheme.bodySmall,
+                  'Last update $ago  ·  $statusLabel  ·  ${latest.accuracyM.toStringAsFixed(0)} m accuracy',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: needsAttention ? AppColors.error : null,
+                      fontWeight:
+                          needsAttention ? FontWeight.w700 : FontWeight.w400),
                 ),
               ],
             ),

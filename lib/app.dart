@@ -7,6 +7,7 @@ import 'core/theme/app_theme.dart';
 import 'features/call_detection/application/call_event_bridge.dart';
 import 'features/call_detection/presentation/deeplink_listener.dart';
 import 'features/call_outcome/presentation/post_call_resume_listener.dart';
+import 'features/location_tracking/application/location_auto_start.dart';
 import 'features/location_tracking/application/location_bridge.dart';
 import 'features/onboarding/presentation/permission_bootstrap.dart';
 import 'features/tenant/application/tenant_controller.dart';
@@ -33,6 +34,11 @@ class TcbPortalApp extends ConsumerWidget {
     // Location tracking bridge — same pattern. Sets up the MethodChannel
     // handler so the native foreground service can push ping updates to Dart.
     ref.watch(locationBridgeProvider);
+
+    // Auto-start location tracking for sales users. Non-sales users get a
+    // no-op (and any leftover native service from a previous sales session
+    // is stopped). See location_auto_start.dart for the policy.
+    ref.watch(locationAutoStartProvider);
 
     final router = ref.watch(routerProvider);
     return PermissionBootstrap(

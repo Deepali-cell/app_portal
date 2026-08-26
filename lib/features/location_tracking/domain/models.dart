@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:latlong2/latlong.dart';
 
-enum LiveStatus { online, stale, offline }
+enum LiveStatus { online, stale, offline, noPermission, locationOff, gpsUnavailable, networkError }
 
 LiveStatus liveStatusFromString(String? s) {
   switch ((s ?? '').toLowerCase()) {
@@ -9,9 +9,38 @@ LiveStatus liveStatusFromString(String? s) {
       return LiveStatus.online;
     case 'stale':
       return LiveStatus.stale;
+    case 'no_permission':
+      return LiveStatus.noPermission;
+    case 'location_off':
+      return LiveStatus.locationOff;
+    case 'gps_unavailable':
+      return LiveStatus.gpsUnavailable;
+    case 'network_error':
+      return LiveStatus.networkError;
     default:
       return LiveStatus.offline;
   }
+}
+
+extension LiveStatusX on LiveStatus {
+  /// User-visible label. Kept short so it fits in a pin/pill.
+  String get label => switch (this) {
+        LiveStatus.online => 'Online',
+        LiveStatus.stale => 'Stale',
+        LiveStatus.offline => 'Offline',
+        LiveStatus.noPermission => 'Permission off',
+        LiveStatus.locationOff => 'Location off',
+        LiveStatus.gpsUnavailable => 'No GPS fix',
+        LiveStatus.networkError => 'No network',
+      };
+
+  /// True if the tracked person's sharing needs their attention (they
+  /// should fix something on their phone).
+  bool get needsAttention =>
+      this == LiveStatus.noPermission ||
+      this == LiveStatus.locationOff ||
+      this == LiveStatus.gpsUnavailable ||
+      this == LiveStatus.networkError;
 }
 
 @immutable
@@ -92,6 +121,8 @@ class PersonCurrent {
     required this.image,
     required this.trackingEnabled,
     required this.sessionId,
+    required this.status,
+    required this.unavailableReason,
     required this.latest,
   });
   final String employee;
@@ -100,6 +131,8 @@ class PersonCurrent {
   final String image;
   final bool trackingEnabled;
   final String? sessionId;
+  final LiveStatus status;
+  final String? unavailableReason;
   final LatestPing? latest;
 
   factory PersonCurrent.fromJson(Map<String, dynamic> j) => PersonCurrent(
@@ -109,6 +142,8 @@ class PersonCurrent {
         image: (j['image'] ?? '').toString(),
         trackingEnabled: j['tracking_enabled'] == true,
         sessionId: j['session_id'] as String?,
+        status: liveStatusFromString(j['status'] as String?),
+        unavailableReason: j['unavailable_reason'] as String?,
         latest: j['latest_ping'] is Map
             ? LatestPing.fromJson(
                 (j['latest_ping'] as Map).cast<String, dynamic>())
