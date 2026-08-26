@@ -1,6 +1,6 @@
 # TCB Portal — Roles & Access Map
 
-**As of 2026-08-26.** Single source of truth for "who sees what in the app".
+**As of 2026-08-26 (evening).** Single source of truth for "who sees what in the app".
 Anything not listed here is visible to everyone with a valid session.
 
 The app has **NO custom role system**. Everything is gated by:
@@ -111,18 +111,20 @@ Source: `lib/features/home/presentation/home_screen.dart` build method.
 | 8 | **Accounts** section | `sees_accounts` | KPI tiles (receivable, payable, overdue count, receipts/payments in period) + top overdue list |
 | 9 | **Leaderboard** card | `manager_view` | CTA → `/leaderboard` |
 | 10 | **Team status** card | `manager_view` | CTA → `/team-status` (live who-is-online, calls-per-rep) |
-| 11 | **Field team** card | `manager_view` **AND** Android | CTA → `/location/team` (live map of reportees) |
-| 12 | **Location sharing** toggle | Android (all users) | Enable/disable own tracking; shows "On since X · Last update Y" |
+| 11 | **Field team** card | `manager_view` **AND** Android | CTA → `/location/team` (live map of sales reportees) |
+| 12 | **Location status banner** | `sees_sales` **AND** Android AND permissions/service missing | Red banner explaining what to fix. Hidden when everything works. **No user toggle any more.** |
 | 13 | **Today** bento tile | always | Clock-in status |
 | 14 | **Leave Balance** bento tile | always | Days remaining |
 | 15 | **Last Payslip** bento tile | always | Latest slip date (amount masked) |
 | 16 | **Recent Activity** | always | Recent leave approvals, task completions, etc. |
 
-**Note on the toggle (row 12):** it appears for every Android user regardless
-of role. If an employee has no manager (their `reports_to` is empty), turning
-it ON still stores pings on the server, but nobody has permission to see
-those pings via `person_current` — the pings become invisible to everyone
-except a System Manager.
+**Note on row 12 (updated 2026-08-26 evening):** the user-facing toggle
+has been removed. Location sharing is a **policy** for the sales team, not
+a choice. Tracking auto-starts silently for any Sales user when the app
+launches. The banner in row 12 only appears when something is broken
+(permission revoked, background permission missing, notification perm off,
+system Location service off) and disappears as soon as it's fixed. Non-
+sales users see no location UI on Home at all.
 
 ---
 
@@ -177,7 +179,8 @@ Answers the question "kaunse role ke bina ye cheez nahi dikhegi":
 | **Accounts home section** | Role `Accounts User` or `Accounts Manager` |
 | **Invoices tab, Invoice create/submit, Record Payment** | Role that grants `Sales Invoice: read` OR `Purchase Invoice: read` (typically `Accounts User` or `Sales User` with company scope) |
 | **Leaderboard, Team status, Field team map, Team-scope on Pipeline** | Role `Sales Manager` / `Sales Master Manager` / `CRM Manager` / `System Manager` |
-| **Field team map showing a specific person's location** | Above manager role AND that person's `Employee.reports_to` chain leads to the caller |
+| **Field team map showing a specific person's location** | Above manager role AND that person's `Employee.reports_to` chain leads to the caller AND that person has one of the sales roles |
+| **Be tracked yourself (location shared with manager)** | One of `Sales User`, `Sales Manager`, `Sales Master Manager`, `CRM Manager`. Automatic, no toggle. Only opt-out is revoking Android location permission. |
 | **Everything (super-user)** | Role `System Manager` |
 
 ---
@@ -190,8 +193,9 @@ Test creds set up 2026-08-26 for the demo.
 |---|---|---|---|---|
 | **Administrator** | `admin` | System Manager (super) | All 11 tabs | Every section (sees everything) |
 | **ess.test@tcb.local** (ESS Tester, HR-EMP-00066) | `demo@123` | Employee | Home · Time · Leave · Payroll · Tasks · Timesheet · Directory | Welcome + Location toggle (Android) + Bento + Recent Activity. **No CRM. No HR. No Projects. No Accounts. No Manager cards.** |
-| **karishma.jain@tcbinfotech.co.in** (HR-EMP-00029) | `tcb@12345` | Employee · Projects User · Sales User | All ESS tabs + Leads + Deals + Directory | Welcome + Today's Plan + **Sales dashboard** + Pipeline + Call detection (Android) + **Projects section** + Location toggle + Bento + Recent Activity. No HR/Accounts/Manager cards. |
-| **ajay.verma@tcbinfotech.co.in** (HR-EMP-00026) | `demo@123` | Agent · Employee · Helpdesk Contact · Projects User | ESS tabs + Directory | Welcome + **Projects section** + Location toggle + Bento + Recent Activity. **No CRM at all.** |
+| **karishma.jain@tcbinfotech.co.in** (HR-EMP-00029, reports to Aditi) | `tcb@12345` | Employee · Projects User · Sales User | All ESS tabs + Leads + Deals + Directory | Welcome + Today's Plan + **Sales dashboard** + Pipeline + Call detection (Android) + **Projects section** + Bento + Recent Activity. **Location tracking auto-starts silently at boot; no user toggle.** Aditi sees Karishma on Field team map. |
+| **ajay.verma@tcbinfotech.co.in** (HR-EMP-00026) | `demo@123` | Agent · Employee · Helpdesk Contact · Projects User | ESS tabs + Directory | Welcome + **Projects section** + Bento + Recent Activity. **No CRM at all. NO location tracking either (Projects User isn't a sales role).** |
+| **mukesh.kumar@tcbinfotech.co.in** (HR-EMP-00025, developer) | `demo@123` | Employee · Projects User | ESS tabs + Directory | Same as Ajay — Welcome + Projects section + Bento + Recent Activity. **Verified 2026-08-26 evening: home has zero location UI, backend refuses any pings from him.** The canonical "not tracked" user for demos. |
 | **rajesh.kumar@tcbinfotech.demo** (HR-EMP-00068) | `demo@123` | Employee · HR Manager · Item Manager · Leave Approver · Purchase User · Sales Manager · Sales Master Manager | ESS + Leads + Deals + Invoices + Directory | Welcome + Today's Plan + **Sales** + Pipeline + Call detection + **HR** + Leaderboard + Team status + Field team + Location toggle + Bento + Recent. No Projects/Accounts (no those specific roles). |
 | **hr@tcbinfotech.com** — Yashvi (HR-EMP-00027) | `demo@123` | 50+ roles incl. System Manager, HR Manager, Sales User, Accounts Manager, Projects User | All 11 tabs | Every home section (super-user via System Manager). Field team map empty (no reportees under Yashvi). |
 | **aditi.malusare@tcbinfotech.co.in** (HR-EMP-00022) | `demo@123` | 50+ roles incl. System Manager, Accounts Manager, HR Manager, Sales Manager, Projects Manager, Purchase Manager, etc. | All 11 tabs | Every home section. **Field team map shows her 5 reportees**: Sahil Dhania, Shivam Singhal, Anuj Sharma, Varsha Mehta, and one more under HR-EMP-00022. |
@@ -200,38 +204,68 @@ Test creds set up 2026-08-26 for the demo.
 
 ---
 
-## 8. Location-tracking mapping (specific to LOC.1 feature)
+## 8. Location-tracking mapping (LOC.1 — policy revision 2026-08-26 evening)
 
-Because this feature is new, calling it out explicitly:
+Because this feature just tightened significantly, calling it out explicitly:
 
-- **Who can turn ON tracking:** any Android user with an Employee record.
-  Toggle card is always visible on Home (Android).
-- **Who sees the "Field team" map card:** any user with `manager_view` on
-  Android.
-- **Whose location shows on that map:** every Active Employee whose
-  `Employee.reports_to` chain (up to 8 hops) resolves to the caller's
-  Employee. System Manager sees every Active Employee.
-- **Person detail view:** allowed if the target employee is the caller, is
-  a transitive report, or the caller is System Manager. Otherwise HTTP 403.
-- **Backend enforces this on every read** — the client-side gating is a UX
+- **Who is tracked:** ONLY users with one of `Sales User`, `Sales Manager`,
+  `Sales Master Manager`, or `CRM Manager` role. Non-sales employees
+  (developers like Mukesh, HR, accounts, projects) are NOT tracked. The
+  app never even tries to start the location service for them; the backend
+  refuses their pings with `{ok: false, reason: "not_trackable"}` as a
+  second line of defence.
+- **How it starts:** automatically at app launch. No user-facing toggle.
+  For a sales user, the app requests permissions (fine, background,
+  notifications) on first launch, opens a backend Tracking Session
+  silently, and starts the native foreground service.
+- **How to opt out:** the sales user CANNOT turn tracking off from within
+  the app. The only opt-out is revoking the OS-level location permission
+  in Android Settings — and even then, the manager still sees a "Permission
+  off" status on the map, so the fact that the user opted out is visible.
+- **Ping cadence:** every 10 min, or when the user moves > 100 m,
+  whichever comes first. Trades freshness for battery.
+- **Who sees the "Field team" map card:** any user with `manager_view`
+  on Android.
+- **Whose location shows on that map:** every Active Employee who
+  (a) has one of the sales roles AND (b) whose `Employee.reports_to`
+  chain resolves to the caller (up to 8 hops). System Manager sees every
+  Active sales employee.
+- **Person detail view:** allowed if the target is the caller, is a
+  transitive report, or the caller is System Manager. Otherwise HTTP 403.
+- **Backend enforces every rule** — the client-side gating is a UX
   nicety, not a security boundary.
-- **iOS:** the whole location feature is Android-only in this pass. iOS
-  users see no toggle and no Field team card, and can never upload pings.
+- **iOS:** entire location feature is Android-only in this pass.
+
+### The five statuses a manager sees, with meaning
+
+| Status pill | Colour | Meaning |
+|---|---|---|
+| **Online** | green | Fresh ping in last 15 min |
+| **Stale** | amber | Last ping 15-45 min ago |
+| **Offline** | grey | Last ping >45 min OR never |
+| **Permission off** | red | User revoked location permission in Android Settings |
+| **Location off** | red | System-wide Location service is off |
+| **No GPS fix** | amber | App is running but can't get a fix (indoor, tunnel) |
+| **No network** | grey | Heartbeat couldn't reach the server (phone offline) |
+
+**Last-known position stays visible.** Even when the latest event is a
+heartbeat (Permission off / Location off), the map pin still shows the
+last real coordinate the user reported. Manager sees WHERE they were
+plus WHY updates stopped.
 
 ### Practical example (with current demo data)
 
-Aditi (HR-EMP-00022) has these direct reports in the DB right now:
+Aditi (HR-EMP-00022) has these direct reports:
 
-- HR-EMP-00004 Sahil Dhania
-- HR-EMP-00009 Shivam Singhal
-- HR-EMP-00019 Anuj Sharma
-- HR-EMP-00023 Varsha Mehta
-- HR-EMP-00026 Ajay Verma
+- HR-EMP-00004 Sahil Dhania — has `Sales User` → **shows on map**
+- HR-EMP-00009 Shivam Singhal — Employee only → hidden
+- HR-EMP-00019 Anuj Sharma — Employee only → hidden
+- HR-EMP-00023 Varsha Mehta — Employee only → hidden
+- HR-EMP-00026 Ajay Verma — Projects User only → hidden
+- HR-EMP-00029 Karishma Jain (added 2026-08-26) — `Sales User` → **shows on map**
 
-If any of them enables tracking on their phone, they show up as a pin on
-Aditi's Field team map. Aditi can tap a pin → see today's trail. If, say,
-Shivam has a sub-report Kavita (transitive), Kavita also shows on Aditi's
-map when tracking is on.
+So Aditi's Field team map today shows Sahil + Karishma. The rest of her
+reports (developers / project members) are correctly invisible.
 
 ---
 
