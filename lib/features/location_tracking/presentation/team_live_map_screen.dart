@@ -21,8 +21,11 @@ class TeamLiveMapScreen extends ConsumerStatefulWidget {
       _TeamLiveMapScreenState();
 }
 
-class _TeamLiveMapScreenState extends ConsumerState<TeamLiveMapScreen> {
+class _TeamLiveMapScreenState extends ConsumerState<TeamLiveMapScreen>
+    with SingleTickerProviderStateMixin {
   final MapController _map = MapController();
+  late final AnimationController _spin =
+      AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
   Timer? _tick;
 
   @override
@@ -30,14 +33,35 @@ class _TeamLiveMapScreenState extends ConsumerState<TeamLiveMapScreen> {
     super.initState();
     // Refresh every 60 s while this screen is on top so the pins stay live.
     _tick = Timer.periodic(const Duration(seconds: 60), (_) {
-      if (mounted) ref.invalidate(teamLiveProvider);
+      if (mounted) _refresh(silent: true);
     });
   }
 
   @override
   void dispose() {
     _tick?.cancel();
+    _spin.dispose();
     super.dispose();
+  }
+
+  Future<void> _refresh({bool silent = false}) async {
+    _spin.repeat();
+    if (!silent) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(
+          content: Text('Refreshing team locations…'),
+          duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+        ));
+    }
+    ref.invalidate(teamLiveProvider);
+    try {
+      await ref.read(teamLiveProvider.future);
+    } catch (_) {/* handled by AsyncValue.when */}
+    if (!mounted) return;
+    _spin.stop();
+    _spin.value = 0;
   }
 
   @override
@@ -51,8 +75,11 @@ class _TeamLiveMapScreenState extends ConsumerState<TeamLiveMapScreen> {
         actions: [
           IconButton(
             tooltip: 'Refresh',
-            icon: Icon(Icons.refresh, color: AppColors.primary),
-            onPressed: () => ref.invalidate(teamLiveProvider),
+            icon: RotationTransition(
+              turns: _spin,
+              child: Icon(Icons.refresh, color: AppColors.primary),
+            ),
+            onPressed: () => _refresh(),
           ),
         ],
       ),

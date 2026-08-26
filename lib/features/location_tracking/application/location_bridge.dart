@@ -89,7 +89,7 @@ class LocationBridge {
       _ref.invalidate(trackingStatusProvider);
     } catch (e) {
       if (kDebugMode) debugPrint('[loc] record_ping failed: $e');
-      // A single failure is fine — the next fused-location callback (1 min
+      // A single failure is fine - the next fused-location callback (1 min
       // away) will retry. We deliberately do NOT queue-and-retry client-side
       // to keep the mobile stateless.
     }
@@ -114,7 +114,7 @@ Future<String?> enableTrackingFlow(WidgetRef ref) async {
   if (!bg.isGranted) {
     return "Grant 'Allow all the time' so tracking works when the screen is off.";
   }
-  // 3. Notifications (Android 13+ — the FGS needs its notification allowed).
+  // 3. Notifications (Android 13+ - the FGS needs its notification allowed).
   final notif = await ph.Permission.notification.request();
   if (!notif.isGranted) {
     return 'Allow notifications so the tracking service can run.';

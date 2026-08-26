@@ -99,24 +99,28 @@ Every tab is auto-hidden when the gating cap is `false`.
 
 Source: `lib/features/home/presentation/home_screen.dart` build method.
 
+**2026-08-26 evening restructure:** the sales sprawl (SalesDashboardSection
++ Pipeline card + Call detection card + Leaderboard + Team status + Field
+team + Location banner) has been collapsed into ONE "Sales workspace" CTA
+that opens a dedicated tabbed screen. Home now stays visually clean for
+every role, including managers. Details in section 3a below.
+
 | # | Section | Gate | Contents |
 |---|---|---|---|
 | 1 | **Welcome hero** | always | `Good {morning/evening}, {name}!` + Clock In + Apply Leave buttons |
 | 2 | **Today's Plan** | `leads` | Sales-agent daily plan (overdue count, new leads, next call) |
-| 3 | **My/Team dashboard toggle** | `sees_sales` (via SalesDashboardSection) | Sales dashboard: leads by status, deals by stage, follow-ups |
-| 4 | **Pipeline** card | `sees_sales` | CTA → `/pipeline` funnel screen |
-| 5 | **Call detection** card | `sees_sales` **AND** Android | CTA → `/call-detection` settings + permission wizard |
-| 6 | **HR at a glance** section | `sees_hr` | KPI tiles (pending leaves, absent today, exits <30d) + birthdays this week |
-| 7 | **Projects** section | `sees_projects` | KPI tiles (active projects, tasks due, overdue, unbilled hrs) + next deadlines |
-| 8 | **Accounts** section | `sees_accounts` | KPI tiles (receivable, payable, overdue count, receipts/payments in period) + top overdue list |
-| 9 | **Leaderboard** card | `manager_view` | CTA → `/leaderboard` |
-| 10 | **Team status** card | `manager_view` | CTA → `/team-status` (live who-is-online, calls-per-rep) |
-| 11 | **Field team** card | `manager_view` **AND** Android | CTA → `/location/team` (live map of sales reportees) |
-| 12 | **Location status banner** | `sees_sales` **AND** Android AND permissions/service missing | Red banner explaining what to fix. Hidden when everything works. **No user toggle any more.** |
-| 13 | **Today** bento tile | always | Clock-in status |
-| 14 | **Leave Balance** bento tile | always | Days remaining |
-| 15 | **Last Payslip** bento tile | always | Latest slip date (amount masked) |
-| 16 | **Recent Activity** | always | Recent leave approvals, task completions, etc. |
+| 3 | **Sales workspace** card | `sees_sales` | CTA → `/sales-workspace`. Single entry point for the whole CRM suite (Overview, Pipeline, Calls, Team). Replaces the old sales-dashboard sprawl on Home. |
+| 4 | **HR at a glance** section | `sees_hr` | KPI tiles (pending leaves, absent today, exits <30d) + birthdays this week |
+| 5 | **Projects** section | `sees_projects` | KPI tiles (active projects, tasks due, overdue, unbilled hrs) + next deadlines |
+| 6 | **Accounts** section | `sees_accounts` | KPI tiles (receivable, payable, overdue count, receipts/payments in period) + top overdue list |
+| 7 | **Leaderboard** card | `manager_view` **AND NOT `sees_sales`** | Fallback for non-sales managers who don't have the Sales workspace. Sales managers reach this from inside the workspace. |
+| 8 | **Team status** card | `manager_view` **AND NOT `sees_sales`** | Same fallback rule. |
+| 9 | **Field team** card | `manager_view` **AND NOT `sees_sales`** **AND** Android | Same fallback rule. |
+| 10 | **Location status banner** | `sees_sales` **AND** Android AND permissions/service missing | Red banner explaining what to fix. Hidden when everything works. **No user toggle any more.** |
+| 11 | **Today** bento tile | always | Clock-in status |
+| 12 | **Leave Balance** bento tile | always | Days remaining |
+| 13 | **Last Payslip** bento tile | always | Latest slip date (amount masked) |
+| 14 | **Recent Activity** | always | Recent leave approvals, task completions, etc. |
 
 **Note on row 12 (updated 2026-08-26 evening):** the user-facing toggle
 has been removed. Location sharing is a **policy** for the sales team, not
@@ -125,6 +129,24 @@ launches. The banner in row 12 only appears when something is broken
 (permission revoked, background permission missing, notification perm off,
 system Location service off) and disappears as soon as it's fixed. Non-
 sales users see no location UI on Home at all.
+
+---
+
+## 3a. Sales workspace tabs (`/sales-workspace`)
+
+Opened via the "Sales workspace" card on Home. Gated on `sees_sales`.
+The Team tab appears only for `manager_view`.
+
+| Tab | Gate | What's inside |
+|---|---|---|
+| **Overview** | `sees_sales` | The full SalesDashboardSection (My/Team toggle, Today counters, Follow-ups, Leads by status, Deals by stage, Sales team today). |
+| **Pipeline** | `sees_sales` | Funnel view CTA (`/pipeline`) + Kanban board CTA (`/lead-kanban`). |
+| **Calls** | `sees_sales` | Call Detection settings CTA (`/call-detection`, Android only) + info card explaining per-lead call history. On iOS the CTA is replaced by an "iOS notice" info card. |
+| **Team** | `manager_view` | Leaderboard CTA + Team status CTA + Field team CTA (Android only). Non-managers don't see this tab at all. |
+
+Nothing was removed. Every surface that was on Home before is still
+reachable; it now lives inside a proper workspace instead of scattered
+across the home screen.
 
 ---
 
@@ -140,7 +162,9 @@ sales users see no location UI on Home at all.
 | Team status | `/team-status` | `manager_view` | Backend also enforces the manager-role check |
 | Leaderboard | `/leaderboard` | `manager_view` | Backend enforces same |
 | Call Detection settings | `/call-detection` | `sees_sales` **AND** Android | iOS users see an "iOS notice" widget explaining Apple sandbox limits |
-| **Field team map** | `/location/team` | `manager_view` **AND** Android | Empty state if no reportees. Auto-refresh every 60 s. |
+| **Sales workspace** | `/sales-workspace` | `sees_sales` | Tabbed screen (Overview / Pipeline / Calls / Team). Team tab visible only to `manager_view`. |
+| **Field team list** (landing) | `/location/team` | `manager_view` **AND** Android | List of trackable reportees with status pill + last-known position + minutes ago. App-bar has map + refresh actions. Refresh spins the icon and shows a snackbar. Auto-refresh every 60 s. |
+| **Field team map** | `/location/team/map` | `manager_view` **AND** Android | Map with a pin per person. Coloured by status. Pull-to-refresh + spinning refresh + auto-refresh every 60 s. |
 | **Person live location** | `/location/person/:employee` | `manager_view` **AND** the target employee is a direct/transitive report | Server 403s if the caller is not authorized |
 | Directory | `/directory` | (always) | Any authenticated user can browse the employee list |
 | Notifications | `/notifications` | (always) | Notification Log is per-user |

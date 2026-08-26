@@ -72,15 +72,14 @@ class HomeScreen extends ConsumerWidget {
                 const SizedBox(height: AppDimens.lg),
                 const TodaysPlanCard(),
               ],
+              // Sales users get ONE compact CTA that opens the Sales
+              // workspace (Overview, Pipeline, Calls, Team). Home used to
+              // dump the whole dashboard + pipeline card + call detection
+              // card + leaderboard + team status + field team here — now
+              // everything is behind one door.
               if (profile.can('sees_sales')) ...[
                 const SizedBox(height: AppDimens.lg),
-                const SalesDashboardSection(),
-                const SizedBox(height: AppDimens.lg),
-                const _PipelineEntry(),
-                if (!kIsWeb && Platform.isAndroid) ...[
-                  const SizedBox(height: AppDimens.lg),
-                  const _CallDetectionEntry(),
-                ],
+                const _SalesWorkspaceEntry(),
               ],
               if (profile.can('sees_hr')) ...[
                 const SizedBox(height: AppDimens.lg),
@@ -94,7 +93,11 @@ class HomeScreen extends ConsumerWidget {
                 const SizedBox(height: AppDimens.lg),
                 const AccountsDashboardSection(),
               ],
-              if (profile.can('manager_view')) ...[
+              // Non-sales managers (rare but possible) still see the
+              // leaderboard + team status shortcuts here. Sales managers
+              // reach the same surfaces from inside the Sales workspace.
+              if (profile.can('manager_view') &&
+                  !profile.can('sees_sales')) ...[
                 const SizedBox(height: AppDimens.lg),
                 const _LeaderboardEntry(),
                 const SizedBox(height: AppDimens.lg),
@@ -753,6 +756,63 @@ class _PipelineEntry extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       "See which leads and deals are stuck at each stage",
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right,
+                  size: 20, color: AppColors.onSurfaceVariant),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// One-stop CTA for the whole Sales suite: Overview, Pipeline, Calls, Team.
+/// Replaces the six-card sprawl (Sales Dashboard + Pipeline card + Call
+/// Detection card + Leaderboard + Team status + Field team) that used to
+/// occupy the middle of every sales rep's home screen.
+class _SalesWorkspaceEntry extends StatelessWidget {
+  const _SalesWorkspaceEntry();
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppDimens.radiusXl),
+        onTap: () => context.push(Routes.salesWorkspace),
+        child: Padding(
+          padding: const EdgeInsets.all(AppDimens.md),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.secondaryFixed,
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Icon(Icons.dashboard_customize_outlined,
+                    color: AppColors.primary, size: 22),
+              ),
+              const SizedBox(width: AppDimens.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Sales workspace",
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 2),
+                    Text(
+                      "Overview, pipeline, calls, and your team in one place",
                       style: Theme.of(context).textTheme.bodySmall,
                     ),
                   ],

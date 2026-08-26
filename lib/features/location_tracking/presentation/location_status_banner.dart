@@ -7,7 +7,7 @@ import '../../../core/theme/app_dimens.dart';
 import '../application/location_auto_start.dart';
 
 /// Home-screen banner shown to a Sales user IF the app cannot currently
-/// share location — permission revoked, background permission missing,
+/// share location - permission revoked, background permission missing,
 /// notifications off, etc. Hidden when everything is healthy.
 ///
 /// There is no "turn off" button. Sharing is a policy for the sales team;

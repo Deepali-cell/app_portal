@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:io' show Platform;
 
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart' show kIsWeb, debugPrint, kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
@@ -42,12 +43,14 @@ final locationHealthProvider =
   return LocationHealth.healthy;
 });
 
-/// Boot controller — runs once per app process. When the current user is
+/// Boot controller - runs once per app process. When the current user is
 /// a sales role, silently starts the native FGS and opens the server
 /// session. When permissions are missing, sends a heartbeat to the server
 /// so the manager can see WHY updates stopped.
 class LocationAutoStartController extends Notifier<bool> {
   Timer? _healthLoop;
+  StreamSubscription<List<ConnectivityResult>>? _connSub;
+  bool _wasOffline = false;
 
   @override
   bool build() {
@@ -57,8 +60,24 @@ class LocationAutoStartController extends Notifier<bool> {
     });
     // First-time boot after app start.
     Future.microtask(() => _boot(ref.read(authControllerProvider).profile));
+    // Listen to connectivity - when the phone comes back online after
+    // being offline, fire ONE `network_error` heartbeat so the manager
+    // knows the person was unreachable for a stretch (distinct from
+    // "location off" or "permission off").
+    _connSub = Connectivity().onConnectivityChanged.listen((results) async {
+      final online = results.any((r) => r != ConnectivityResult.none);
+      final profile = ref.read(authControllerProvider).profile;
+      if (profile == null || !(profile.can('sees_sales') as bool)) return;
+      if (!online) {
+        _wasOffline = true;
+      } else if (_wasOffline) {
+        _wasOffline = false;
+        await _sendHeartbeat('network_error');
+      }
+    });
     ref.onDispose(() {
       _healthLoop?.cancel();
+      _connSub?.cancel();
     });
     return false;
   }
@@ -114,7 +133,7 @@ class LocationAutoStartController extends Notifier<bool> {
       return;
     }
 
-    // All green — start the native FGS + open server session.
+    // All green - start the native FGS + open server session.
     try {
       await ref.read(locationRepositoryProvider).setEnabled(true);
       await bridge.startNativeService();

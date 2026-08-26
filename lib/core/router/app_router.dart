@@ -27,7 +27,9 @@ import '../../features/team_status/presentation/team_status_screen.dart';
 import '../../features/call_detection/presentation/call_detection_screen.dart';
 import '../../features/leads_kanban/presentation/kanban_screen.dart';
 import '../../features/location_tracking/presentation/person_location_screen.dart';
+import '../../features/location_tracking/presentation/team_live_list_screen.dart';
 import '../../features/location_tracking/presentation/team_live_map_screen.dart';
+import '../../features/sales_workspace/presentation/sales_workspace_screen.dart';
 import '../../features/notifications/presentation/notifications_screen.dart';
 import '../../features/payslips/presentation/payslip_detail_screen.dart';
 import '../../features/payslips/presentation/payslips_screen.dart';
@@ -71,8 +73,10 @@ class Routes {
   static const teamStatus = '/team-status';
   static const callDetection = '/call-detection';
   static const leadKanban = '/lead-kanban';
+  static const salesWorkspace = '/sales-workspace';
   // Live location tracking (Phase LOC.1)
-  static const locationTeam = '/location/team';
+  static const locationTeam = '/location/team';        // list view (landing)
+  static const locationTeamMap = '/location/team/map'; // map of all pins
   static const locationPerson = '/location/person/:employee';
 
   // Legacy aliases (kept so old strings still resolve)
@@ -220,7 +224,15 @@ final routerProvider = Provider<GoRouter>((ref) {
           parentNavigatorKey: rootNavigatorKey,
           builder: (_, _) => const LeadKanbanScreen()),
       GoRoute(
+          path: Routes.salesWorkspace,
+          parentNavigatorKey: rootNavigatorKey,
+          builder: (_, _) => const SalesWorkspaceScreen()),
+      GoRoute(
           path: Routes.locationTeam,
+          parentNavigatorKey: rootNavigatorKey,
+          builder: (_, _) => const TeamLiveListScreen()),
+      GoRoute(
+          path: Routes.locationTeamMap,
           parentNavigatorKey: rootNavigatorKey,
           builder: (_, _) => const TeamLiveMapScreen()),
       GoRoute(
