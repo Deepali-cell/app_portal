@@ -1,0 +1,258 @@
+# TCB Portal — Roles & Access Map
+
+**As of 2026-08-26.** Single source of truth for "who sees what in the app".
+Anything not listed here is visible to everyone with a valid session.
+
+The app has **NO custom role system**. Everything is gated by:
+
+1. **ERPNext roles** the user has (Sales User, HR Manager, Projects User, etc.)
+2. **ERPNext DocType permissions** (`frappe.has_permission("Lead", "create")` etc.)
+3. **Employee.reports_to** for hierarchy-based visibility (managers see their reportees)
+
+`tcb_portal_erp.api.auth._capabilities()` computes a `capabilities: {…}` map
+that the mobile reads once at login and uses to hide/show every UI surface.
+
+---
+
+## 1. The capability catalogue (all keys the API returns)
+
+Every key is a boolean. `true` unlocks a UI surface.
+
+### 1a. Feature-permission caps (from `FEATURE_PERMISSIONS`)
+
+Each is `True` iff the user has the given ERPNext permission on the given
+DocType. Source: `apps/tcb_portal_erp/tcb_portal_erp/api/auth.py`.
+
+| Cap key | Backing check | What it unlocks |
+|---|---|---|
+| `attendance` | `Employee Checkin`: create | **Time** tab, Clock In on Home |
+| `leave` | `Leave Application`: create | **Leave** tab, Apply Leave on Home |
+| `expense` | `Expense Claim`: create | **Expenses** side-nav item |
+| `payslip` | `Salary Slip`: read | **Payroll** tab, Payslip card in bento |
+| `task` | `Task`: create | **Tasks** tab |
+| `timesheet` | `Timesheet`: create | **Timesheet** tab + running-timer strip |
+| `leads` | `Lead`: create | **Leads** side-nav, Today's Plan card, phone-lookup FAB on Leads |
+| `deals` | `CRM Deal`: read | **Deals** side-nav |
+| `sales_invoice` | `Sales Invoice`: read | (part of synthetic `invoices`) |
+| `purchase_invoice` | `Purchase Invoice`: read | (part of synthetic `invoices`) |
+| `invoices` | `sales_invoice OR purchase_invoice` | **Invoices** tab |
+
+### 1b. Section-role caps (from `SECTION_ROLES`)
+
+Each is `True` iff the user has one of the listed roles. Used to gate the
+role-specific **home dashboard sections** (added 2026-08-26).
+
+| Cap key | Roles that unlock it | Home section shown |
+|---|---|---|
+| `sees_sales` | Sales User · Sales Manager · Sales Master Manager · CRM Manager | Sales dashboard + Pipeline card + Call detection card (Android) |
+| `sees_hr` | HR User · HR Manager | HR at a glance section |
+| `sees_projects` | Projects User · Projects Manager | Projects section |
+| `sees_accounts` | Accounts User · Accounts Manager | Accounts section |
+
+**System Manager gets all four automatically.**
+
+### 1c. Manager view (from `_MANAGER_ROLES`)
+
+| Cap key | Roles that unlock it | What it unlocks |
+|---|---|---|
+| `manager_view` | System Manager · Sales Manager · Sales Master Manager · CRM Manager | Leaderboard card · Team Status card · **Field team** card (Android) · Team-scope toggle on Pipeline · Team-scope toggle on Projects dashboard |
+
+*Note: `manager_view` is **sales-leadership specific**. A plain HR Manager
+does NOT get `manager_view` unless they also have System Manager.*
+
+### 1d. Hierarchy-based (server-enforced, no cap key)
+
+For **live location tracking**, the manager view uses
+`Employee.reports_to` walked up to 8 hops. There is no `sees_field_team`
+cap — server enforces `_is_reportee()` on every read. Client just shows the
+**Field team** card whenever `manager_view` is true; if the user has no
+reportees, the map shows an empty state ("You don't have any direct or
+indirect reports").
+
+---
+
+## 2. Bottom navigation tabs
+
+Source: `lib/features/home/presentation/nav_destinations.dart`.
+
+Every tab is auto-hidden when the gating cap is `false`.
+
+| Tab | Gate cap | Route | Screen |
+|---|---|---|---|
+| **Home** | (always) | `/home` | HomeScreen (role-based sections inside) |
+| **Time** | `attendance` | `/time` | AttendanceScreen |
+| **Leave** | `leave` | `/leave` | LeaveScreen |
+| **Payroll** | `payslip` | `/payroll` | PayslipsScreen |
+| **Tasks** | `task` | `/tasks` | TasksScreen |
+| **Timesheet** | `timesheet` | `/timesheet` | TimesheetScreen |
+| **Expenses** | `expense` | `/expenses` | ExpensesScreen |
+| **Leads** | `leads` | `/leads` | LeadsScreen |
+| **Deals** | `deals` | `/deals` | DealsScreen |
+| **Directory** | (always) | `/directory` | DirectoryScreen |
+| **Invoices** | `invoices` | `/invoices` | InvoicesScreen |
+
+*The bottom nav is scrollable, so a super-user sees all 11 items horizontally.*
+
+---
+
+## 3. Home-screen sections (top → bottom)
+
+Source: `lib/features/home/presentation/home_screen.dart` build method.
+
+| # | Section | Gate | Contents |
+|---|---|---|---|
+| 1 | **Welcome hero** | always | `Good {morning/evening}, {name}!` + Clock In + Apply Leave buttons |
+| 2 | **Today's Plan** | `leads` | Sales-agent daily plan (overdue count, new leads, next call) |
+| 3 | **My/Team dashboard toggle** | `sees_sales` (via SalesDashboardSection) | Sales dashboard: leads by status, deals by stage, follow-ups |
+| 4 | **Pipeline** card | `sees_sales` | CTA → `/pipeline` funnel screen |
+| 5 | **Call detection** card | `sees_sales` **AND** Android | CTA → `/call-detection` settings + permission wizard |
+| 6 | **HR at a glance** section | `sees_hr` | KPI tiles (pending leaves, absent today, exits <30d) + birthdays this week |
+| 7 | **Projects** section | `sees_projects` | KPI tiles (active projects, tasks due, overdue, unbilled hrs) + next deadlines |
+| 8 | **Accounts** section | `sees_accounts` | KPI tiles (receivable, payable, overdue count, receipts/payments in period) + top overdue list |
+| 9 | **Leaderboard** card | `manager_view` | CTA → `/leaderboard` |
+| 10 | **Team status** card | `manager_view` | CTA → `/team-status` (live who-is-online, calls-per-rep) |
+| 11 | **Field team** card | `manager_view` **AND** Android | CTA → `/location/team` (live map of reportees) |
+| 12 | **Location sharing** toggle | Android (all users) | Enable/disable own tracking; shows "On since X · Last update Y" |
+| 13 | **Today** bento tile | always | Clock-in status |
+| 14 | **Leave Balance** bento tile | always | Days remaining |
+| 15 | **Last Payslip** bento tile | always | Latest slip date (amount masked) |
+| 16 | **Recent Activity** | always | Recent leave approvals, task completions, etc. |
+
+**Note on the toggle (row 12):** it appears for every Android user regardless
+of role. If an employee has no manager (their `reports_to` is empty), turning
+it ON still stores pings on the server, but nobody has permission to see
+those pings via `person_current` — the pings become invisible to everyone
+except a System Manager.
+
+---
+
+## 4. Screen-level access (deep routes)
+
+| Screen | Route | Gate | Extra rules |
+|---|---|---|---|
+| Pipeline | `/pipeline` | `leads` OR `deals` (defence in depth) | Team-scope toggle visible only if `manager_view` |
+| Lead Kanban | `/lead-kanban` | `leads` | FAB (new lead) hidden if no create perm |
+| Lead detail | `/lead-detail/:name` | `leads` | Backend enforces owner OR territory-share |
+| Deal detail | `/deal-detail/:name` | `deals` | Backend enforces owner OR territory-share |
+| Invoice detail | `/invoice-detail/:name` | `invoices` | Submit / Record Payment shown only if server returns `can_submit`/`can_record_payment` = true |
+| Team status | `/team-status` | `manager_view` | Backend also enforces the manager-role check |
+| Leaderboard | `/leaderboard` | `manager_view` | Backend enforces same |
+| Call Detection settings | `/call-detection` | `sees_sales` **AND** Android | iOS users see an "iOS notice" widget explaining Apple sandbox limits |
+| **Field team map** | `/location/team` | `manager_view` **AND** Android | Empty state if no reportees. Auto-refresh every 60 s. |
+| **Person live location** | `/location/person/:employee` | `manager_view` **AND** the target employee is a direct/transitive report | Server 403s if the caller is not authorized |
+| Directory | `/directory` | (always) | Any authenticated user can browse the employee list |
+| Notifications | `/notifications` | (always) | Notification Log is per-user |
+| Profile | `/profile` | (always) | Own profile only |
+
+---
+
+## 5. Feature-level access (finer than screen-level)
+
+| Feature | Where | Gate |
+|---|---|---|
+| Create Sales Invoice | Invoices FAB | Server sets `can_create_sales` in `invoices.get_context`, based on `Sales Invoice: create` perm |
+| Create Purchase Invoice | Invoices FAB | Same via `can_create_purchase` |
+| Submit invoice | Invoice detail | Server `can_submit` = `docstatus==0 AND has Submit perm` |
+| Record Payment | Invoice detail | Server `can_record_payment` = `docstatus==1 AND outstanding>0 AND has Payment Entry: create` |
+| Convert Lead → Customer | Lead detail menu | `leads` cap + backend Lead-convert perm |
+| Apply AI suggested status | Recording detail | `leads` cap + own the lead OR manager |
+| Start/stop timer | Timesheet tab | `timesheet` cap; one active timer per user enforced server-side |
+| Enable location tracking | Home toggle | Android only, requires Employee record |
+| See any reportee's live location | Field team map | `manager_view` cap AND `Employee.reports_to` graph |
+
+---
+
+## 6. Minimum roles for each key surface
+
+Answers the question "kaunse role ke bina ye cheez nahi dikhegi":
+
+| To see this | Minimum you need |
+|---|---|
+| **Nothing** (base user) | Any active `User` record (login-able) |
+| **Basic ESS** (Home bento + Time + Leave + Payroll + Tasks + Timesheet) | Role `Employee` (grants Employee Checkin, Leave, Salary Slip, Task, Timesheet permissions) |
+| **Expenses tab** | Role that grants `Expense Claim: create` (typically `Employee` + org policy) |
+| **Leads / Deals tabs, Sales home section, Pipeline, Call detection card** | Role `Sales User` (or higher: Sales Manager, Sales Master Manager, CRM Manager). This gives `leads` + `deals` + `sees_sales` |
+| **HR home section** (pending leaves, birthdays, absentees) | Role `HR User` or `HR Manager` |
+| **Projects home section** | Role `Projects User` or `Projects Manager` |
+| **Accounts home section** | Role `Accounts User` or `Accounts Manager` |
+| **Invoices tab, Invoice create/submit, Record Payment** | Role that grants `Sales Invoice: read` OR `Purchase Invoice: read` (typically `Accounts User` or `Sales User` with company scope) |
+| **Leaderboard, Team status, Field team map, Team-scope on Pipeline** | Role `Sales Manager` / `Sales Master Manager` / `CRM Manager` / `System Manager` |
+| **Field team map showing a specific person's location** | Above manager role AND that person's `Employee.reports_to` chain leads to the caller |
+| **Everything (super-user)** | Role `System Manager` |
+
+---
+
+## 7. Demo-user matrix (what each seeded user sees today)
+
+Test creds set up 2026-08-26 for the demo.
+
+| User (Employee) | Password | Roles | Bottom nav | Home sections shown |
+|---|---|---|---|---|
+| **Administrator** | `admin` | System Manager (super) | All 11 tabs | Every section (sees everything) |
+| **ess.test@tcb.local** (ESS Tester, HR-EMP-00066) | `demo@123` | Employee | Home · Time · Leave · Payroll · Tasks · Timesheet · Directory | Welcome + Location toggle (Android) + Bento + Recent Activity. **No CRM. No HR. No Projects. No Accounts. No Manager cards.** |
+| **karishma.jain@tcbinfotech.co.in** (HR-EMP-00029) | `tcb@12345` | Employee · Projects User · Sales User | All ESS tabs + Leads + Deals + Directory | Welcome + Today's Plan + **Sales dashboard** + Pipeline + Call detection (Android) + **Projects section** + Location toggle + Bento + Recent Activity. No HR/Accounts/Manager cards. |
+| **ajay.verma@tcbinfotech.co.in** (HR-EMP-00026) | `demo@123` | Agent · Employee · Helpdesk Contact · Projects User | ESS tabs + Directory | Welcome + **Projects section** + Location toggle + Bento + Recent Activity. **No CRM at all.** |
+| **rajesh.kumar@tcbinfotech.demo** (HR-EMP-00068) | `demo@123` | Employee · HR Manager · Item Manager · Leave Approver · Purchase User · Sales Manager · Sales Master Manager | ESS + Leads + Deals + Invoices + Directory | Welcome + Today's Plan + **Sales** + Pipeline + Call detection + **HR** + Leaderboard + Team status + Field team + Location toggle + Bento + Recent. No Projects/Accounts (no those specific roles). |
+| **hr@tcbinfotech.com** — Yashvi (HR-EMP-00027) | `demo@123` | 50+ roles incl. System Manager, HR Manager, Sales User, Accounts Manager, Projects User | All 11 tabs | Every home section (super-user via System Manager). Field team map empty (no reportees under Yashvi). |
+| **aditi.malusare@tcbinfotech.co.in** (HR-EMP-00022) | `demo@123` | 50+ roles incl. System Manager, Accounts Manager, HR Manager, Sales Manager, Projects Manager, Purchase Manager, etc. | All 11 tabs | Every home section. **Field team map shows her 5 reportees**: Sahil Dhania, Shivam Singhal, Anuj Sharma, Varsha Mehta, and one more under HR-EMP-00022. |
+| **rishab.gupta@tcbinfotech.co.in** | `demo@123` | 50+ roles incl. System Manager (super) | All 11 tabs | Every home section (same as Yashvi). No reportees under Rishab in current data → Field team map empty. |
+| **sahil.dhania@tcbinfotech.co.in** (HR-EMP-00004) | `demo@123` | Employee · Projects User (via role chain) | ESS tabs + Directory | Welcome + Location toggle + Bento + Recent Activity. **Reports to Aditi**, so his pings are visible to her on the Field team map. |
+
+---
+
+## 8. Location-tracking mapping (specific to LOC.1 feature)
+
+Because this feature is new, calling it out explicitly:
+
+- **Who can turn ON tracking:** any Android user with an Employee record.
+  Toggle card is always visible on Home (Android).
+- **Who sees the "Field team" map card:** any user with `manager_view` on
+  Android.
+- **Whose location shows on that map:** every Active Employee whose
+  `Employee.reports_to` chain (up to 8 hops) resolves to the caller's
+  Employee. System Manager sees every Active Employee.
+- **Person detail view:** allowed if the target employee is the caller, is
+  a transitive report, or the caller is System Manager. Otherwise HTTP 403.
+- **Backend enforces this on every read** — the client-side gating is a UX
+  nicety, not a security boundary.
+- **iOS:** the whole location feature is Android-only in this pass. iOS
+  users see no toggle and no Field team card, and can never upload pings.
+
+### Practical example (with current demo data)
+
+Aditi (HR-EMP-00022) has these direct reports in the DB right now:
+
+- HR-EMP-00004 Sahil Dhania
+- HR-EMP-00009 Shivam Singhal
+- HR-EMP-00019 Anuj Sharma
+- HR-EMP-00023 Varsha Mehta
+- HR-EMP-00026 Ajay Verma
+
+If any of them enables tracking on their phone, they show up as a pin on
+Aditi's Field team map. Aditi can tap a pin → see today's trail. If, say,
+Shivam has a sub-report Kavita (transitive), Kavita also shows on Aditi's
+map when tracking is on.
+
+---
+
+## 9. What is deliberately NOT gated
+
+- **Directory:** everyone can browse the employee list (like a global
+  address book). No cap.
+- **Home welcome + bento (Today/Leave Balance/Last Payslip):** always
+  shown. These are per-user data and the individual cards silently
+  hide if the underlying cap is missing (e.g. no Payslip card if
+  `payslip` cap is false).
+- **Notifications, Profile:** always. Both are per-user.
+
+---
+
+**End of mapping.**
+
+For code truth, cross-reference:
+
+- `apps/tcb_portal_erp/tcb_portal_erp/api/auth.py` (`_capabilities()`)
+- `lib/features/home/presentation/nav_destinations.dart` (tab list)
+- `lib/features/home/presentation/home_screen.dart` (home section gates)
+- `lib/core/router/app_router.dart` (route table)
+- `lib/features/location_tracking/DESIGN.md` (location tracking full spec)
