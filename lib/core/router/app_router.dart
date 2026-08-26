@@ -26,6 +26,8 @@ import '../../features/pipeline/presentation/pipeline_screen.dart';
 import '../../features/team_status/presentation/team_status_screen.dart';
 import '../../features/call_detection/presentation/call_detection_screen.dart';
 import '../../features/leads_kanban/presentation/kanban_screen.dart';
+import '../../features/location_tracking/presentation/person_location_screen.dart';
+import '../../features/location_tracking/presentation/team_live_map_screen.dart';
 import '../../features/notifications/presentation/notifications_screen.dart';
 import '../../features/payslips/presentation/payslip_detail_screen.dart';
 import '../../features/payslips/presentation/payslips_screen.dart';
@@ -69,6 +71,9 @@ class Routes {
   static const teamStatus = '/team-status';
   static const callDetection = '/call-detection';
   static const leadKanban = '/lead-kanban';
+  // Live location tracking (Phase LOC.1)
+  static const locationTeam = '/location/team';
+  static const locationPerson = '/location/person/:employee';
 
   // Legacy aliases (kept so old strings still resolve)
   static const attendance = time;
@@ -214,6 +219,17 @@ final routerProvider = Provider<GoRouter>((ref) {
           path: Routes.leadKanban,
           parentNavigatorKey: rootNavigatorKey,
           builder: (_, _) => const LeadKanbanScreen()),
+      GoRoute(
+          path: Routes.locationTeam,
+          parentNavigatorKey: rootNavigatorKey,
+          builder: (_, _) => const TeamLiveMapScreen()),
+      GoRoute(
+          path: Routes.locationPerson,
+          parentNavigatorKey: rootNavigatorKey,
+          builder: (context, state) => PersonLocationScreen(
+                employee: Uri.decodeComponent(
+                    state.pathParameters['employee'] ?? ''),
+              )),
     ],
   );
 });

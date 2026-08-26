@@ -8,6 +8,9 @@ import 'package:intl/intl.dart';
 
 import '../../dashboard/data/dashboard_repository.dart' show salesDashboardProvider;
 import '../../dashboard/presentation/sales_dashboard_section.dart';
+import '../../location_tracking/data/location_tracking_repository.dart'
+    show trackingStatusProvider, teamLiveProvider;
+import '../../location_tracking/presentation/tracking_toggle_card.dart';
 import '../../role_dashboards/data/role_dashboards_repository.dart'
     show hrSummaryProvider, projectsSummaryProvider, accountsSummaryProvider;
 import '../../role_dashboards/presentation/role_dashboards_sections.dart';
@@ -48,6 +51,8 @@ class HomeScreen extends ConsumerWidget {
             ref.invalidate(hrSummaryProvider);
             ref.invalidate(projectsSummaryProvider);
             ref.invalidate(accountsSummaryProvider);
+            ref.invalidate(trackingStatusProvider);
+            ref.invalidate(teamLiveProvider);
             ref.invalidate(todaysPlanControllerProvider);
             ref.invalidate(attendanceControllerProvider);
             ref.invalidate(leaveControllerProvider);
@@ -95,6 +100,14 @@ class HomeScreen extends ConsumerWidget {
                 const _LeaderboardEntry(),
                 const SizedBox(height: AppDimens.lg),
                 const _TeamStatusEntry(),
+                if (!kIsWeb && Platform.isAndroid) ...[
+                  const SizedBox(height: AppDimens.lg),
+                  const _FieldTeamEntry(),
+                ],
+              ],
+              if (!kIsWeb && Platform.isAndroid) ...[
+                const SizedBox(height: AppDimens.lg),
+                const TrackingToggleCard(),
               ],
               const SizedBox(height: AppDimens.lg),
               const _BentoGrid(),
@@ -754,8 +767,63 @@ class _PipelineEntry extends StatelessWidget {
   }
 }
 
+/// Compact CTA that opens the Field Team live-location map. Manager-only,
+/// Android-only. See [TeamLiveMapScreen].
+class _FieldTeamEntry extends StatelessWidget {
+  const _FieldTeamEntry();
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppDimens.radiusXl),
+        onTap: () => context.push(Routes.locationTeam),
+        child: Padding(
+          padding: const EdgeInsets.all(AppDimens.md),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.secondaryFixed,
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Icon(Icons.map_outlined,
+                    color: AppColors.primary, size: 22),
+              ),
+              const SizedBox(width: AppDimens.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text("Field team",
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 2),
+                    Text(
+                      "Live location of your team on a map",
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right,
+                  size: 20, color: AppColors.onSurfaceVariant),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// Compact CTA that opens the Call Detection + Recording settings screen.
-/// Android-only — iOS users skip this card entirely.
+/// Android-only. iOS users skip this card entirely.
 class _CallDetectionEntry extends StatelessWidget {
   const _CallDetectionEntry();
   @override

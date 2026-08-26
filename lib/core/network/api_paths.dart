@@ -47,6 +47,22 @@ class ApiPaths {
   static const String accountsDashboard =
       '/api/method/tcb_portal_erp.api.accounts_dashboard.get_summary';
 
+  // Live location tracking (Phase LOC.1)
+  static const String locSetTrackingEnabled =
+      '/api/method/tcb_portal_erp.api.location_tracking.set_tracking_enabled';
+  static const String locTrackingStatus =
+      '/api/method/tcb_portal_erp.api.location_tracking.get_tracking_status';
+  static const String locRecordPing =
+      '/api/method/tcb_portal_erp.api.location_tracking.record_ping';
+  static const String locRecordPingsBatch =
+      '/api/method/tcb_portal_erp.api.location_tracking.record_pings_batch';
+  static const String locMyTeamLive =
+      '/api/method/tcb_portal_erp.api.location_tracking.my_team_live';
+  static const String locPersonCurrent =
+      '/api/method/tcb_portal_erp.api.location_tracking.person_current';
+  static const String locPersonTrail =
+      '/api/method/tcb_portal_erp.api.location_tracking.person_trail';
+
   // Call recording + AI pipeline (Phase D.2.4 + D.2.5)
   static const String uploadRecording =
       '/api/method/tcb_portal_erp.api.call_intelligence.upload_recording';

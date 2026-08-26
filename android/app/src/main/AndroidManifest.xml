@@ -23,6 +23,11 @@
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         tools:ignore="ScopedStorage"/>
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+    <!-- Live location tracking: background permission is Android 10+ only;
+         FOREGROUND_SERVICE_LOCATION was introduced in Android 14 and is
+         a hard requirement for our persistent foreground service. -->
+    <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION"/>
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION"/>
     <application
         android:label="TCB Portal"
         android:name="${applicationName}"
@@ -69,13 +74,21 @@
             android:enabled="true"
             android:exported="false"
             android:foregroundServiceType="specialUse">
-            <!-- Android 14+ requires explaining why specialUse — CRM call
+            <!-- Android 14+ requires explaining why specialUse - CRM call
                  context overlay + recording ingestion are not covered by
                  dialer/microphone/mediaPlayback foreground-service types. -->
             <property
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="caller-id-and-recording-ingestion"/>
         </service>
+
+        <!-- Live location tracking foreground service. `location` FGS type
+             is the correct one on Android 14+ for actively-uploaded pings. -->
+        <service
+            android:name="com.tcbinfotech.tcb_portal.location.LocationTrackingService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="location"/>
     </application>
     <!-- Required to query activities that can process text, see:
          https://developer.android.com/training/package-visibility and

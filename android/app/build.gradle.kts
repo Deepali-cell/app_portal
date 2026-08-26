@@ -42,3 +42,10 @@ android {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // Fused Location Provider — Google Play Services. Powers the location
+    // tracking foreground service. Version pinned to match the Play Services
+    // BOM commonly available on Realme/Samsung/Vivo phones (2024+).
+    implementation("com.google.android.gms:play-services-location:21.3.0")
+}

@@ -1,11 +1,16 @@
 package com.tcbinfotech.tcb_portal
 
+import android.content.BroadcastReceiver
+import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import com.tcbinfotech.tcb_portal.calldetect.AllFilesAccessHelper
 import com.tcbinfotech.tcb_portal.calldetect.CallDetectBridge
 import com.tcbinfotech.tcb_portal.calldetect.LocalNotifier
+import com.tcbinfotech.tcb_portal.location.LocationTrackingService
 import io.flutter.embedding.android.FlutterFragmentActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -15,8 +20,13 @@ class MainActivity : FlutterFragmentActivity() {
 
     companion object {
         const val CALL_DETECT_CHANNEL = "tcb_portal/call_detect"
+        const val LOCATION_CHANNEL = "tcb_portal/location_tracking"
         const val DEEPLINK_EXTRA = "tcb.notif.deeplink"
     }
+
+    // Location channel + broadcast receiver that pipes native pings into Dart.
+    private var locationChannel: MethodChannel? = null
+    private var locationReceiver: BroadcastReceiver? = null
 
     // Most-recent deeplink received via Intent extra. Set on app cold-start +
     // every onNewIntent (warm tap from background). Flutter polls it on its
@@ -95,11 +105,70 @@ class MainActivity : FlutterFragmentActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        // --- Location tracking bridge -----------------------------------
+        val locChannel = MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            LOCATION_CHANNEL,
+        )
+        locationChannel = locChannel
+        locChannel.setMethodCallHandler { call, result ->
+            when (call.method) {
+                "startService" -> {
+                    val i = Intent(this, LocationTrackingService::class.java).apply {
+                        action = LocationTrackingService.ACTION_START
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        startForegroundService(i)
+                    } else {
+                        startService(i)
+                    }
+                    result.success(true)
+                }
+                "stopService" -> {
+                    val i = Intent(this, LocationTrackingService::class.java).apply {
+                        action = LocationTrackingService.ACTION_STOP
+                    }
+                    startService(i)
+                    result.success(true)
+                }
+                "isRunning" -> result.success(LocationTrackingService.isRunning)
+                else -> result.notImplemented()
+            }
+        }
+        // Receive ping broadcasts from the foreground service and forward to Dart.
+        val recv = object : BroadcastReceiver() {
+            override fun onReceive(context: Context?, intent: Intent?) {
+                if (intent?.action != LocationTrackingService.BROADCAST_PING) return
+                val payload = mapOf(
+                    "latitude" to intent.getDoubleExtra("latitude", 0.0),
+                    "longitude" to intent.getDoubleExtra("longitude", 0.0),
+                    "accuracy_m" to intent.getDoubleExtra("accuracy_m", 0.0),
+                    "speed_mps" to intent.getDoubleExtra("speed_mps", 0.0),
+                    "battery_level" to intent.getIntExtra("battery_level", -1),
+                    "recorded_at" to intent.getLongExtra("recorded_at", 0L),
+                )
+                locationChannel?.invokeMethod("onLocationUpdate", payload)
+            }
+        }
+        locationReceiver = recv
+        val filter = IntentFilter(LocationTrackingService.BROADCAST_PING)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(recv, filter, Context.RECEIVER_NOT_EXPORTED)
+        } else {
+            @Suppress("DEPRECATION")
+            registerReceiver(recv, filter)
+        }
     }
 
     override fun cleanUpFlutterEngine(flutterEngine: FlutterEngine) {
         CallDetectBridge.detach()
         deeplinkChannel = null
+        try {
+            locationReceiver?.let { unregisterReceiver(it) }
+        } catch (_: Throwable) {}
+        locationReceiver = null
+        locationChannel = null
         super.cleanUpFlutterEngine(flutterEngine)
     }
 }

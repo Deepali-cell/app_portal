@@ -7,6 +7,7 @@ import 'core/theme/app_theme.dart';
 import 'features/call_detection/application/call_event_bridge.dart';
 import 'features/call_detection/presentation/deeplink_listener.dart';
 import 'features/call_outcome/presentation/post_call_resume_listener.dart';
+import 'features/location_tracking/application/location_bridge.dart';
 import 'features/onboarding/presentation/permission_bootstrap.dart';
 import 'features/tenant/application/tenant_controller.dart';
 import 'features/tenant/domain/tenant.dart';
@@ -28,6 +29,10 @@ class TcbPortalApp extends ConsumerWidget {
     // The provider's body wires the MethodChannel listener; reading once is
     // enough to keep it alive for the app's lifetime.
     ref.watch(callEventBridgeProvider);
+
+    // Location tracking bridge — same pattern. Sets up the MethodChannel
+    // handler so the native foreground service can push ping updates to Dart.
+    ref.watch(locationBridgeProvider);
 
     final router = ref.watch(routerProvider);
     return PermissionBootstrap(
