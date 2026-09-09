@@ -19,6 +19,7 @@ import '../../features/home/presentation/home_screen.dart';
 import '../../features/leads/presentation/lead_detail_screen.dart';
 import '../../features/leads/presentation/leads_screen.dart';
 import '../../features/leave/presentation/leave_detail_screen.dart';
+import '../../features/leave/presentation/leave_approvals_screen.dart';
 import '../../features/leave/presentation/leave_screen.dart';
 import '../../features/leaderboard/presentation/leaderboard_screen.dart';
 import '../../features/missed_activities/presentation/missed_activities_screen.dart';
@@ -65,6 +66,7 @@ class Routes {
   static const timesheetDetail = '/timesheet-detail';
   static const invoiceDetail = '/invoice-detail';
   static const leaveDetail = '/leave-detail';
+  static const leaveApprovals = '/leave-approvals';
   static const profile = '/profile';
   static const notifications = '/notifications';
   static const missedActivities = '/missed-activities';
@@ -195,6 +197,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           path: Routes.profile,
           parentNavigatorKey: rootNavigatorKey,
           builder: (_, _) => const ProfileScreen()),
+      GoRoute(
+          path: Routes.leaveApprovals,
+          parentNavigatorKey: rootNavigatorKey,
+          builder: (_, _) => const LeaveApprovalsScreen()),
       GoRoute(
           path: Routes.notifications,
           parentNavigatorKey: rootNavigatorKey,

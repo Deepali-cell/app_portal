@@ -221,6 +221,10 @@ class ApiPaths {
   // Leave detail
   static const String leaveApplicationDetail =
       '/api/method/tcb_portal_erp.api.leave.get_application_detail';
+  static const String leavePendingApprovals =
+      '/api/method/tcb_portal_erp.api.leave.get_pending_approvals';
+  static const String leaveActOnApplication =
+      '/api/method/tcb_portal_erp.api.leave.act_on_application';
 
   // Task detail + update
   static const String taskDetail =

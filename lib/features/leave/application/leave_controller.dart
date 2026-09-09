@@ -34,6 +34,22 @@ class LeaveController extends AsyncNotifier<LeaveContext> {
     await ref.read(leaveRepositoryProvider).applyCompOff(request);
     await reload();
   }
+
+  /// Approve or reject one request. Refreshes both the approvals list and the
+  /// leave context, since the pending count on the leave screen changes too.
+  Future<void> actOnApplication({
+    required String name,
+    required String action,
+    String? reason,
+  }) async {
+    await ref.read(leaveRepositoryProvider).actOnApplication(
+          name: name,
+          action: action,
+          reason: reason,
+        );
+    ref.invalidate(pendingLeaveApprovalsProvider);
+    await reload();
+  }
 }
 
 /// On-demand detail for a single Leave Application.
@@ -42,3 +58,8 @@ final leaveApplicationDetailProvider =
         (ref, name) => ref
             .read(leaveRepositoryProvider)
             .getApplicationDetail(name));
+
+/// Requests waiting on the signed in user, as manager or as HR.
+final pendingLeaveApprovalsProvider =
+    FutureProvider<List<PendingLeaveApproval>>(
+        (ref) => ref.read(leaveRepositoryProvider).getPendingApprovals());

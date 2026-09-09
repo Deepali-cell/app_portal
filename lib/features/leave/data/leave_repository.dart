@@ -74,6 +74,39 @@ class LeaveRepository {
     }
   }
 
+  /// Leave requests waiting on the signed in user, as their team's manager or
+  /// as HR. The server decides which rows belong to them.
+  Future<List<PendingLeaveApproval>> getPendingApprovals() async {
+    try {
+      final resp = await _dio.get(ApiPaths.leavePendingApprovals);
+      final msg = (resp.data['message'] as Map).cast<String, dynamic>();
+      return ((msg['applications'] as List?) ?? [])
+          .map((e) =>
+              PendingLeaveApproval.fromJson((e as Map).cast<String, dynamic>()))
+          .toList();
+    } on DioException catch (e) {
+      throw _asApiException(e);
+    }
+  }
+
+  /// Move one request along. [action] is Approve or Reject; a rejection needs
+  /// a reason, which the server also enforces.
+  Future<void> actOnApplication({
+    required String name,
+    required String action,
+    String? reason,
+  }) async {
+    try {
+      await _dio.post(ApiPaths.leaveActOnApplication, data: {
+        'name': name,
+        'action': action,
+        if (reason != null && reason.isNotEmpty) 'reason': reason,
+      });
+    } on DioException catch (e) {
+      throw _asApiException(e);
+    }
+  }
+
   String _ymd(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-'
       '${d.month.toString().padLeft(2, '0')}-'

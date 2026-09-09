@@ -8,6 +8,7 @@ class LeaveBalance {
     required this.taken,
     required this.pending,
     required this.remaining,
+    this.isLwp = false,
   });
 
   final String leaveType;
@@ -16,12 +17,63 @@ class LeaveBalance {
   final double pending;
   final double remaining;
 
+  /// Leave without pay draws down no allocation, so it carries no balance and
+  /// the picker shows no days remaining against it.
+  final bool isLwp;
+
   factory LeaveBalance.fromJson(Map<String, dynamic> j) => LeaveBalance(
         leaveType: j['leave_type'] as String,
         total: (j['total'] as num?)?.toDouble() ?? 0,
         taken: (j['taken'] as num?)?.toDouble() ?? 0,
         pending: (j['pending'] as num?)?.toDouble() ?? 0,
         remaining: (j['remaining'] as num?)?.toDouble() ?? 0,
+        isLwp: ((j['is_lwp'] as num?)?.toInt() ?? 0) == 1,
+      );
+}
+
+/// One leave request waiting on the signed in user, at either approval hop.
+@immutable
+class PendingLeaveApproval {
+  const PendingLeaveApproval({
+    required this.name,
+    required this.employeeName,
+    required this.leaveType,
+    required this.fromDate,
+    required this.toDate,
+    required this.totalLeaveDays,
+    required this.stageLabel,
+    required this.asHr,
+    this.description,
+    this.halfDay = false,
+  });
+
+  final String name;
+  final String employeeName;
+  final String leaveType;
+  final DateTime fromDate;
+  final DateTime toDate;
+  final double totalLeaveDays;
+  final String stageLabel;
+
+  /// True when this row is waiting on the user as HR rather than as the
+  /// employee's own manager. Somebody who is both needs to know which hat the
+  /// row is asking them to wear.
+  final bool asHr;
+  final String? description;
+  final bool halfDay;
+
+  factory PendingLeaveApproval.fromJson(Map<String, dynamic> j) =>
+      PendingLeaveApproval(
+        name: j['name'] as String,
+        employeeName: (j['employee_name'] ?? j['employee'] ?? '') as String,
+        leaveType: (j['leave_type'] ?? '') as String,
+        fromDate: DateTime.parse(j['from_date'] as String),
+        toDate: DateTime.parse(j['to_date'] as String),
+        totalLeaveDays: (j['total_leave_days'] as num?)?.toDouble() ?? 0,
+        stageLabel: (j['stage_label'] ?? '') as String,
+        asHr: (j['as_hr'] ?? false) as bool,
+        description: j['description'] as String?,
+        halfDay: (j['half_day'] as num?)?.toInt() == 1,
       );
 }
 
@@ -51,6 +103,7 @@ class LeaveApplication {
     required this.status,
     this.description,
     this.halfDay = false,
+    this.stageLabel,
   });
 
   final String name;
@@ -62,6 +115,11 @@ class LeaveApplication {
   final String? description;
   final bool halfDay;
 
+  /// Where the request has actually reached. `status` stays Open across both
+  /// waiting hops, so this is what tells the applicant whether their manager
+  /// has cleared it and it is now with HR.
+  final String? stageLabel;
+
   factory LeaveApplication.fromJson(Map<String, dynamic> j) => LeaveApplication(
         name: j['name'] as String,
         leaveType: (j['leave_type'] ?? '') as String,
@@ -71,6 +129,7 @@ class LeaveApplication {
         status: leaveStatusFrom(j['status'] as String?),
         description: j['description'] as String?,
         halfDay: (j['half_day'] as num?)?.toInt() == 1,
+        stageLabel: j['stage_label'] as String?,
       );
 }
 
@@ -136,13 +195,41 @@ class LeaveContext {
     required this.leaveTypes,
     required this.compensatoryLeaveTypes,
     this.leaveApprover,
+    this.leaveApproverName,
+    this.holidays = const {},
+    this.pendingApprovalCount = 0,
+    this.isHr = false,
   });
 
   final String employee;
   final String? leaveApprover;
+  final String? leaveApproverName;
   final List<LeaveBalance> balances;
   final List<LeaveApplication> applications;
   final List<String> leaveTypes;
+
+  /// Holiday and weekly off dates for this employee, as yyyy-MM-dd strings.
+  /// The date picker greys these out so a leave day is never spent on a day
+  /// the office was closed anyway.
+  final Set<String> holidays;
+
+  /// How many requests are waiting on this user across both hops. Non zero
+  /// means the Approvals entry is worth showing.
+  final int pendingApprovalCount;
+  final bool isHr;
+
+  bool isHoliday(DateTime d) =>
+      holidays.contains('${d.year.toString().padLeft(4, '0')}'
+          '-${d.month.toString().padLeft(2, '0')}'
+          '-${d.day.toString().padLeft(2, '0')}');
+
+  /// Balance for one leave type, or null when the type carries none.
+  LeaveBalance? balanceFor(String leaveType) {
+    for (final b in balances) {
+      if (b.leaveType == leaveType) return b;
+    }
+    return null;
+  }
 
   /// Subset of leave types where `is_compensatory=1`. Empty when comp-off
   /// isn't configured on the site; the mobile hides the Apply CTA in that case.
@@ -153,6 +240,13 @@ class LeaveContext {
   factory LeaveContext.fromJson(Map<String, dynamic> j) => LeaveContext(
         employee: j['employee'] as String,
         leaveApprover: j['leave_approver'] as String?,
+        leaveApproverName: j['leave_approver_name'] as String?,
+        holidays: ((j['holidays'] as List?) ?? [])
+            .map((e) => e.toString())
+            .toSet(),
+        pendingApprovalCount:
+            (j['pending_approval_count'] as num?)?.toInt() ?? 0,
+        isHr: (j['is_hr'] ?? false) as bool,
         balances: ((j['balances'] as List?) ?? [])
             .map((e) => LeaveBalance.fromJson(e as Map<String, dynamic>))
             .toList(),

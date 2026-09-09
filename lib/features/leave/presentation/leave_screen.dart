@@ -49,6 +49,10 @@ class LeaveScreen extends ConsumerWidget {
                 AppDimens.xl),
             children: [
               _HeaderSection(ctx: ctx),
+              if (ctx.pendingApprovalCount > 0) ...[
+                const SizedBox(height: AppDimens.lg),
+                _ApprovalsEntry(count: ctx.pendingApprovalCount),
+              ],
               const SizedBox(height: AppDimens.lg),
               if (ctx.balances.isEmpty)
                 _EmptyBalances()
@@ -125,7 +129,7 @@ class _HeaderSection extends ConsumerWidget {
         borderRadius:
             BorderRadius.vertical(top: Radius.circular(AppDimens.radius3xl)),
       ),
-      builder: (_) => _ApplyLeaveSheet(leaveTypes: ctx.leaveTypes),
+      builder: (_) => _ApplyLeaveSheet(ctx: ctx),
     );
     if (ok == true && context.mounted) {
       ScaffoldMessenger.of(context)
@@ -426,6 +430,18 @@ class _RequestRow extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
+                  // The status chip reads Pending across both waiting hops, so
+                  // the stage is what tells the applicant whether their manager
+                  // has cleared it and it is now sitting with HR.
+                  if (app.status == LeaveStatus.open &&
+                      app.stageLabel != null &&
+                      app.stageLabel!.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(app.stageLabel!,
+                        style: Theme.of(context).textTheme.labelSmall,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
+                  ],
                 ],
               ),
             ),
@@ -531,9 +547,67 @@ class _Error extends StatelessWidget {
 
 // ---- Apply sheet (kept compatible with the previous implementation) ----
 
+/// Entry point into the approvals queue. Only rendered when something is
+/// actually waiting on this user, so an employee with no reports never sees it.
+class _ApprovalsEntry extends StatelessWidget {
+  const _ApprovalsEntry({required this.count});
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: InkWell(
+        borderRadius: BorderRadius.circular(AppDimens.radiusXl),
+        onTap: () => context.push(Routes.leaveApprovals),
+        child: Padding(
+          padding: const EdgeInsets.all(AppDimens.md),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.secondaryFixed,
+                  shape: BoxShape.circle,
+                ),
+                alignment: Alignment.center,
+                child: Icon(Icons.fact_check_outlined,
+                    color: AppColors.primary, size: 22),
+              ),
+              const SizedBox(width: AppDimens.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Leave approvals',
+                        style: Theme.of(context)
+                            .textTheme
+                            .titleMedium
+                            ?.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 2),
+                    Text(
+                        count == 1
+                            ? '1 request is waiting for you'
+                            : '$count requests are waiting for you',
+                        style: Theme.of(context).textTheme.bodySmall),
+                  ],
+                ),
+              ),
+              Icon(Icons.chevron_right,
+                  size: 20, color: AppColors.onSurfaceVariant),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _ApplyLeaveSheet extends ConsumerStatefulWidget {
-  const _ApplyLeaveSheet({required this.leaveTypes});
-  final List<String> leaveTypes;
+  const _ApplyLeaveSheet({required this.ctx});
+  final LeaveContext ctx;
   @override
   ConsumerState<_ApplyLeaveSheet> createState() => _ApplyLeaveSheetState();
 }
@@ -555,14 +629,37 @@ class _ApplyLeaveSheetState extends ConsumerState<_ApplyLeaveSheet> {
 
   bool get _singleDay => _from != null && _to != null && _from == _to;
 
+  /// "Casual Leave  (8 left)". Leave without pay carries no allocation, so it
+  /// shows no count rather than a misleading zero.
+  String _typeLabel(String type) {
+    final b = widget.ctx.balanceFor(type);
+    if (b == null || b.isLwp) return type;
+    return '$type  (${_n(b.remaining)} left)';
+  }
+
+  DateTime _nextWorkingDay(DateTime from) {
+    var d = from;
+    for (var i = 0; i < 60 && widget.ctx.isHoliday(d); i++) {
+      d = d.add(const Duration(days: 1));
+    }
+    return d;
+  }
+
+  static String _n(double v) =>
+      v == v.roundToDouble() ? v.toInt().toString() : v.toString();
+
   Future<void> _pickDate({required bool isFrom}) async {
     final now = DateTime.now();
     final initial = (isFrom ? _from : _to) ?? now;
     final picked = await showDatePicker(
       context: context,
-      initialDate: initial,
+      initialDate: widget.ctx.isHoliday(initial) ? _nextWorkingDay(initial) : initial,
       firstDate: DateTime(now.year, now.month, now.day),
       lastDate: DateTime(now.year + 1, 12, 31),
+      // Holidays and weekly offs are not selectable. Spending a leave day on a
+      // day the office was closed helps nobody, and HRMS would reject it later
+      // anyway with an error the employee cannot act on.
+      selectableDayPredicate: (d) => !widget.ctx.isHoliday(d),
     );
     if (picked == null) return;
     setState(() {
@@ -631,11 +728,16 @@ class _ApplyLeaveSheetState extends ConsumerState<_ApplyLeaveSheet> {
             DropdownButtonFormField<String>(
               initialValue: _type,
               decoration: const InputDecoration(labelText: 'Leave type'),
-              items: widget.leaveTypes
-                  .map((t) => DropdownMenuItem(value: t, child: Text(t)))
+              items: widget.ctx.leaveTypes
+                  .map((t) => DropdownMenuItem(
+                        value: t,
+                        child: Text(_typeLabel(t),
+                            maxLines: 1, overflow: TextOverflow.ellipsis),
+                      ))
                   .toList(),
               onChanged: (v) => setState(() => _type = v),
             ),
+            if (_type != null) _BalanceLine(balance: widget.ctx.balanceFor(_type!)),
             const SizedBox(height: AppDimens.lg),
             Row(
               children: [
@@ -910,6 +1012,40 @@ class _ApplyCompOffSheetState extends ConsumerState<_ApplyCompOffSheet> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+
+/// The selected leave type's balance, shown under the picker so the employee
+/// can see what they are spending before choosing dates.
+class _BalanceLine extends StatelessWidget {
+  const _BalanceLine({required this.balance});
+  final LeaveBalance? balance;
+
+  static String _n(double v) =>
+      v == v.roundToDouble() ? v.toInt().toString() : v.toString();
+
+  @override
+  Widget build(BuildContext context) {
+    final b = balance;
+    if (b == null) return const SizedBox.shrink();
+    final text = b.isLwp
+        ? 'Leave without pay does not use your leave balance.'
+        : '${_n(b.remaining)} of ${_n(b.total)} days left'
+            '${b.pending > 0 ? " · ${_n(b.pending)} awaiting approval" : ""}'
+            '${b.taken > 0 ? " · ${_n(b.taken)} taken" : ""}';
+    return Padding(
+      padding: const EdgeInsets.only(top: AppDimens.sm),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, size: 14, color: AppColors.onSurfaceVariant),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(text, style: Theme.of(context).textTheme.bodySmall),
+          ),
+        ],
       ),
     );
   }
