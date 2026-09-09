@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../application/timesheet_controller.dart';
 import '../domain/models.dart';
+import 'timer_sheets.dart';
 
 final _dateFmt = DateFormat('d MMM yyyy');
 final _dtFmt = DateFormat('d MMM, h:mm a');
@@ -22,6 +23,27 @@ class TimesheetDetailScreen extends ConsumerStatefulWidget {
 
 class _TimesheetDetailScreenState extends ConsumerState<TimesheetDetailScreen> {
   bool _submitting = false;
+
+  /// Open the add / edit sheet for a time log row.
+  ///
+  /// Activity types and projects come from the timesheet context the list
+  /// screen already loads, so the sheet has the same pickers the Start Timer
+  /// sheet uses. If that context has not arrived yet the tap is ignored rather
+  /// than opening a sheet with empty dropdowns.
+  Future<void> _openEditor({TimesheetLogRow? row}) async {
+    final ctx = ref.read(timesheetControllerProvider).asData?.value;
+    if (ctx == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('Still loading. Try again in a moment.')));
+      return;
+    }
+    await showTimeLogEditorSheet(
+      context,
+      ctx: ctx,
+      timesheet: widget.name,
+      row: row,
+    );
+  }
 
   Future<void> _submit(TimesheetDetail d) async {
     if (d.hasActiveTimer) {
@@ -108,7 +130,12 @@ class _TimesheetDetailScreenState extends ConsumerState<TimesheetDetailScreen> {
           children: [
             _Hero(d: d),
             const SizedBox(height: AppDimens.lg),
-            _LogsSection(logs: d.logs),
+            _LogsSection(
+              logs: d.logs,
+              canEdit: d.canEdit,
+              onAdd: () => _openEditor(),
+              onEdit: (row) => _openEditor(row: row),
+            ),
             if (d.note != null && d.note!.isNotEmpty) ...[
               const SizedBox(height: AppDimens.lg),
               Card(
@@ -215,8 +242,10 @@ class _Hero extends StatelessWidget {
   const _Hero({required this.d});
   final TimesheetDetail d;
 
-  String _formatHours(double v) =>
-      v == v.truncate() ? '${v.toInt()} h' : '${v.toStringAsFixed(1)} h';
+  /// Total as the server formatted it, matching the ERPNext desk. Falls back
+  /// to the raw number only if an older server build did not send the string.
+  String _formatHours(TimesheetDetail d) =>
+      '${d.totalHoursDisplay ?? d.totalHours.toStringAsFixed(2)} h';
 
   String _docstatusLabel(int s) =>
       switch (s) { 1 => 'Submitted', 2 => 'Cancelled', _ => 'Draft' };
@@ -244,7 +273,7 @@ class _Hero extends StatelessWidget {
                   color: AppColors.onPrimary, fontWeight: FontWeight.w600)),
           const SizedBox(height: AppDimens.md),
           Row(children: [
-            Expanded(child: _kv(context, 'Total', _formatHours(d.totalHours))),
+            Expanded(child: _kv(context, 'Total', _formatHours(d))),
             Container(
                 width: 1,
                 height: 32,
@@ -286,11 +315,22 @@ class _Hero extends StatelessWidget {
 }
 
 class _LogsSection extends StatelessWidget {
-  const _LogsSection({required this.logs});
+  const _LogsSection({
+    required this.logs,
+    required this.canEdit,
+    required this.onAdd,
+    required this.onEdit,
+  });
   final List<TimesheetLogRow> logs;
+  final bool canEdit;
+  final VoidCallback onAdd;
+  final ValueChanged<TimesheetLogRow> onEdit;
 
-  String _h(double v) =>
-      v == v.truncate() ? '${v.toInt()} h' : '${v.toStringAsFixed(1)} h';
+  /// Hours as the server formatted them, which is how the ERPNext desk shows
+  /// the same value. Falls back to the raw number only if an older server
+  /// build did not send the display string.
+  String _h(TimesheetLogRow log) =>
+      '${log.hoursDisplay ?? log.hours.toStringAsFixed(2)} h';
 
   @override
   Widget build(BuildContext context) {
@@ -306,6 +346,12 @@ class _LogsSection extends StatelessWidget {
               Expanded(
                   child: Text('No time logs on this timesheet.',
                       style: Theme.of(context).textTheme.bodyMedium)),
+              if (canEdit)
+                IconButton(
+                  tooltip: 'Add entry',
+                  icon: Icon(Icons.add, color: AppColors.primary),
+                  onPressed: onAdd,
+                ),
             ],
           ),
         ),
@@ -316,8 +362,8 @@ class _LogsSection extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(
-                AppDimens.md, AppDimens.md, AppDimens.md, AppDimens.sm),
+            padding: EdgeInsets.fromLTRB(AppDimens.md, AppDimens.md,
+                canEdit ? AppDimens.xs : AppDimens.md, AppDimens.sm),
             child: Row(
               children: [
                 Expanded(
@@ -328,6 +374,13 @@ class _LogsSection extends StatelessWidget {
                 ),
                 Text('${logs.length}',
                     style: Theme.of(context).textTheme.labelMedium),
+                if (canEdit)
+                  IconButton(
+                    tooltip: 'Add entry',
+                    visualDensity: VisualDensity.compact,
+                    icon: Icon(Icons.add, color: AppColors.primary),
+                    onPressed: onAdd,
+                  ),
               ],
             ),
           ),
@@ -335,7 +388,15 @@ class _LogsSection extends StatelessWidget {
             if (i > 0)
               Divider(
                   height: 1, indent: 64, color: AppColors.outlineVariant),
-            _LogRow(log: logs[i], hours: _h(logs[i].hours)),
+            _LogRow(
+              log: logs[i],
+              hours: _h(logs[i]),
+              // A running timer row has no end yet: it is stopped from the
+              // timer strip, not edited here.
+              onTap: (canEdit && !logs[i].isRunning && logs[i].name != null)
+                  ? () => onEdit(logs[i])
+                  : null,
+            ),
           ],
         ],
       ),
@@ -344,9 +405,10 @@ class _LogsSection extends StatelessWidget {
 }
 
 class _LogRow extends StatelessWidget {
-  const _LogRow({required this.log, required this.hours});
+  const _LogRow({required this.log, required this.hours, this.onTap});
   final TimesheetLogRow log;
   final String hours;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -355,7 +417,7 @@ class _LogRow extends StatelessWidget {
       if (log.project != null && log.project!.isNotEmpty) log.project,
       if (log.task != null && log.task!.isNotEmpty) log.task,
     ].whereType<String>().join(' · ');
-    return Padding(
+    final body = Padding(
       padding: const EdgeInsets.all(AppDimens.md),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -414,5 +476,7 @@ class _LogRow extends StatelessWidget {
         ],
       ),
     );
+    if (onTap == null) return body;
+    return InkWell(onTap: onTap, child: body);
   }
 }

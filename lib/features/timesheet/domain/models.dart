@@ -6,12 +6,16 @@ class TimesheetSummary {
     required this.name,
     required this.totalHours,
     required this.status,
+    this.totalHoursDisplay,
     this.startDate,
     this.endDate,
   });
 
   final String name;
   final double totalHours;
+
+  /// Server-formatted total, matching the ERPNext desk.
+  final String? totalHoursDisplay;
   final String status;
   final DateTime? startDate;
   final DateTime? endDate;
@@ -19,6 +23,7 @@ class TimesheetSummary {
   factory TimesheetSummary.fromJson(Map<String, dynamic> j) => TimesheetSummary(
         name: j['name'] as String,
         totalHours: (j['total_hours'] as num?)?.toDouble() ?? 0,
+        totalHoursDisplay: j['total_hours_display'] as String?,
         status: (j['status'] ?? '') as String,
         startDate: j['start_date'] != null
             ? DateTime.tryParse(j['start_date'].toString())
@@ -92,22 +97,37 @@ class TimesheetLogRow {
   const TimesheetLogRow({
     required this.fromTime,
     required this.hours,
+    this.name,
+    this.hoursDisplay,
     this.toTime,
     this.activityType,
     this.project,
     this.task,
     this.description,
+    this.billable = false,
   });
 
+  /// Child row id on the Timesheet. Needed to edit or delete this row.
+  final String? name;
   final DateTime? fromTime;
   final DateTime? toTime;
   final double hours;
+
+  /// Hours already formatted by the server the way the ERPNext desk shows
+  /// them. Prefer this over formatting [hours] here, so the app and the desk
+  /// never disagree.
+  final String? hoursDisplay;
   final String? activityType;
   final String? project;
   final String? task;
   final String? description;
+  final bool billable;
+
+  /// A row with a start but no end is the timer that is still running.
+  bool get isRunning => fromTime != null && toTime == null;
 
   factory TimesheetLogRow.fromJson(Map<String, dynamic> j) => TimesheetLogRow(
+        name: j['name'] as String?,
         fromTime: j['from_time'] != null
             ? DateTime.tryParse(j['from_time'].toString())
             : null,
@@ -115,10 +135,12 @@ class TimesheetLogRow {
             ? DateTime.tryParse(j['to_time'].toString())
             : null,
         hours: (j['hours'] as num?)?.toDouble() ?? 0,
+        hoursDisplay: j['hours_display'] as String?,
         activityType: j['activity_type'] as String?,
         project: j['project'] as String?,
         task: j['task'] as String?,
         description: j['description'] as String?,
+        billable: ((j['billable'] as num?)?.toInt() ?? 0) == 1,
       );
 }
 
@@ -132,6 +154,8 @@ class TimesheetDetail {
     required this.docstatus,
     required this.canSubmit,
     required this.hasActiveTimer,
+    this.totalHoursDisplay,
+    this.canEdit = false,
     this.startDate,
     this.endDate,
     this.note,
@@ -139,10 +163,18 @@ class TimesheetDetail {
 
   final String name;
   final double totalHours;
+
+  /// Server-formatted total, matching the ERPNext desk. See
+  /// [TimesheetLogRow.hoursDisplay].
+  final String? totalHoursDisplay;
   final String status;
   final int docstatus;
   final List<TimesheetLogRow> logs;
   final bool canSubmit;
+
+  /// True while the timesheet is a draft the caller may change. Gates the
+  /// add / edit / delete affordances; the server re-checks on every write.
+  final bool canEdit;
   final bool hasActiveTimer;
   final DateTime? startDate;
   final DateTime? endDate;
@@ -153,6 +185,7 @@ class TimesheetDetail {
   factory TimesheetDetail.fromJson(Map<String, dynamic> j) => TimesheetDetail(
         name: j['name'] as String,
         totalHours: (j['total_hours'] as num?)?.toDouble() ?? 0,
+        totalHoursDisplay: j['total_hours_display'] as String?,
         status: (j['status'] ?? '') as String,
         docstatus: (j['docstatus'] as num?)?.toInt() ?? 0,
         startDate: j['start_date'] != null
@@ -167,6 +200,7 @@ class TimesheetDetail {
                 TimesheetLogRow.fromJson((e as Map).cast<String, dynamic>()))
             .toList(),
         canSubmit: (j['can_submit'] ?? false) as bool,
+        canEdit: (j['can_edit'] ?? false) as bool,
         hasActiveTimer: (j['has_active_timer'] ?? false) as bool,
       );
 }

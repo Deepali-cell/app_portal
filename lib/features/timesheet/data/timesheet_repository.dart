@@ -109,6 +109,79 @@ class TimesheetRepository {
     }
   }
 
+  /// Datetime in the shape Frappe parses without a timezone shift. The server
+  /// stores naive local datetimes, so the offset and microseconds are dropped.
+  static String _dt(DateTime d) =>
+      d.toLocal().toIso8601String().split('.').first.replaceFirst('T', ' ');
+
+  Future<void> addLog({
+    required String timesheet,
+    required String activityType,
+    required DateTime fromTime,
+    required DateTime toTime,
+    required String project,
+    required String task,
+    required String description,
+    required bool billable,
+  }) async {
+    try {
+      await _dio.post(ApiPaths.timesheetAddLog, data: {
+        'timesheet': timesheet,
+        'activity_type': activityType,
+        'from_time': _dt(fromTime),
+        'to_time': _dt(toTime),
+        'project': project,
+        'task': task,
+        'description': description,
+        'is_billable': billable ? 1 : 0,
+      });
+    } on DioException catch (e) {
+      throw _err(e);
+    }
+  }
+
+  Future<void> updateLog({
+    required String timesheet,
+    required String rowName,
+    required String activityType,
+    required DateTime fromTime,
+    required DateTime toTime,
+    required String project,
+    required String task,
+    required String description,
+    required bool billable,
+  }) async {
+    try {
+      await _dio.post(ApiPaths.timesheetUpdateLog, data: {
+        'timesheet': timesheet,
+        'row_name': rowName,
+        'activity_type': activityType,
+        'from_time': _dt(fromTime),
+        'to_time': _dt(toTime),
+        'project': project,
+        'task': task,
+        'description': description,
+        'is_billable': billable ? 1 : 0,
+      });
+    } on DioException catch (e) {
+      throw _err(e);
+    }
+  }
+
+  Future<void> deleteLog({
+    required String timesheet,
+    required String rowName,
+  }) async {
+    try {
+      await _dio.post(ApiPaths.timesheetDeleteLog, data: {
+        'timesheet': timesheet,
+        'row_name': rowName,
+      });
+    } on DioException catch (e) {
+      throw _err(e);
+    }
+  }
+
   Future<void> create(List<TimeLog> logs, {String? note}) async {
     try {
       await _dio.post(ApiPaths.timesheetCreate, data: {

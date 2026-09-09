@@ -75,6 +75,71 @@ class TimesheetController extends AsyncNotifier<TimesheetContext> {
     await ref.read(timesheetRepositoryProvider).submitTimesheet(name);
     await reload();
   }
+
+  /// Add one time log row to an existing draft timesheet.
+  ///
+  /// The detail view and the list both change (row count, timesheet total,
+  /// period summary), so both are refreshed once the write lands.
+  Future<void> addLog({
+    required String timesheet,
+    required String activityType,
+    required DateTime fromTime,
+    required DateTime toTime,
+    required String project,
+    required String task,
+    required String description,
+    required bool billable,
+  }) async {
+    await ref.read(timesheetRepositoryProvider).addLog(
+          timesheet: timesheet,
+          activityType: activityType,
+          fromTime: fromTime,
+          toTime: toTime,
+          project: project,
+          task: task,
+          description: description,
+          billable: billable,
+        );
+    ref.invalidate(timesheetDetailProvider(timesheet));
+    await reload();
+  }
+
+  Future<void> updateLog({
+    required String timesheet,
+    required String rowName,
+    required String activityType,
+    required DateTime fromTime,
+    required DateTime toTime,
+    required String project,
+    required String task,
+    required String description,
+    required bool billable,
+  }) async {
+    await ref.read(timesheetRepositoryProvider).updateLog(
+          timesheet: timesheet,
+          rowName: rowName,
+          activityType: activityType,
+          fromTime: fromTime,
+          toTime: toTime,
+          project: project,
+          task: task,
+          description: description,
+          billable: billable,
+        );
+    ref.invalidate(timesheetDetailProvider(timesheet));
+    await reload();
+  }
+
+  Future<void> deleteLog({
+    required String timesheet,
+    required String rowName,
+  }) async {
+    await ref
+        .read(timesheetRepositoryProvider)
+        .deleteLog(timesheet: timesheet, rowName: rowName);
+    ref.invalidate(timesheetDetailProvider(timesheet));
+    await reload();
+  }
 }
 
 /// Active timer for the current user. Refreshed by start/stop actions and on

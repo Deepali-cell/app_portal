@@ -164,6 +164,12 @@ class ApiPaths {
       '/api/method/tcb_portal_erp.api.timesheet.create';
   static const String timesheetSubmit =
       '/api/method/tcb_portal_erp.api.timesheet.submit_timesheet';
+  static const String timesheetAddLog =
+      '/api/method/tcb_portal_erp.api.timesheet.add_log';
+  static const String timesheetUpdateLog =
+      '/api/method/tcb_portal_erp.api.timesheet.update_log';
+  static const String timesheetDeleteLog =
+      '/api/method/tcb_portal_erp.api.timesheet.delete_log';
   static const String activeTimer =
       '/api/method/tcb_portal_erp.api.timesheet.get_active_timer';
   static const String timerStart =
