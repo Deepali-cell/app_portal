@@ -651,34 +651,53 @@ class _TimeLogEditorSheetState extends ConsumerState<TimeLogEditorSheet> {
       _to.isAfter(_from) ? _to.difference(_from).inSeconds / 3600.0 : 0;
 
   Future<void> _pick({required bool isFrom}) async {
-    final current = isFrom ? _from : _to;
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: current,
-      firstDate: DateTime.now().subtract(const Duration(days: 365)),
-      lastDate: DateTime.now().add(const Duration(days: 1)),
-    );
-    if (picked == null || !mounted) return;
-    final time = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay.fromDateTime(current),
-    );
-    if (time == null) return;
-    final next = DateTime(
-        picked.year, picked.month, picked.day, time.hour, time.minute);
-    setState(() {
-      if (isFrom) {
-        // Keep the span intact when the start moves, so a nudge to From does
-        // not silently invert the row.
-        final span = _to.difference(_from);
-        _from = next;
-        if (!_to.isAfter(_from)) _to = next.add(span.isNegative ? const Duration(hours: 1) : span);
-      } else {
-        _to = next;
-      }
-    });
-  }
+  final current = isFrom ? _from : _to;
 
+  // First select date
+  final pickedDate = await showDatePicker(
+    context: context,
+    initialDate: current,
+    firstDate: DateTime.now().subtract(const Duration(days: 365)),
+    lastDate: DateTime.now().add(const Duration(days: 1)),
+  );
+
+  if (pickedDate == null || !mounted) return;
+
+  // Then select time
+  final pickedTime = await showTimePicker(
+    context: context,
+    initialTime: TimeOfDay.fromDateTime(current),
+  );
+
+  if (pickedTime == null || !mounted) return;
+
+  final next = DateTime(
+    pickedDate.year,
+    pickedDate.month,
+    pickedDate.day,
+    pickedTime.hour,
+    pickedTime.minute,
+  );
+
+  setState(() {
+    if (isFrom) {
+      final span = _to.difference(_from);
+
+      _from = next;
+
+      // Keep To time valid
+      if (!_to.isAfter(_from)) {
+        _to = next.add(
+          span.isNegative || span == Duration.zero
+              ? const Duration(hours: 1)
+              : span,
+        );
+      }
+    } else {
+      _to = next;
+    }
+  });
+ }
   Future<void> _save() async {
     final desc = _descCtrl.text.trim();
     if (_activity == null) {

@@ -468,6 +468,10 @@ class _LogRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppDimens.sm),
+            if (!log.isRunning && log.toTime != null) ...[
+              const Icon(Icons.check_circle, color: Colors.green, size: 18),
+              const SizedBox(width: 4),
+         ],
           Text(hours,
               style: TextStyle(
                   color: AppColors.primary,

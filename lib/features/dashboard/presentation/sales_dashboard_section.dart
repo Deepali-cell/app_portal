@@ -102,7 +102,7 @@ class _DashboardBody extends ConsumerWidget {
                 ref
                     .read(pendingLeadStatusFilterProvider.notifier)
                     .set(s.status);
-                context.push(Routes.leads);
+                context.go(Routes.leads);
               }),
           const SizedBox(height: AppDimens.lg),
         ],
@@ -115,7 +115,7 @@ class _DashboardBody extends ConsumerWidget {
           const SizedBox(height: 6),
           _StatusGrid(
               buckets: snapshot.dealStatuses.where((s) => s.count > 0).toList(),
-              onTap: (s) => context.push(Routes.deals)),
+              onTap: (s) => context.go(Routes.deals)),
           const SizedBox(height: AppDimens.lg),
         ],
         if (snapshot.perRep.isNotEmpty) ...[
@@ -364,27 +364,54 @@ class _StatusGrid extends StatelessWidget {
   }
 }
 
-class _StatusCard extends StatelessWidget {
+class _StatusCard extends StatefulWidget {
   const _StatusCard({required this.bucket, required this.onTap});
+
   final StatusBucket bucket;
   final void Function(StatusBucket) onTap;
+
+  @override
+  State<_StatusCard> createState() => _StatusCardState();
+}
+
+class _StatusCardState extends State<_StatusCard> {
+  bool _navigating = false;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
     return InkWell(
-      onTap: () => onTap(bucket),
+      onTap: () {
+        if (_navigating) return;
+
+        setState(() {
+          _navigating = true;
+        });
+
+        widget.onTap(widget.bucket);
+
+        Future.delayed(const Duration(milliseconds: 800), () {
+          if (mounted) {
+            setState(() {
+              _navigating = false;
+            });
+          }
+        });
+      },
       borderRadius: BorderRadius.circular(AppDimens.radiusLg),
       child: Container(
         padding: const EdgeInsets.symmetric(
-            horizontal: AppDimens.md, vertical: 10),
-        decoration: BoxDecoration(
-          color: bucket.color.withValues(alpha: 0.08),
-          borderRadius: BorderRadius.circular(AppDimens.radiusLg),
-          border: Border.all(color: bucket.color.withValues(alpha: 0.30)),
+          horizontal: AppDimens.md,
+          vertical: 10,
         ),
-        // Title row on top, count + value on a single bottom row with the
-        // value right-aligned + muted so it reads as a secondary stat instead
-        // of competing with the big count number for attention.
+        decoration: BoxDecoration(
+          color: widget.bucket.color.withValues(alpha: 0.08),
+          borderRadius: BorderRadius.circular(AppDimens.radiusLg),
+          border: Border.all(
+            color: widget.bucket.color.withValues(alpha: 0.30),
+          ),
+        ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -393,28 +420,35 @@ class _StatusCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    bucket.status,
+                    widget.bucket.status,
                     style: theme.textTheme.labelLarge?.copyWith(
-                        color: bucket.color,
-                        fontWeight: FontWeight.w700,
-                        height: 1.1),
+                      color: widget.bucket.color,
+                      fontWeight: FontWeight.w700,
+                      height: 1.1,
+                    ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                if (bucket.staleCount > 0)
+                if (widget.bucket.staleCount > 0)
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 6, vertical: 1),
+                      horizontal: 6,
+                      vertical: 1,
+                    ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFB23A48).withValues(alpha: 0.15),
+                      color: const Color(0xFFB23A48)
+                          .withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(999),
                     ),
-                    child: Text('${bucket.staleCount} stale',
-                        style: const TextStyle(
-                            color: Color(0xFFB23A48),
-                            fontSize: 9,
-                            fontWeight: FontWeight.w800)),
+                    child: Text(
+                      '${widget.bucket.staleCount} stale',
+                      style: const TextStyle(
+                        color: Color(0xFFB23A48),
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
                   ),
               ],
             ),
@@ -422,17 +456,23 @@ class _StatusCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.baseline,
               textBaseline: TextBaseline.alphabetic,
               children: [
-                Text('${bucket.count}',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                        color: bucket.color,
-                        fontWeight: FontWeight.w800,
-                        height: 1.0)),
-                if (bucket.value > 0) ...[
+                Text(
+                  '${widget.bucket.count}',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    color: widget.bucket.color,
+                    fontWeight: FontWeight.w800,
+                    height: 1.0,
+                  ),
+                ),
+                if (widget.bucket.value > 0) ...[
                   const Spacer(),
-                  Text(moneyShort(bucket.value),
-                      style: theme.textTheme.labelSmall?.copyWith(
-                          color: bucket.color.withValues(alpha: 0.75),
-                          fontWeight: FontWeight.w600)),
+                  Text(
+                    moneyShort(widget.bucket.value),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: widget.bucket.color.withValues(alpha: 0.75),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                 ],
               ],
             ),

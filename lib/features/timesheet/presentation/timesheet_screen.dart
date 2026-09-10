@@ -57,7 +57,7 @@ class TimesheetScreen extends ConsumerWidget {
                 _Header(
                   title: 'Timesheet',
                   subtitle: 'Track time against tasks. Tap Start to begin.',
-                  cta: ctx.activeTimer == null ? 'Start Timer' : 'Timer running…',
+                  cta: ctx.activeTimer == null ? 'Add Timesheet' : 'Timer running…',
                   enabled: ctx.activeTimer == null,
                   onPressed: () => _open(context, ctx),
                 ),
