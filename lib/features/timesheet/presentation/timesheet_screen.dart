@@ -210,10 +210,13 @@ class _TotalsCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final items = ctx.timesheets;
     final total = items.fold<double>(0, (s, t) => s + t.totalHours);
-    final approved = items
-        .where((t) => t.status.toLowerCase().contains('approved'))
-        .fold<double>(0, (s, t) => s + t.totalHours);
-    final draft = total - approved;
+    final draft = items
+        .where((t) => t.status.toLowerCase() == 'draft')
+        .length;
+    final submitted = items
+        .where((t) => t.status.toLowerCase() == 'submitted')
+        .length;
+  
     return Container(
       padding: const EdgeInsets.all(AppDimens.lg),
       decoration: BoxDecoration(
@@ -237,17 +240,12 @@ class _TotalsCard extends StatelessWidget {
                   fontWeight: FontWeight.w800)),
           const SizedBox(height: AppDimens.md),
           Row(children: [
-            Expanded(child: _kv(context, 'Approved', _h(approved))),
+            Expanded(child: _kv(context, 'Draft','$draft')),
             Container(
                 width: 1,
                 height: 28,
                 color: AppColors.primaryFixedDim.withValues(alpha: 0.25)),
-            Expanded(child: _kv(context, 'Pending / Draft', _h(draft))),
-            Container(
-                width: 1,
-                height: 28,
-                color: AppColors.primaryFixedDim.withValues(alpha: 0.25)),
-            Expanded(child: _kv(context, 'Entries', '${items.length}')),
+            Expanded(child: _kv(context, 'Submitted', '$submitted')),
           ]),
         ],
       ),

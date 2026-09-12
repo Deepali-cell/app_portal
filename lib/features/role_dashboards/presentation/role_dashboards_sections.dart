@@ -138,6 +138,7 @@ class _KpiTile extends StatelessWidget {
     required this.value,
     this.tone = _Tone.primary,
   });
+
   final IconData icon;
   final String label;
   final String value;
@@ -146,37 +147,80 @@ class _KpiTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (bg, fg) = switch (tone) {
-      _Tone.primary => (AppColors.surfaceContainerLowest, AppColors.primary),
-      _Tone.warn => (const Color(0xFFFFF3E0), const Color(0xFFE65100)),
-      _Tone.danger => (AppColors.errorContainer, AppColors.onErrorContainer),
-      _Tone.success => (const Color(0xFFE7F5EC), const Color(0xFF1B7F4D)),
+      _Tone.primary => (
+          AppColors.surfaceContainerLowest,
+          AppColors.primary,
+        ),
+      _Tone.warn => (
+          const Color(0xFFFFF3E0),
+          const Color(0xFFE65100),
+        ),
+      _Tone.danger => (
+          AppColors.errorContainer,
+          AppColors.onErrorContainer,
+        ),
+      _Tone.success => (
+          const Color(0xFFE7F5EC),
+          const Color(0xFF1B7F4D),
+        ),
     };
+
     return Container(
+      constraints: const BoxConstraints(
+        minHeight: 92,
+      ),
       padding: const EdgeInsets.all(AppDimens.md),
       decoration: BoxDecoration(
         color: bg,
         borderRadius: BorderRadius.circular(AppDimens.radiusLg),
-        border: Border.all(color: AppColors.outlineVariant),
+        border: Border.all(
+          color: AppColors.outlineVariant,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(children: [
-            Icon(icon, size: 16, color: fg),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(label,
-                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: AppColors.onSurfaceVariant,
-                      fontWeight: FontWeight.w600),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis),
-            ),
-          ]),
-          const SizedBox(height: 6),
-          Text(value,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: fg, fontWeight: FontWeight.w800)),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                icon,
+                size: 16,
+                color: fg,
+              ),
+              const SizedBox(width: 6),
+
+              // Allow the label to wrap instead of showing "..."
+              Expanded(
+                child: Text(
+                  label,
+                  style: Theme.of(context)
+                      .textTheme
+                      .labelSmall
+                      ?.copyWith(
+                        color: AppColors.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                  maxLines: 2,
+                  softWrap: true,
+                  overflow: TextOverflow.visible,
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 8),
+
+          Text(
+            value,
+            style: Theme.of(context)
+                .textTheme
+                .headlineSmall
+                ?.copyWith(
+                  color: fg,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
         ],
       ),
     );
@@ -241,7 +285,7 @@ class _HrBody extends StatelessWidget {
             Expanded(
               child: _KpiTile(
                 icon: Icons.pending_actions_outlined,
-                label: 'Pending leaves',
+                label: 'Pending leave Applications',
                 value: '${summary.pendingLeaveApps}',
                 tone: summary.pendingLeaveApps > 0 ? _Tone.warn : _Tone.primary,
               ),
@@ -259,7 +303,7 @@ class _HrBody extends StatelessWidget {
             Expanded(
               child: _KpiTile(
                 icon: Icons.logout_outlined,
-                label: 'Exits <30d',
+                label: 'Exits <30d Reliving',
                 value: '${summary.upcomingExits}',
               ),
             ),
