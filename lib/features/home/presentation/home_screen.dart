@@ -323,8 +323,6 @@ class _BentoGrid extends ConsumerWidget {
       children: const [
         _ShiftCard(),
         SizedBox(height: AppDimens.md),
-        _LeaveBalanceCard(),
-        SizedBox(height: AppDimens.md),
         _LastPayslipCard(),
       ],
     );
@@ -417,73 +415,6 @@ class _ShiftCard extends ConsumerWidget {
       ),
     );
   }
-}
-
-class _LeaveBalanceCard extends ConsumerWidget {
-  const _LeaveBalanceCard();
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(leaveControllerProvider);
-    return _BentoCard(
-      title: 'Leave Balance',
-      icon: Icons.flight_takeoff_outlined,
-      child: async.when(
-        loading: () => const _SkeletonLine(),
-        error: (_, _) => Text('No leave data yet.',
-            style: Theme.of(context).textTheme.bodyMedium),
-        data: (ctx) {
-          if (ctx.balances.isEmpty) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('No allocations yet',
-                    style: Theme.of(context).textTheme.headlineMedium),
-                const SizedBox(height: 2),
-                Text('Open the Leave tab to apply.',
-                    style: Theme.of(context).textTheme.bodyMedium),
-              ],
-            );
-          }
-          // Show the leave type with the most remaining as the headline.
-          final top = (List<LeaveBalance>.from(ctx.balances)
-                ..sort((a, b) => b.remaining.compareTo(a.remaining)))
-              .first;
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.baseline,
-                textBaseline: TextBaseline.alphabetic,
-                children: [
-                  Text(_n(top.remaining),
-                      style: Theme.of(context).textTheme.headlineMedium),
-                  const SizedBox(width: 4),
-                  Text(' days left',
-                      style: Theme.of(context).textTheme.bodyMedium),
-                ],
-              ),
-              const SizedBox(height: 6),
-              if (top.total > 0)
-                LinearProgressIndicator(
-                  value: (top.remaining / top.total).clamp(0, 1),
-                  minHeight: 6,
-                  borderRadius: BorderRadius.circular(999),
-                  backgroundColor: AppColors.surfaceContainer,
-                  valueColor: AlwaysStoppedAnimation(
-                      AppColors.secondaryContainer),
-                ),
-              const SizedBox(height: 6),
-              Text(top.leaveType,
-                  style: Theme.of(context).textTheme.labelSmall),
-            ],
-          );
-        },
-      ),
-    );
-  }
-
-  String _n(double v) =>
-      v == v.roundToDouble() ? v.toInt().toString() : v.toString();
 }
 
 class _LastPayslipCard extends ConsumerStatefulWidget {

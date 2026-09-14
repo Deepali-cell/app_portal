@@ -37,6 +37,7 @@ object RecordingScanner {
     private val KNOWN_FOLDERS = listOf(
         // Realme / Oppo ColorOS (CONFIRMED on RMX3686 / Android 15)
         "Music/Recordings/Call Recordings",
+        "Recordings/Record/Call",
         "Music/Recordings/Call recordings",
         "Recordings/Call Recordings",
         "Recordings/CallRecordings",
