@@ -31,6 +31,12 @@ import '../../features/location_tracking/presentation/person_location_screen.dar
 import '../../features/location_tracking/presentation/team_live_list_screen.dart';
 import '../../features/location_tracking/presentation/team_live_map_screen.dart';
 import '../../features/sales_workspace/presentation/sales_workspace_screen.dart';
+import '../../features/admin/presentation/admin_screen.dart';
+import '../../features/records/domain/descriptor.dart';
+import '../../features/records/presentation/record_list_screen.dart';
+import '../../features/records/presentation/record_detail_screen.dart';
+import '../../features/stock/presentation/items_screen.dart';
+import '../../features/stock/presentation/item_detail_screen.dart';
 import '../../features/notifications/presentation/notifications_screen.dart';
 import '../../features/payslips/presentation/payslip_detail_screen.dart';
 import '../../features/payslips/presentation/payslips_screen.dart';
@@ -46,7 +52,7 @@ class Routes {
   static const login = '/login';
   static const unlock = '/unlock';
 
-  // All top-level destinations — drawer + side-rail navigation; no nested "More".
+  // All top-level destinations - drawer + side-rail navigation; no nested "More".
   static const home = '/home';
   static const time = '/time';
   static const leave = '/leave';
@@ -58,6 +64,22 @@ class Routes {
   static const deals = '/deals';
   static const directory = '/directory';
   static const invoices = '/invoices';
+  static const stock = '/stock';
+  static const admin = '/admin';
+  // Manufacturing
+  static const mfgBom = '/mfg/bom';
+  static const mfgWorkOrder = '/mfg/work-order';
+  static const mfgJobCard = '/mfg/job-card';
+  static const mfgProductionPlan = '/mfg/production-plan';
+  static const mfgWorkstation = '/mfg/workstation';
+  // Stock (transactional + masters)
+  static const stockWarehouse = '/stock/warehouse';
+  static const stockMaterialRequest = '/stock/material-request';
+  static const stockEntry = '/stock/entry';
+  // HR
+  static const hrEmployees = '/hr/employees';
+  // Shared generic record detail
+  static const recordDetail = '/record-detail';
 
   // Sub-routes pushed inside a branch
   static const payslipDetail = '/payslip-detail';
@@ -65,6 +87,7 @@ class Routes {
   static const dealDetail = '/deal-detail';
   static const timesheetDetail = '/timesheet-detail';
   static const invoiceDetail = '/invoice-detail';
+  static const stockItemDetail = '/stock-item-detail';
   static const leaveDetail = '/leave-detail';
   static const leaveApprovals = '/leave-approvals';
   static const profile = '/profile';
@@ -191,7 +214,33 @@ final routerProvider = Provider<GoRouter>((ref) {
               },
             ),
           ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: Routes.stock, builder: (_, _) => const ItemsScreen()),
+            GoRoute(
+              path: Routes.stockItemDetail,
+              builder: (_, state) =>
+                  ItemDetailScreen(name: state.extra! as String),
+            ),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(path: Routes.admin, builder: (_, _) => const AdminScreen()),
+          ]),
+          _recordBranch(Routes.mfgBom, 'mfg_bom'),
+          _recordBranch(Routes.mfgWorkOrder, 'mfg_work_order'),
+          _recordBranch(Routes.mfgJobCard, 'mfg_job_card'),
+          _recordBranch(Routes.mfgProductionPlan, 'mfg_production_plan'),
+          _recordBranch(Routes.mfgWorkstation, 'mfg_workstation'),
+          _recordBranch(Routes.hrEmployees, 'hr_employee'),
+          _recordBranch(Routes.stockWarehouse, 'stock_warehouse'),
+          _recordBranch(Routes.stockMaterialRequest, 'stock_material_request'),
+          _recordBranch(Routes.stockEntry, 'stock_entry'),
         ],
+      ),
+      GoRoute(
+        path: Routes.recordDetail,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, state) =>
+            RecordDetailScreen(args: state.extra! as RecordArgs),
       ),
       GoRoute(
           path: Routes.profile,
@@ -251,6 +300,18 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
+
+/// A shell branch that hosts a generic [RecordListScreen] for the descriptor
+/// registered under [key]. Keeps the router terse as modules grow.
+StatefulShellBranch _recordBranch(String path, String key) {
+  final descriptor = recordRegistry[key]!;
+  return StatefulShellBranch(routes: [
+    GoRoute(
+      path: path,
+      builder: (_, _) => RecordListScreen(descriptor: descriptor),
+    ),
+  ]);
+}
 
 /// Bridges Riverpod state changes to GoRouter's redirect re-evaluation.
 class _RouterRefresh extends ChangeNotifier {

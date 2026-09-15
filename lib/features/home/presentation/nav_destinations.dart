@@ -27,6 +27,18 @@ const List<NavDest> _allDestinations = [
   NavDest('Deals', Icons.handshake_outlined, Icons.handshake, Routes.deals, 'deals'),
   NavDest('Directory', Icons.contacts_outlined, Icons.contacts, Routes.directory, null),
   NavDest('Invoices', Icons.receipt_outlined, Icons.receipt, Routes.invoices, 'invoices'),
+  NavDest('Items', Icons.inventory_2_outlined, Icons.inventory_2, Routes.stock, 'stock_item'),
+  // Manufacturing
+  NavDest('BOM', Icons.account_tree_outlined, Icons.account_tree, Routes.mfgBom, 'mfg_bom'),
+  NavDest('Work Orders', Icons.precision_manufacturing_outlined, Icons.precision_manufacturing, Routes.mfgWorkOrder, 'mfg_work_order'),
+  NavDest('Job Cards', Icons.assignment_outlined, Icons.assignment, Routes.mfgJobCard, 'mfg_job_card'),
+  NavDest('Prod. Plan', Icons.event_note_outlined, Icons.event_note, Routes.mfgProductionPlan, 'mfg_production_plan'),
+  NavDest('Workstations', Icons.hardware_outlined, Icons.hardware, Routes.mfgWorkstation, 'mfg_workstation'),
+  // Stock (transactional + masters)
+  NavDest('Warehouses', Icons.warehouse_outlined, Icons.warehouse, Routes.stockWarehouse, 'stock_warehouse'),
+  NavDest('Material Req', Icons.playlist_add_outlined, Icons.playlist_add, Routes.stockMaterialRequest, 'purchase_material_request'),
+  NavDest('Stock Entry', Icons.swap_horiz_outlined, Icons.swap_horiz, Routes.stockEntry, 'stock_entry'),
+  NavDest('Admin', Icons.admin_panel_settings_outlined, Icons.admin_panel_settings, Routes.admin, 'admin'),
 ];
 
 List<NavDest> destinationsFor(Profile? profile) {
@@ -44,6 +56,7 @@ bool isInBranch(String dest, String current) {
     Routes.timesheet: Routes.timesheetDetail,
     Routes.invoices: Routes.invoiceDetail,
     Routes.leave: Routes.leaveDetail,
+    Routes.stock: Routes.stockItemDetail,
   };
   return childMap[dest] == current;
 }

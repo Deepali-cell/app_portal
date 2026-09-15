@@ -16,7 +16,8 @@ class AppConfig {
   /// resolved at runtime per tenant.
   static const String middlewareBaseUrl = String.fromEnvironment(
     'TCB_MIDDLEWARE_URL',
-    defaultValue: 'https://office.tcbinfotech.com',
+    // defaultValue: 'https://office.tcbinfotech.com',
+    defaultValue: 'https://tcb-portal.mukeshcoder.site',
   );
 
   /// Optional fallback server URL when no tenant is cached.

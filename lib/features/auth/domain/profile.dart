@@ -96,6 +96,7 @@ class Profile {
     this.userImage,
     this.roles = const [],
     this.capabilities = const {},
+    this.screenPerms = const {},
     this.employee,
   });
 
@@ -104,11 +105,21 @@ class Profile {
   final String? userImage;
   final List<String> roles;
   final Set<String> capabilities;
+
+  /// Per-screen action permissions from the backend, e.g.
+  /// {'stock_item': {'view','create','write'}}. Powers ERP-native
+  /// enable/disable of create/edit/submit/delete buttons inside a screen.
+  final Map<String, Set<String>> screenPerms;
   final Employee? employee;
 
   bool get hasEmployee => employee != null;
 
   bool can(String feature) => capabilities.contains(feature);
+
+  /// True if the user may perform [action] (view/create/write/submit/delete)
+  /// on [screen]. Falls back to the coarse [can] flag when no per-screen data.
+  bool canDo(String screen, String action) =>
+      screenPerms[screen]?.contains(action) ?? false;
 
   Profile withEmployee(Employee employee) => Profile(
         user: user,
@@ -116,6 +127,7 @@ class Profile {
         userImage: userImage,
         roles: roles,
         capabilities: capabilities,
+        screenPerms: screenPerms,
         employee: employee,
       );
 
@@ -138,6 +150,7 @@ class Profile {
         roles: (json['roles'] as List?)?.map((e) => e.toString()).toList() ??
             const [],
         capabilities: _capsFromJson(json['capabilities']),
+        screenPerms: _screenPermsFromJson(json['screen_perms']),
         employee: json['employee'] is Map<String, dynamic>
             ? Employee.fromJson(json['employee'] as Map<String, dynamic>)
             : null,
@@ -154,12 +167,32 @@ class Profile {
     return const {};
   }
 
+  static Map<String, Set<String>> _screenPermsFromJson(dynamic raw) {
+    if (raw is Map) {
+      final out = <String, Set<String>>{};
+      raw.forEach((screen, perms) {
+        if (perms is Map) {
+          out[screen.toString()] = perms.entries
+              .where((e) => e.value == true)
+              .map((e) => e.key.toString())
+              .toSet();
+        }
+      });
+      return out;
+    }
+    return const {};
+  }
+
   Map<String, dynamic> toJson() => {
         'user': user,
         'full_name': fullName,
         'user_image': userImage,
         'roles': roles,
         'capabilities': {for (final c in capabilities) c: true},
+        'screen_perms': {
+          for (final e in screenPerms.entries)
+            e.key: {for (final a in e.value) a: true}
+        },
         'employee': employee?.toJson(),
       };
 }

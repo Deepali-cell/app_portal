@@ -8,7 +8,7 @@ class ApiPaths {
   static const String tenantResolve =
       '/api/method/tcb_portal_control.api.tenant.resolve';
 
-  // Today's Plan — salesperson's daily command-centre payload
+  // Today's Plan - salesperson's daily command-centre payload
   static const String todaysPlan =
       '/api/method/tcb_portal_erp.api.todays_plan.get_today_plan';
 
@@ -38,7 +38,7 @@ class ApiPaths {
   static const String salesDashboard =
       '/api/method/tcb_portal_erp.api.dashboard.get_sales_dashboard';
 
-  // Role-specific home sections — one endpoint per role. Each takes a
+  // Role-specific home sections - one endpoint per role. Each takes a
   // `period` (today | week | month | custom) and optional from_date/to_date.
   static const String hrDashboard =
       '/api/method/tcb_portal_erp.api.hr_dashboard.get_summary';
@@ -68,12 +68,12 @@ class ApiPaths {
   // Call recording + AI pipeline (Phase D.2.4 + D.2.5)
   static const String uploadRecording =
       '/api/method/tcb_portal_erp.api.call_intelligence.upload_recording';
-  /// Idempotency lookup — used by the mobile after a multipart-upload
+  /// Idempotency lookup - used by the mobile after a multipart-upload
   /// DioException to confirm whether the server already saved the row
   /// (Cloudflare 524 / mobile network drop after server commit).
   static const String findRecordingByClientId =
       '/api/method/tcb_portal_erp.api.call_intelligence.find_by_client_id';
-  /// Always-log endpoint — mobile calls this for every detected call
+  /// Always-log endpoint - mobile calls this for every detected call
   /// (connected or not) so the user has a complete call history even
   /// when no OEM recording is produced. Auto-matches to a Lead/Deal.
   static const String logCallAttempt =
@@ -299,6 +299,35 @@ class ApiPaths {
   // Activity timeline (aggregated)
   static const String timelineGet =
       '/api/method/tcb_portal_erp.api.timeline.get_timeline';
+
+  // Administrator (in-app Frappe role-permission manager)
+  static const String adminMeta =
+      '/api/method/tcb_portal_erp.api.admin.get_admin_meta';
+  static const String adminRoleMatrix =
+      '/api/method/tcb_portal_erp.api.admin.get_role_matrix';
+  static const String adminSetPerm =
+      '/api/method/tcb_portal_erp.api.admin.set_role_perm';
+
+  // Generic portal records (Manufacturing, HR, Sales, Purchase…)
+  static const String portalListDocs =
+      '/api/method/tcb_portal_erp.api.portal_docs.list_docs';
+  static const String portalGetDoc =
+      '/api/method/tcb_portal_erp.api.portal_docs.get_doc';
+  // Generic metadata-driven forms
+  static const String portalFormMeta =
+      '/api/method/tcb_portal_erp.api.portal_forms.get_meta';
+  static const String portalSearchLink =
+      '/api/method/tcb_portal_erp.api.portal_forms.search_link';
+  static const String portalSaveDoc =
+      '/api/method/tcb_portal_erp.api.portal_forms.save_doc';
+  static const String portalSubmitDoc =
+      '/api/method/tcb_portal_erp.api.portal_forms.submit_doc';
+
+  // Stock module (Phase 1)
+  static const String stockListItems =
+      '/api/method/tcb_portal_erp.api.stock.list_items';
+  static const String stockGetItem =
+      '/api/method/tcb_portal_erp.api.stock.get_item';
 
   // Generic resource access
   static String resource(String doctype) => '/api/resource/$doctype';
