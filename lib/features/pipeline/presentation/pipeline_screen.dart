@@ -7,6 +7,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../home/presentation/app_shell.dart';
 import '../../leaderboard/application/leaderboard_controller.dart'
     show LeaderboardPeriod, LeaderboardPeriodX;
 import '../application/pipeline_controller.dart';
@@ -77,6 +78,7 @@ class PipelineScreen extends ConsumerWidget {
         ],
         ),
       ),
+      bottomNavigationBar: const PersistentBottomNav(),
     );
   }
 }

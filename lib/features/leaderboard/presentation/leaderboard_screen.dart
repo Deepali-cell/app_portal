@@ -6,6 +6,7 @@ import 'package:intl/intl.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
+import '../../home/presentation/app_shell.dart';
 import '../application/leaderboard_controller.dart';
 import '../domain/models.dart';
 
@@ -75,6 +76,7 @@ class LeaderboardScreen extends ConsumerWidget {
           );
         },
       ),
+      bottomNavigationBar: const PersistentBottomNav(),
     );
   }
 }

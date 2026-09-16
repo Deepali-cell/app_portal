@@ -2,15 +2,34 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../timesheet/presentation/running_timer.dart';
 import 'nav_destinations.dart';
 
+/// One resolved nav tile: either a top-level destination (Home) or a module
+/// launcher / a destination inside the currently-active module.
+class _NavTile {
+  const _NavTile({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+}
+
 /// Root shell. Mobile gets the horizontally-scrollable bottom nav; tablet/
-/// desktop (>=840 px) gets a persistent side rail. Same destination list
-/// drives both, role-gated by capability.
+/// desktop (>=840 px) gets a persistent side rail. Both render two levels:
+/// outside any module you see Home + one tile per module; once inside a
+/// module the bar switches to that module's own items (plus a way back).
 class AppShell extends ConsumerWidget {
   const AppShell({super.key, required this.shell});
   final StatefulNavigationShell shell;
@@ -19,6 +38,8 @@ class AppShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(authControllerProvider.select((s) => s.profile));
     final dests = destinationsFor(profile);
+    final currentRoute = _currentRoute(context);
+    final tiles = _buildNavTiles(context, dests, currentRoute);
     final wide = MediaQuery.sizeOf(context).width >= 840;
 
     if (wide) {
@@ -26,7 +47,7 @@ class AppShell extends ConsumerWidget {
         backgroundColor: AppColors.background,
         body: Row(
           children: [
-            _SideRail(dests: dests, currentRoute: _currentRoute(context)),
+            _SideRail(tiles: tiles),
             VerticalDivider(width: 1, color: AppColors.outlineVariant),
             Expanded(child: shell),
           ],
@@ -36,25 +57,125 @@ class AppShell extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: shell,
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const RunningTimerStrip(),
-          _ScrollableBottomNav(
-              dests: dests, currentRoute: _currentRoute(context)),
-        ],
-      ),
+      bottomNavigationBar: const PersistentBottomNav(),
     );
   }
+}
 
-  String _currentRoute(BuildContext context) =>
-      GoRouterState.of(context).matchedLocation;
+String _currentRoute(BuildContext context) =>
+    GoRouterState.of(context).matchedLocation;
+
+/// Navigates to a shell destination, first popping any screens that were
+/// pushed on the ROOT navigator (e.g. Sales Workspace, Pipeline, Leaderboard
+/// - screens registered with `parentNavigatorKey: rootNavigatorKey`, so they
+/// sit above the shell rather than inside one of its branches). Going
+/// straight to `context.go(route)` while such a screen is still on top can
+/// hit Flutter's `!keyReservation.contains(key)` GlobalKey assertion, since
+/// the shell branch switch and the root-stack pop would otherwise happen at
+/// once. `GoRouter.of(context)` is captured up front (the tile's own screen
+/// may itself be one of the popped ones, deactivating `context`), and each
+/// pop is awaited via `maybePop()` so GoRouter's internal page list settles
+/// before the next step runs - firing them all in the same frame is what
+/// produced a duplicate-Navigator-GlobalKey crash.
+Future<void> _goFromRoot(BuildContext context, String route) async {
+  final goRouter = GoRouter.of(context);
+  final root = rootNavigatorKey.currentState;
+  while (root != null && root.canPop()) {
+    await root.maybePop();
+  }
+  goRouter.go(route);
+}
+
+/// Level 1 (no module active): Home + one tile per module that has at
+/// least one visible destination. Level 2 (inside a module): a "Modules"
+/// tile to go back to Home, followed by that module's own destinations.
+List<_NavTile> _buildNavTiles(
+    BuildContext context, List<NavDest> dests, String currentRoute) {
+  final activeModule = activeModuleFor(dests, currentRoute);
+
+  if (activeModule == null) {
+    final tiles = <_NavTile>[];
+    for (final d in dests.where((d) => d.module == null)) {
+      final selected = isInBranch(d.route, currentRoute);
+      tiles.add(_NavTile(
+        icon: d.icon,
+        selectedIcon: d.selectedIcon,
+        label: d.label,
+        selected: selected,
+        onTap: () {
+          if (!selected) _goFromRoot(context, d.route);
+        },
+      ));
+    }
+    for (final m in modulesIn(dests)) {
+      final meta = moduleMeta[m];
+      if (meta == null) continue;
+      final first = dests.firstWhere((d) => d.module == m);
+      tiles.add(_NavTile(
+        icon: meta.$1,
+        selectedIcon: meta.$2,
+        label: meta.$3,
+        selected: false,
+        onTap: () {
+          _goFromRoot(context, first.route);
+        },
+      ));
+    }
+    return tiles;
+  }
+
+  final meta = moduleMeta[activeModule];
+  final tiles = <_NavTile>[
+    _NavTile(
+      icon: Icons.apps_outlined,
+      selectedIcon: Icons.apps,
+      label: meta?.$3 ?? 'Modules',
+      selected: false,
+      onTap: () {
+        _goFromRoot(context, Routes.home);
+      },
+    ),
+  ];
+  for (final d in dests.where((d) => d.module == activeModule)) {
+    final selected = isInBranch(d.route, currentRoute);
+    tiles.add(_NavTile(
+      icon: d.icon,
+      selectedIcon: d.selectedIcon,
+      label: d.label,
+      selected: selected,
+      onTap: () {
+        if (!selected) _goFromRoot(context, d.route);
+      },
+    ));
+  }
+  return tiles;
+}
+
+/// Bottom nav bar (running-timer strip + scrollable tiles) reused by
+/// [AppShell] and by full-screen routes pushed outside the shell (e.g. Sales
+/// Workspace and its sub-screens) so the tab bar stays visible everywhere.
+class PersistentBottomNav extends ConsumerWidget {
+  const PersistentBottomNav({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(authControllerProvider.select((s) => s.profile));
+    final dests = destinationsFor(profile);
+    final currentRoute = _currentRoute(context);
+    final tiles = _buildNavTiles(context, dests, currentRoute);
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        const RunningTimerStrip(),
+        _ScrollableBottomNav(tiles: tiles),
+      ],
+    );
+  }
 }
 
 class _ScrollableBottomNav extends StatelessWidget {
-  const _ScrollableBottomNav({required this.dests, required this.currentRoute});
-  final List<NavDest> dests;
-  final String currentRoute;
+  const _ScrollableBottomNav({required this.tiles});
+  final List<_NavTile> tiles;
 
   @override
   Widget build(BuildContext context) {
@@ -80,16 +201,7 @@ class _ScrollableBottomNav extends StatelessWidget {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                for (final d in dests)
-                  _BottomNavItem(
-                    dest: d,
-                    selected: isInBranch(d.route, currentRoute),
-                    onTap: () {
-                      if (!isInBranch(d.route, currentRoute)) {
-                        context.go(d.route);
-                      }
-                    },
-                  ),
+                for (final t in tiles) _BottomNavItem(tile: t),
               ],
             ),
           ),
@@ -100,21 +212,16 @@ class _ScrollableBottomNav extends StatelessWidget {
 }
 
 class _BottomNavItem extends StatelessWidget {
-  const _BottomNavItem({
-    required this.dest,
-    required this.selected,
-    required this.onTap,
-  });
-  final NavDest dest;
-  final bool selected;
-  final VoidCallback onTap;
+  const _BottomNavItem({required this.tile});
+  final _NavTile tile;
 
   @override
   Widget build(BuildContext context) {
+    final selected = tile.selected;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 3),
       child: InkWell(
-        onTap: onTap,
+        onTap: tile.onTap,
         borderRadius: BorderRadius.circular(999),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
@@ -129,7 +236,7 @@ class _BottomNavItem extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(
-                selected ? dest.selectedIcon : dest.icon,
+                selected ? tile.selectedIcon : tile.icon,
                 size: 20,
                 color: selected
                     ? AppColors.onSecondaryContainer
@@ -137,7 +244,7 @@ class _BottomNavItem extends StatelessWidget {
               ),
               const SizedBox(height: 1),
               Text(
-                dest.label,
+                tile.label,
                 style: TextStyle(
                   fontSize: 10.5,
                   height: 1.1,
@@ -157,9 +264,8 @@ class _BottomNavItem extends StatelessWidget {
 }
 
 class _SideRail extends StatelessWidget {
-  const _SideRail({required this.dests, required this.currentRoute});
-  final List<NavDest> dests;
-  final String currentRoute;
+  const _SideRail({required this.tiles});
+  final List<_NavTile> tiles;
 
   @override
   Widget build(BuildContext context) {
@@ -195,7 +301,7 @@ class _SideRail extends StatelessWidget {
             child: ListView(
               padding: EdgeInsets.zero,
               children: [
-                for (final d in dests) _SideTile(dest: d, currentRoute: currentRoute),
+                for (final t in tiles) _SideTile(tile: t),
               ],
             ),
           ),
@@ -206,19 +312,16 @@ class _SideRail extends StatelessWidget {
 }
 
 class _SideTile extends StatelessWidget {
-  const _SideTile({required this.dest, required this.currentRoute});
-  final NavDest dest;
-  final String currentRoute;
+  const _SideTile({required this.tile});
+  final _NavTile tile;
 
   @override
   Widget build(BuildContext context) {
-    final selected = isInBranch(dest.route, currentRoute);
+    final selected = tile.selected;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: InkWell(
-        onTap: () {
-          if (!selected) context.go(dest.route);
-        },
+        onTap: tile.onTap,
         borderRadius: BorderRadius.circular(999),
         child: Container(
           padding: const EdgeInsets.symmetric(
@@ -230,14 +333,14 @@ class _SideTile extends StatelessWidget {
           child: Row(
             children: [
               Icon(
-                selected ? dest.selectedIcon : dest.icon,
+                selected ? tile.selectedIcon : tile.icon,
                 color: selected
                     ? AppColors.onSecondaryFixed
                     : AppColors.onSurfaceVariant,
               ),
               const SizedBox(width: AppDimens.sm),
               Text(
-                dest.label,
+                tile.label,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       color: selected
                           ? AppColors.onSecondaryFixed

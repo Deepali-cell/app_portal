@@ -10,6 +10,7 @@ class TaskItem {
     this.project,
     this.expEndDate,
     this.progress = 0,
+    this.assignees = const [],
   });
 
   final String name;
@@ -19,6 +20,7 @@ class TaskItem {
   final String? project;
   final DateTime? expEndDate;
   final double progress;
+  final List<String> assignees;
 
   bool get isDone => status == 'Completed' || status == 'Cancelled';
 
@@ -32,6 +34,9 @@ class TaskItem {
             ? DateTime.tryParse(j['exp_end_date'].toString())
             : null,
         progress: (j['progress'] as num?)?.toDouble() ?? 0,
+        assignees: ((j['assignees'] as List?) ?? [])
+            .map((e) => e.toString())
+            .toList(),
       );
 }
 

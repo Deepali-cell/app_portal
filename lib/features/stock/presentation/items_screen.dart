@@ -12,11 +12,29 @@ import '../domain/models.dart';
 /// Items master list. Visible only when the user can read Item (nav is gated
 /// by the `stock_item` capability). The "Add" button follows the ERP-native
 /// create permission via `profile.canDo('stock_item','create')`.
-class ItemsScreen extends ConsumerWidget {
+class ItemsScreen extends ConsumerStatefulWidget {
   const ItemsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ItemsScreen> createState() => _ItemsScreenState();
+}
+
+class _ItemsScreenState extends ConsumerState<ItemsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    // `screen_perms` (incl. create) is only refetched at login/app-start; if
+    // that background fetch ever failed, the app keeps showing a stale
+    // profile until logout/login. Re-fetch here so a permission granted
+    // after login (e.g. from the Administrator screen) takes effect as soon
+    // as the user opens this screen, without needing to re-login.
+    Future.microtask(
+      () => ref.read(authControllerProvider.notifier).refresh(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final async = ref.watch(itemsControllerProvider);
     final profile = ref.watch(authControllerProvider.select((s) => s.profile));
     final canCreate = profile?.canDo('stock_item', 'create') ?? false;
@@ -26,9 +44,7 @@ class ItemsScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Items')),
       floatingActionButton: canCreate
           ? FloatingActionButton.extended(
-              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('New Item - coming soon')),
-              ),
+              onPressed: () => context.push(Routes.stockItemCreate),
               icon: const Icon(Icons.add),
               label: const Text('Add Item'),
             )

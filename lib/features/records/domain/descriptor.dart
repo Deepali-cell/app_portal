@@ -185,6 +185,26 @@ const Map<String, RecordDescriptor> recordRegistry = {
       FieldSpec('Date of Joining', 'date_of_joining'),
     ],
   ),
+  // ---- Projects ----
+  'projects_project': RecordDescriptor(
+    key: 'projects_project',
+    doctype: 'Project',
+    cap: 'projects_project',
+    title: 'Projects',
+    titleField: 'project_name',
+    subtitleFields: ['name', 'status'],
+    detailFields: [
+      FieldSpec('Project Name', 'project_name'),
+      FieldSpec('Customer', 'customer'),
+      FieldSpec('Status', 'status'),
+      FieldSpec('Priority', 'priority'),
+      FieldSpec('Progress %', 'percent_complete'),
+      FieldSpec('Start Date', 'expected_start_date'),
+      FieldSpec('End Date', 'expected_end_date'),
+      FieldSpec('Department', 'department'),
+      FieldSpec('Company', 'company'),
+    ],
+  ),
 };
 
 /// Args passed to the shared detail route.

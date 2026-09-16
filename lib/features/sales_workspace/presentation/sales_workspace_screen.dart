@@ -10,6 +10,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../dashboard/presentation/sales_dashboard_section.dart';
+import '../../home/presentation/app_shell.dart';
 
 /// The Sales workspace - one screen that hosts every CRM surface in a
 /// tabbed layout so Home stays clean. Reached via the "Sales workspace"
@@ -98,6 +99,7 @@ class _SalesWorkspaceScreenState extends ConsumerState<SalesWorkspaceScreen>
           if (isManager) _TeamTab(isAndroid: isAndroid),
         ],
       ),
+      bottomNavigationBar: const PersistentBottomNav(),
     );
   }
 }

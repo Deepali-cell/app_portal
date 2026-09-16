@@ -7,6 +7,7 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
+import '../../home/presentation/app_shell.dart';
 import '../../leads/application/lead_controller.dart';
 import '../../leads/domain/models.dart';
 
@@ -51,6 +52,7 @@ class _LeadKanbanScreenState extends ConsumerState<LeadKanbanScreen> {
         ),
         data: (ctx) => _buildBoard(context, ctx),
       ),
+      bottomNavigationBar: const PersistentBottomNav(),
     );
   }
 

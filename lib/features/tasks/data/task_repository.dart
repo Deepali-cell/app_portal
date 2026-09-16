@@ -51,6 +51,39 @@ class TaskRepository {
     }
   }
 
+  /// All tasks under a Project (any status/assignee) - powers the Projects
+  /// module's "Tasks" section on the project detail screen.
+  Future<List<TaskItem>> listByProject(String project) async {
+    try {
+      final resp = await _dio.get(
+        ApiPaths.taskListByProject,
+        queryParameters: {'project': project},
+      );
+      final rows = (resp.data['message'] as List?) ?? [];
+      return rows
+          .map((e) => TaskItem.fromJson((e as Map).cast<String, dynamic>()))
+          .toList();
+    } on DioException catch (e) {
+      throw _err(e);
+    }
+  }
+
+  Future<void> assign(String name, String user) async {
+    try {
+      await _dio.post(ApiPaths.taskAssign, data: {'name': name, 'user': user});
+    } on DioException catch (e) {
+      throw _err(e);
+    }
+  }
+
+  Future<void> unassign(String name, String user) async {
+    try {
+      await _dio.post(ApiPaths.taskUnassign, data: {'name': name, 'user': user});
+    } on DioException catch (e) {
+      throw _err(e);
+    }
+  }
+
   Future<TaskDetail> getDetail(String name) async {
     try {
       final resp = await _dio.get(

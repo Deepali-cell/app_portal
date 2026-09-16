@@ -37,6 +37,9 @@ import '../../features/records/presentation/record_list_screen.dart';
 import '../../features/records/presentation/record_detail_screen.dart';
 import '../../features/stock/presentation/items_screen.dart';
 import '../../features/stock/presentation/item_detail_screen.dart';
+import '../../features/stock/presentation/item_create_screen.dart';
+import '../../features/stock/presentation/item_edit_screen.dart';
+import '../../features/stock/domain/models.dart';
 import '../../features/notifications/presentation/notifications_screen.dart';
 import '../../features/payslips/presentation/payslip_detail_screen.dart';
 import '../../features/payslips/presentation/payslips_screen.dart';
@@ -78,6 +81,8 @@ class Routes {
   static const stockEntry = '/stock/entry';
   // HR
   static const hrEmployees = '/hr/employees';
+  // Projects
+  static const projectsProject = '/projects/project';
   // Shared generic record detail
   static const recordDetail = '/record-detail';
 
@@ -88,6 +93,8 @@ class Routes {
   static const timesheetDetail = '/timesheet-detail';
   static const invoiceDetail = '/invoice-detail';
   static const stockItemDetail = '/stock-item-detail';
+  static const stockItemCreate = '/stock-item-create';
+  static const stockItemEdit = '/stock-item-edit';
   static const leaveDetail = '/leave-detail';
   static const leaveApprovals = '/leave-approvals';
   static const profile = '/profile';
@@ -221,6 +228,15 @@ final routerProvider = Provider<GoRouter>((ref) {
               builder: (_, state) =>
                   ItemDetailScreen(name: state.extra! as String),
             ),
+            GoRoute(
+              path: Routes.stockItemCreate,
+              builder: (_, _) => const ItemCreateScreen(),
+            ),
+            GoRoute(
+              path: Routes.stockItemEdit,
+              builder: (_, state) =>
+                  ItemEditScreen(item: state.extra! as ItemDetail),
+            ),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: Routes.admin, builder: (_, _) => const AdminScreen()),
@@ -231,6 +247,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           _recordBranch(Routes.mfgProductionPlan, 'mfg_production_plan'),
           _recordBranch(Routes.mfgWorkstation, 'mfg_workstation'),
           _recordBranch(Routes.hrEmployees, 'hr_employee'),
+          _recordBranch(Routes.projectsProject, 'projects_project'),
           _recordBranch(Routes.stockWarehouse, 'stock_warehouse'),
           _recordBranch(Routes.stockMaterialRequest, 'stock_material_request'),
           _recordBranch(Routes.stockEntry, 'stock_entry'),

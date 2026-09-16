@@ -8,6 +8,7 @@ import 'package:intl/intl.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
+import '../../home/presentation/app_shell.dart';
 import '../data/location_tracking_repository.dart';
 import '../domain/models.dart';
 
@@ -131,6 +132,7 @@ class _TeamLiveListScreenState extends ConsumerState<TeamLiveListScreen>
           data: (people) => _Body(people: people),
         ),
       ),
+      bottomNavigationBar: const PersistentBottomNav(),
     );
   }
 }

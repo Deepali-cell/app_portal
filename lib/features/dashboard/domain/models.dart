@@ -27,20 +27,59 @@ class TodaySnapshot {
 }
 
 @immutable
+class FollowupItem {
+  const FollowupItem({
+    required this.name,
+    required this.bucket,
+    this.title,
+    this.dueDate,
+    this.status,
+    this.priority,
+    this.referenceDoctype,
+    this.referenceDocname,
+  });
+  final String name;
+  /// One of 'overdue', 'due_today', 'upcoming'.
+  final String bucket;
+  final String? title;
+  final DateTime? dueDate;
+  final String? status;
+  final String? priority;
+  final String? referenceDoctype;
+  final String? referenceDocname;
+
+  factory FollowupItem.fromJson(Map<String, dynamic> j) => FollowupItem(
+        name: (j['name'] ?? '').toString(),
+        bucket: (j['bucket'] ?? '').toString(),
+        title: j['title'] as String?,
+        dueDate: _parseDate(j['due_date']),
+        status: j['status'] as String?,
+        priority: j['priority'] as String?,
+        referenceDoctype: j['reference_doctype'] as String?,
+        referenceDocname: j['reference_docname'] as String?,
+      );
+}
+
+@immutable
 class FollowupsBucket {
   const FollowupsBucket({
     required this.dueToday,
     required this.overdue,
     required this.upcomingWeek,
+    this.items = const [],
   });
   final int dueToday;
   final int overdue;
   final int upcomingWeek;
+  final List<FollowupItem> items;
 
   factory FollowupsBucket.fromJson(Map<String, dynamic> j) => FollowupsBucket(
         dueToday: (j['due_today'] as num?)?.toInt() ?? 0,
         overdue: (j['overdue'] as num?)?.toInt() ?? 0,
         upcomingWeek: (j['upcoming_week'] as num?)?.toInt() ?? 0,
+        items: ((j['items'] as List?) ?? [])
+            .map((e) => FollowupItem.fromJson((e as Map).cast<String, dynamic>()))
+            .toList(),
       );
 }
 

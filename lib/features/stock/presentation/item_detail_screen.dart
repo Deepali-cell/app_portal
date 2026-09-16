@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../auth/application/auth_controller.dart';
@@ -15,18 +17,18 @@ class ItemDetailScreen extends ConsumerWidget {
     final async = ref.watch(itemDetailProvider(name));
     final profile = ref.watch(authControllerProvider.select((s) => s.profile));
     final canEdit = profile?.canDo('stock_item', 'write') ?? false;
+    final loadedItem = async.value;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Item'),
         actions: [
-          if (canEdit)
+          if (canEdit && loadedItem != null)
             IconButton(
               icon: const Icon(Icons.edit_outlined),
-              onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Edit Item - coming soon')),
-              ),
+              onPressed: () =>
+                  context.push(Routes.stockItemEdit, extra: loadedItem),
             ),
         ],
       ),
@@ -55,6 +57,7 @@ class ItemDetailScreen extends ConsumerWidget {
             _row('Purchase Item', item.isPurchaseItem ? 'Yes' : 'No'),
             _row('Valuation Rate', item.valuationRate?.toString()),
             _row('Standard Rate', item.standardRate?.toString()),
+            _row('HSN Code', item.gstHsnCode),
             if ((item.description ?? '').isNotEmpty) ...[
               const SizedBox(height: AppDimens.md),
               Text('Description',

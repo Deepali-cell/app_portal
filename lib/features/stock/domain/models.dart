@@ -50,6 +50,7 @@ class ItemDetail {
     this.image,
     this.valuationRate,
     this.standardRate,
+    this.gstHsnCode,
   });
 
   final String name;
@@ -65,6 +66,7 @@ class ItemDetail {
   final String? image;
   final double? valuationRate;
   final double? standardRate;
+  final String? gstHsnCode;
 
   factory ItemDetail.fromJson(Map<String, dynamic> j) => ItemDetail(
         name: j['name'] as String,
@@ -80,5 +82,6 @@ class ItemDetail {
         image: j['image'] as String?,
         valuationRate: (j['valuation_rate'] as num?)?.toDouble(),
         standardRate: (j['standard_rate'] as num?)?.toDouble(),
+        gstHsnCode: j['gst_hsn_code'] as String?,
       );
 }

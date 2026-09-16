@@ -67,11 +67,7 @@ class _DashboardBody extends ConsumerWidget {
         if (snapshot.canLead) ...[
           _SectionHeader(
             title: 'Follow-ups',
-            subtitle: snapshot.followups.dueToday > 0
-                ? "${snapshot.followups.dueToday} due today. Get on these first."
-                : (snapshot.followups.overdue > 0
-                    ? "${snapshot.followups.overdue} overdue. Handle ASAP."
-                    : "All caught up"),
+            subtitle: 'Tap to see what\'s due',
           ),
           const SizedBox(height: 6),
           _FollowupsCard(bucket: snapshot.followups),
@@ -85,16 +81,7 @@ class _DashboardBody extends ConsumerWidget {
           ),
           const SizedBox(height: 6),
           _StatusGrid(
-              // Always show the two "action target" buckets — New (fresh
-              // inbound) and Follow-up (rep-scheduled callback) — even
-              // when empty. Both are places reps drop leads into, so the
-              // card must exist for the drop target to be discoverable.
-              // Other buckets hide at count 0 to keep the grid short.
-              buckets: snapshot.leadStatuses.where((s) {
-                if (s.count > 0) return true;
-                final k = s.status.toLowerCase();
-                return k == 'new' || k == 'follow-up';
-              }).toList(),
+              buckets: snapshot.leadStatuses,
               onTap: (s) {
                 // Drill-in — set the pending status filter, then push
                 // Leads. LeadsScreen reads + clears this on first build
@@ -114,7 +101,7 @@ class _DashboardBody extends ConsumerWidget {
           ),
           const SizedBox(height: 6),
           _StatusGrid(
-              buckets: snapshot.dealStatuses.where((s) => s.count > 0).toList(),
+              buckets: snapshot.dealStatuses,
               onTap: (s) => context.go(Routes.deals)),
           const SizedBox(height: AppDimens.lg),
         ],
@@ -256,86 +243,231 @@ class _KpiTile extends StatelessWidget {
   }
 }
 
+// The Follow-ups section is a single tappable summary card — no inline
+// number breakdown. Tapping it opens a bottom sheet listing the actual
+// due/overdue/upcoming items (mirrors how tapping a Lead-status bucket
+// drills in, rather than showing everything inline up front).
 class _FollowupsCard extends StatelessWidget {
   const _FollowupsCard({required this.bucket});
   final FollowupsBucket bucket;
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppDimens.md),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainerLowest,
-        borderRadius: BorderRadius.circular(AppDimens.radiusLg),
-        border: Border.all(color: AppColors.outlineVariant),
+    final total = bucket.dueToday + bucket.overdue + bucket.upcomingWeek;
+    final accent = bucket.overdue > 0
+        ? const Color(0xFFB23A48)
+        : (bucket.dueToday > 0 ? AppColors.primary : const Color(0xFF1B7F4D));
+    final summary = total == 0
+        ? 'All caught up'
+        : [
+            if (bucket.overdue > 0) '${bucket.overdue} overdue',
+            if (bucket.dueToday > 0) '${bucket.dueToday} today',
+            if (bucket.upcomingWeek > 0) '${bucket.upcomingWeek} this week',
+          ].join(' · ');
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppDimens.radiusLg),
+      onTap: () => _showFollowupsSheet(context, bucket),
+      child: Container(
+        padding: const EdgeInsets.all(AppDimens.md),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(AppDimens.radiusLg),
+          border: Border.all(color: AppColors.outlineVariant),
+        ),
+        child: Row(
+          children: [
+            Icon(total == 0 ? Icons.check_circle_outline : Icons.event_repeat,
+                color: accent, size: 22),
+            const SizedBox(width: AppDimens.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    total == 0 ? 'No follow-ups pending' : '$total follow-up${total == 1 ? '' : 's'}',
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                        color: accent, fontWeight: FontWeight.w800),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(summary, style: Theme.of(context).textTheme.bodySmall),
+                ],
+              ),
+            ),
+            Icon(Icons.chevron_right,
+                size: 20, color: AppColors.onSurfaceVariant),
+          ],
+        ),
       ),
-      child: Row(
+    );
+  }
+}
+
+Future<void> _showFollowupsSheet(BuildContext context, FollowupsBucket bucket) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: AppColors.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(AppDimens.radiusXl)),
+    ),
+    builder: (_) => _FollowupsSheet(bucket: bucket),
+  );
+}
+
+class _FollowupsSheet extends StatelessWidget {
+  const _FollowupsSheet({required this.bucket});
+  final FollowupsBucket bucket;
+
+  @override
+  Widget build(BuildContext context) {
+    final overdue = bucket.items.where((i) => i.bucket == 'overdue').toList();
+    final dueToday = bucket.items.where((i) => i.bucket == 'due_today').toList();
+    final upcoming = bucket.items.where((i) => i.bucket == 'upcoming').toList();
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      minChildSize: 0.3,
+      maxChildSize: 0.9,
+      expand: false,
+      builder: (_, controller) => ListView(
+        controller: controller,
+        padding: const EdgeInsets.fromLTRB(
+            AppDimens.lg, AppDimens.md, AppDimens.lg, AppDimens.lg),
         children: [
-          Expanded(
-            child: _FollowupCell(
-              label: 'Due today',
-              value: bucket.dueToday,
-              accent: AppColors.primary,
-              icon: Icons.event_available,
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              margin: const EdgeInsets.only(bottom: AppDimens.md),
+              decoration: BoxDecoration(
+                color: AppColors.outlineVariant,
+                borderRadius: BorderRadius.circular(999),
+              ),
             ),
           ),
-          _Divider(),
-          Expanded(
-            child: _FollowupCell(
-              label: 'Overdue',
-              value: bucket.overdue,
-              accent: const Color(0xFFB23A48),
-              icon: Icons.warning_amber,
+          Text('Follow-ups',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppColors.primary, fontWeight: FontWeight.w800)),
+          const SizedBox(height: AppDimens.md),
+          if (overdue.isNotEmpty)
+            _FollowupGroup(
+                label: 'Overdue',
+                color: const Color(0xFFB23A48),
+                items: overdue),
+          if (dueToday.isNotEmpty)
+            _FollowupGroup(
+                label: 'Due today',
+                color: AppColors.primary,
+                items: dueToday),
+          if (upcoming.isNotEmpty)
+            _FollowupGroup(
+                label: 'Next 7 days',
+                color: const Color(0xFFB87800),
+                items: upcoming),
+          if (bucket.items.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppDimens.xl),
+              child: Center(
+                child: Text('All caught up. Nothing pending.',
+                    style: Theme.of(context).textTheme.bodyMedium),
+              ),
             ),
-          ),
-          _Divider(),
-          Expanded(
-            child: _FollowupCell(
-              label: 'Next 7 days',
-              value: bucket.upcomingWeek,
-              accent: const Color(0xFFB87800),
-              icon: Icons.schedule,
-            ),
-          ),
         ],
       ),
     );
   }
 }
 
-class _FollowupCell extends StatelessWidget {
-  const _FollowupCell({
-    required this.label,
-    required this.value,
-    required this.accent,
-    required this.icon,
-  });
+class _FollowupGroup extends StatelessWidget {
+  const _FollowupGroup(
+      {required this.label, required this.color, required this.items});
   final String label;
-  final int value;
-  final Color accent;
-  final IconData icon;
+  final Color color;
+  final List<FollowupItem> items;
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Icon(icon, color: accent, size: 18),
-        const SizedBox(height: 4),
-        Text('$value',
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: accent, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 2),
-        Text(label,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodySmall),
-      ],
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppDimens.md),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('$label (${items.length})',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: color, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 6),
+          for (final item in items) _FollowupItemRow(item: item, color: color),
+        ],
+      ),
     );
   }
 }
 
-class _Divider extends StatelessWidget {
+class _FollowupItemRow extends StatelessWidget {
+  const _FollowupItemRow({required this.item, required this.color});
+  final FollowupItem item;
+  final Color color;
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-        width: 1, height: 48, color: AppColors.outlineVariant);
+    final canOpen = item.referenceDocname != null &&
+        (item.referenceDoctype == 'Lead' || item.referenceDoctype == 'CRM Deal');
+    return InkWell(
+      borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+      onTap: !canOpen
+          ? null
+          : () {
+              final router = GoRouter.of(context);
+              final path = item.referenceDoctype == 'Lead'
+                  ? Routes.leadDetail
+                  : Routes.dealDetail;
+              final docname = item.referenceDocname;
+              final currentLoc =
+                  router.routerDelegate.currentConfiguration.uri.path;
+              Navigator.of(context).pop();
+              if (currentLoc == path) {
+                router.go(path, extra: docname);
+              } else {
+                router.push(path, extra: docname);
+              }
+            },
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 6),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppDimens.md, vertical: 10),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceContainerLowest,
+          borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+          border: Border.all(color: AppColors.outlineVariant),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    (item.title == null || item.title!.isEmpty)
+                        ? item.name
+                        : item.title!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w700),
+                  ),
+                  if (item.dueDate != null)
+                    Text(
+                      'Due ${item.dueDate!.day}/${item.dueDate!.month}/${item.dueDate!.year}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                ],
+              ),
+            ),
+            if (canOpen)
+              Icon(Icons.chevron_right,
+                  size: 18, color: AppColors.onSurfaceVariant),
+          ],
+        ),
+      ),
+    );
   }
 }
 

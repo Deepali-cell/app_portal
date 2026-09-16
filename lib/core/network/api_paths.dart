@@ -154,6 +154,20 @@ class ApiPaths {
   static const String taskCreate = '/api/method/tcb_portal_erp.api.task.create';
   static const String taskSetStatus =
       '/api/method/tcb_portal_erp.api.task.set_status';
+  static const String taskListByProject =
+      '/api/method/tcb_portal_erp.api.task.list_by_project';
+  static const String taskAssign = '/api/method/tcb_portal_erp.api.task.assign';
+  static const String taskUnassign =
+      '/api/method/tcb_portal_erp.api.task.unassign';
+
+  // Projects (team/assignment; the Project doc itself is generic - see
+  // portalListDocs/portalGetDoc/portalSaveDoc below)
+  static const String projectTeam =
+      '/api/method/tcb_portal_erp.api.project.get_team';
+  static const String projectAddMember =
+      '/api/method/tcb_portal_erp.api.project.add_member';
+  static const String projectRemoveMember =
+      '/api/method/tcb_portal_erp.api.project.remove_member';
 
   // Timesheet
   static const String timesheetContext =
@@ -328,6 +342,10 @@ class ApiPaths {
       '/api/method/tcb_portal_erp.api.stock.list_items';
   static const String stockGetItem =
       '/api/method/tcb_portal_erp.api.stock.get_item';
+  static const String stockCreateItem =
+      '/api/method/tcb_portal_erp.api.stock.create_item';
+  static const String stockUpdateItem =
+      '/api/method/tcb_portal_erp.api.stock.update_item';
 
   // Generic resource access
   static String resource(String doctype) => '/api/resource/$doctype';
