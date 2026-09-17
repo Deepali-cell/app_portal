@@ -9,6 +9,8 @@ class TimesheetSummary {
     this.totalHoursDisplay,
     this.startDate,
     this.endDate,
+    this.employee,
+    this.employeeName,
   });
 
   final String name;
@@ -19,6 +21,11 @@ class TimesheetSummary {
   final String status;
   final DateTime? startDate;
   final DateTime? endDate;
+
+  /// Owner - only sent by the All Timesheets roster (list_all), null on the
+  /// personal My Timesheet view.
+  final String? employee;
+  final String? employeeName;
 
   factory TimesheetSummary.fromJson(Map<String, dynamic> j) => TimesheetSummary(
         name: j['name'] as String,
@@ -31,7 +38,39 @@ class TimesheetSummary {
         endDate: j['end_date'] != null
             ? DateTime.tryParse(j['end_date'].toString())
             : null,
+        employee: j['employee'] as String?,
+        employeeName: j['employee_name'] as String?,
       );
+}
+
+/// Response of `timesheet.list_all` - the All Timesheets roster window.
+@immutable
+class AllTimesheets {
+  const AllTimesheets({
+    required this.timesheets,
+    required this.fromDate,
+    required this.toDate,
+  });
+
+  final List<TimesheetSummary> timesheets;
+  final DateTime fromDate;
+  final DateTime toDate;
+
+  factory AllTimesheets.fromJson(Map<String, dynamic> j) {
+    final now = DateTime.now();
+    return AllTimesheets(
+      timesheets: ((j['timesheets'] as List?) ?? [])
+          .map((e) => TimesheetSummary.fromJson(e as Map<String, dynamic>))
+          .toList(),
+      fromDate: j['from_date'] != null
+          ? DateTime.tryParse(j['from_date'].toString()) ??
+              DateTime(now.year, now.month, 1)
+          : DateTime(now.year, now.month, 1),
+      toDate: j['to_date'] != null
+          ? DateTime.tryParse(j['to_date'].toString()) ?? now
+          : now,
+    );
+  }
 }
 
 @immutable

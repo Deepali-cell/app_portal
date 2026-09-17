@@ -45,4 +45,30 @@ class ExpenseController extends AsyncNotifier<ExpenseContext> {
     await ref.read(expenseRepositoryProvider).apply(items, remark: remark);
     await reload();
   }
+
+  /// Approve or reject one claim, then refresh the approvals list and the
+  /// expense context (its pending count changes too).
+  Future<void> actOnClaim({
+    required String name,
+    required String action,
+    String? reason,
+  }) async {
+    await ref.read(expenseRepositoryProvider).actOnClaim(
+          name: name,
+          action: action,
+          reason: reason,
+        );
+    ref.invalidate(pendingExpenseApprovalsProvider);
+    await reload();
+  }
 }
+
+/// Claims waiting on the signed in user, as approver or as HR.
+final pendingExpenseApprovalsProvider =
+    FutureProvider<List<PendingExpenseApproval>>(
+        (ref) => ref.read(expenseRepositoryProvider).getPendingApprovals());
+
+/// On-demand detail (with line items) for a single Expense Claim.
+final expenseClaimDetailProvider =
+    FutureProvider.family<ExpenseClaimDetail, String>((ref, name) =>
+        ref.read(expenseRepositoryProvider).getClaimDetail(name));

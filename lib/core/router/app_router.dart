@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/attendance/presentation/attendance_screen.dart';
+import '../../features/attendance/presentation/attendance_roster_screen.dart';
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/application/lock_controller.dart';
 import '../../features/auth/presentation/login_screen.dart';
@@ -21,6 +22,7 @@ import '../../features/leads/presentation/leads_screen.dart';
 import '../../features/leave/presentation/leave_detail_screen.dart';
 import '../../features/leave/presentation/leave_approvals_screen.dart';
 import '../../features/leave/presentation/leave_screen.dart';
+import '../../features/approvals/presentation/approval_requests_screen.dart';
 import '../../features/leaderboard/presentation/leaderboard_screen.dart';
 import '../../features/missed_activities/presentation/missed_activities_screen.dart';
 import '../../features/pipeline/presentation/pipeline_screen.dart';
@@ -32,6 +34,8 @@ import '../../features/location_tracking/presentation/team_live_list_screen.dart
 import '../../features/location_tracking/presentation/team_live_map_screen.dart';
 import '../../features/sales_workspace/presentation/sales_workspace_screen.dart';
 import '../../features/admin/presentation/admin_screen.dart';
+import '../../features/purchase/presentation/purchase_dashboard_screen.dart';
+import '../../features/sales/presentation/sales_dashboard_screen.dart';
 import '../../features/records/domain/descriptor.dart';
 import '../../features/records/presentation/record_list_screen.dart';
 import '../../features/records/presentation/record_detail_screen.dart';
@@ -45,6 +49,7 @@ import '../../features/payslips/presentation/payslip_detail_screen.dart';
 import '../../features/payslips/presentation/payslips_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/tasks/presentation/tasks_screen.dart';
+import '../../features/timesheet/presentation/all_timesheets_screen.dart';
 import '../../features/timesheet/presentation/timesheet_detail_screen.dart';
 import '../../features/timesheet/presentation/timesheet_screen.dart';
 import '../config/app_config.dart';
@@ -62,6 +67,7 @@ class Routes {
   static const payroll = '/payroll';
   static const tasks = '/tasks';
   static const timesheet = '/timesheet';
+  static const allTimesheets = '/hr/all-timesheets';
   static const expenses = '/expenses';
   static const leads = '/leads';
   static const deals = '/deals';
@@ -79,8 +85,23 @@ class Routes {
   static const stockWarehouse = '/stock/warehouse';
   static const stockMaterialRequest = '/stock/material-request';
   static const stockEntry = '/stock/entry';
+  // Purchase
+  static const purchaseDashboard = '/purchase/dashboard';
+  static const purchaseSupplier = '/purchase/supplier';
+  static const purchaseRfq = '/purchase/rfq';
+  static const purchaseSupplierQuotation = '/purchase/supplier-quotation';
+  static const purchaseOrder = '/purchase/order';
+  static const purchaseReceipt = '/purchase/receipt';
+  static const salesDashboard = '/sales/dashboard';
+  static const salesCustomer = '/sales/customer';
+  static const salesQuotation = '/sales/quotation';
+  static const salesOrder = '/sales/order';
+  static const salesDelivery = '/sales/delivery';
   // HR
   static const hrEmployees = '/hr/employees';
+  static const allAttendance = '/hr/all-attendance';
+  static const hrAttendance = '/hr/attendance-management';
+  static const approvals = '/hr/approvals';
   // Projects
   static const projectsProject = '/projects/project';
   // Shared generic record detail
@@ -159,11 +180,39 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: Routes.time, builder: (_, _) => const AttendanceScreen()),
           ]),
           StatefulShellBranch(routes: [
+            GoRoute(
+              path: Routes.allAttendance,
+              builder: (_, _) => const AttendanceRosterScreen(
+                title: 'All Attendance',
+                canManage: false,
+              ),
+            ),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: Routes.hrAttendance,
+              builder: (_, _) => const AttendanceRosterScreen(
+                title: 'Attendance Management',
+                canManage: true,
+              ),
+            ),
+          ]),
+          StatefulShellBranch(routes: [
             GoRoute(path: Routes.leave, builder: (_, _) => const LeaveScreen()),
             GoRoute(
               path: Routes.leaveDetail,
               builder: (_, state) =>
                   LeaveDetailScreen(name: state.extra! as String),
+            ),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: Routes.approvals,
+              // `?tab=` deep-links to a section: 0 Leave, 1 Comp-Off, 2 Expense.
+              builder: (_, state) => ApprovalRequestsScreen(
+                initialTab:
+                    int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0,
+              ),
             ),
           ]),
           StatefulShellBranch(routes: [
@@ -183,6 +232,12 @@ final routerProvider = Provider<GoRouter>((ref) {
               path: Routes.timesheetDetail,
               builder: (_, state) =>
                   TimesheetDetailScreen(name: state.extra! as String),
+            ),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: Routes.allTimesheets,
+              builder: (_, _) => const AllTimesheetsScreen(),
             ),
           ]),
           StatefulShellBranch(routes: [
@@ -251,6 +306,28 @@ final routerProvider = Provider<GoRouter>((ref) {
           _recordBranch(Routes.stockWarehouse, 'stock_warehouse'),
           _recordBranch(Routes.stockMaterialRequest, 'stock_material_request'),
           _recordBranch(Routes.stockEntry, 'stock_entry'),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: Routes.purchaseDashboard,
+              builder: (_, _) => const PurchaseDashboardScreen(),
+            ),
+          ]),
+          _recordBranch(Routes.purchaseSupplier, 'purchase_supplier'),
+          _recordBranch(Routes.purchaseRfq, 'purchase_rfq'),
+          _recordBranch(
+              Routes.purchaseSupplierQuotation, 'purchase_supplier_quotation'),
+          _recordBranch(Routes.purchaseOrder, 'purchase_order'),
+          _recordBranch(Routes.purchaseReceipt, 'purchase_receipt'),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: Routes.salesDashboard,
+              builder: (_, _) => const SalesDashboardScreen(),
+            ),
+          ]),
+          _recordBranch(Routes.salesCustomer, 'sales_customer'),
+          _recordBranch(Routes.salesQuotation, 'sales_quotation'),
+          _recordBranch(Routes.salesOrder, 'sales_order'),
+          _recordBranch(Routes.salesDelivery, 'sales_delivery'),
         ],
       ),
       GoRoute(

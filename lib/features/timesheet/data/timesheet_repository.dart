@@ -31,6 +31,34 @@ class TimesheetRepository {
     }
   }
 
+  /// All Timesheets roster: every permitted employee's timesheets in the
+  /// window. Fails with a permission error for users without Timesheet read.
+  Future<AllTimesheets> listAll({
+    DateTime? from,
+    DateTime? to,
+    String? search,
+  }) async {
+    String fmt(DateTime d) =>
+        '${d.year.toString().padLeft(4, '0')}-'
+        '${d.month.toString().padLeft(2, '0')}-'
+        '${d.day.toString().padLeft(2, '0')}';
+    try {
+      final resp = await _dio.get(
+        ApiPaths.timesheetListAll,
+        queryParameters: {
+          if (from != null) 'from_date': fmt(from),
+          if (to != null) 'to_date': fmt(to),
+          if (search != null && search.isNotEmpty) 'search': search,
+        },
+      );
+      return AllTimesheets.fromJson(
+        (resp.data['message'] as Map).cast<String, dynamic>(),
+      );
+    } on DioException catch (e) {
+      throw _err(e);
+    }
+  }
+
   Future<void> submitTimesheet(String name) async {
     try {
       await _dio.post(ApiPaths.timesheetSubmit, data: {'name': name});

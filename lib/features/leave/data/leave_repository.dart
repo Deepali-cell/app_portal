@@ -107,6 +107,38 @@ class LeaveRepository {
     }
   }
 
+  /// Comp-off requests waiting on the signed in user, as manager or as HR.
+  /// The server decides which rows belong to them.
+  Future<List<PendingCompOffApproval>> getCompOffPendingApprovals() async {
+    try {
+      final resp = await _dio.get(ApiPaths.compOffPendingApprovals);
+      final msg = (resp.data['message'] as Map).cast<String, dynamic>();
+      return ((msg['requests'] as List?) ?? [])
+          .map((e) =>
+              PendingCompOffApproval.fromJson((e as Map).cast<String, dynamic>()))
+          .toList();
+    } on DioException catch (e) {
+      throw _asApiException(e);
+    }
+  }
+
+  /// Approve or reject one comp-off request. A rejection needs a reason.
+  Future<void> actOnCompOff({
+    required String name,
+    required String action,
+    String? reason,
+  }) async {
+    try {
+      await _dio.post(ApiPaths.compOffActOnRequest, data: {
+        'name': name,
+        'action': action,
+        if (reason != null && reason.isNotEmpty) 'reason': reason,
+      });
+    } on DioException catch (e) {
+      throw _asApiException(e);
+    }
+  }
+
   String _ymd(DateTime d) =>
       '${d.year.toString().padLeft(4, '0')}-'
       '${d.month.toString().padLeft(2, '0')}-'

@@ -159,3 +159,17 @@ final timesheetDetailProvider =
     FutureProvider.family<TimesheetDetail, String>((ref, name) {
   return ref.read(timesheetRepositoryProvider).getDetail(name);
 });
+
+/// Filter key for the All Timesheets roster.
+typedef AllTimesheetsKey = ({DateTime from, DateTime to, String? search});
+
+/// All Timesheets roster, keyed by date window + search. Only usable by users
+/// with Timesheet read permission (the screen is nav-gated on that capability).
+final allTimesheetsProvider =
+    FutureProvider.family<AllTimesheets, AllTimesheetsKey>((ref, key) {
+  return ref.read(timesheetRepositoryProvider).listAll(
+        from: key.from,
+        to: key.to,
+        search: key.search,
+      );
+});

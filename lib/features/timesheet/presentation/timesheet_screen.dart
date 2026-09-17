@@ -7,9 +7,11 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
+import '../../auth/application/auth_controller.dart';
 import '../application/timesheet_controller.dart';
 import '../domain/models.dart';
 import '../../../shared/widgets/date_range_bar.dart';
+import '../../../shared/widgets/employee_only_notice.dart';
 import 'running_timer.dart';
 import 'timer_sheets.dart';
 
@@ -21,6 +23,8 @@ class TimesheetScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(authControllerProvider).profile;
+    final noEmployee = profile != null && !profile.hasEmployee;
     final async = ref.watch(timesheetControllerProvider);
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -28,15 +32,18 @@ class TimesheetScreen extends ConsumerWidget {
         backgroundColor: AppColors.surfaceContainerLowest,
         title: const Text('Timesheet'),
         actions: [
-          IconButton(
-            tooltip: 'Refresh',
-            icon: Icon(Icons.refresh, color: AppColors.primary),
-            onPressed: () =>
-                ref.read(timesheetControllerProvider.notifier).reload(),
-          ),
+          if (!noEmployee)
+            IconButton(
+              tooltip: 'Refresh',
+              icon: Icon(Icons.refresh, color: AppColors.primary),
+              onPressed: () =>
+                  ref.read(timesheetControllerProvider.notifier).reload(),
+            ),
         ],
       ),
-      body: async.when(
+      body: noEmployee
+          ? const EmployeeOnlyNotice(feature: 'Timesheet')
+          : async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => _Err(
           msg: e is ApiException ? e.message : 'Something unexpected happened. Please try again.',

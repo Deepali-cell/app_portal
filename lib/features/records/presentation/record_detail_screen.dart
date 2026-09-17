@@ -7,6 +7,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../projects/data/project_repository.dart';
+import '../../purchase/data/purchase_repository.dart';
+import '../../sales/data/sales_repository.dart';
 import '../../tasks/application/task_controller.dart';
 import '../../tasks/domain/models.dart';
 import '../data/records_repository.dart';
@@ -118,6 +120,63 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
           _ProjectTeamSection(project: widget.args.name),
           const SizedBox(height: AppDimens.lg),
           _ProjectTasksSection(project: widget.args.name),
+        ],
+        if (d.doctype == 'Material Request' &&
+            _str(doc['material_request_type']) == 'Purchase' &&
+            _str(doc['status']) != 'Draft' &&
+            _str(doc['status']) != 'Cancelled') ...[
+          const SizedBox(height: AppDimens.lg),
+          _MaterialRequestRfqSection(materialRequest: widget.args.name),
+        ],
+        if (d.doctype == 'Quotation' &&
+            !{'Draft', 'Cancelled', 'Lost'}.contains(_str(doc['status']))) ...[
+          const SizedBox(height: AppDimens.lg),
+          _SalesConversionSection(
+            actions: [
+              _SalesAction(
+                label: 'Create Sales Order',
+                targetKey: 'sales_order',
+                run: (repo) => repo.createSoFromQuotation(widget.args.name),
+              ),
+            ],
+          ),
+        ],
+        if (d.doctype == 'Sales Order' &&
+            !{'Draft', 'Cancelled', 'Closed'}.contains(_str(doc['status']))) ...[
+          const SizedBox(height: AppDimens.lg),
+          _SalesConversionSection(
+            actions: [
+              _SalesAction(
+                label: 'Create Delivery Note',
+                targetKey: 'sales_delivery',
+                run: (repo) => repo.createDeliveryNoteFromSo(widget.args.name),
+              ),
+              _SalesAction(
+                label: 'Create Invoice',
+                targetKey: null,
+                run: (repo) => repo.createInvoiceFromSo(widget.args.name),
+              ),
+            ],
+          ),
+        ],
+        if (d.doctype == 'Delivery Note' &&
+            !{'Draft', 'Cancelled'}.contains(_str(doc['status']))) ...[
+          const SizedBox(height: AppDimens.lg),
+          _SalesConversionSection(
+            actions: [
+              _SalesAction(
+                label: 'Create Invoice',
+                targetKey: null,
+                run: (repo) =>
+                    repo.createInvoiceFromDeliveryNote(widget.args.name),
+              ),
+              _SalesAction(
+                label: 'Create Return',
+                targetKey: 'sales_delivery',
+                run: (repo) => repo.createSalesReturn(widget.args.name),
+              ),
+            ],
+          ),
         ],
       ],
     );
@@ -488,6 +547,244 @@ class _NewTaskSubjectSheetState extends State<_NewTaskSubjectSheet> {
   }
 }
 
+/// Material Request -> RFQ conversion. Lists RFQs already raised against this
+/// MR and lets the user raise a new one by picking suppliers to invite -
+/// ERPNext's own make_request_for_quotation() maps over the pending items.
+class _MaterialRequestRfqSection extends ConsumerStatefulWidget {
+  const _MaterialRequestRfqSection({required this.materialRequest});
+  final String materialRequest;
+
+  @override
+  ConsumerState<_MaterialRequestRfqSection> createState() =>
+      _MaterialRequestRfqSectionState();
+}
+
+class _MaterialRequestRfqSectionState
+    extends ConsumerState<_MaterialRequestRfqSection> {
+  List<Map<String, dynamic>>? _rfqs;
+  Object? _error;
+  bool _creating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final rfqs = await ref
+          .read(purchaseRepositoryProvider)
+          .rfqsForMaterialRequest(widget.materialRequest);
+      if (mounted) {
+        setState(() {
+          _rfqs = rfqs;
+          _error = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = e);
+    }
+  }
+
+  void _snack(String m) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+
+  Future<void> _createRfq() async {
+    final suppliers = await showModalBottomSheet<List<String>>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => const _SupplierMultiSelectSheet(),
+    );
+    if (suppliers == null || suppliers.isEmpty) return;
+
+    setState(() => _creating = true);
+    try {
+      final name = await ref
+          .read(purchaseRepositoryProvider)
+          .createRfqFromMaterialRequest(widget.materialRequest, suppliers);
+      if (!mounted) return;
+      _snack('RFQ created: $name');
+      _load();
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => RecordDetailScreen(
+            args: RecordArgs(recordRegistry['purchase_rfq']!, name),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) _snack('Failed: $e');
+    } finally {
+      if (mounted) setState(() => _creating = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimens.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text('RFQs',
+                      style: Theme.of(context)
+                          .textTheme
+                          .titleMedium
+                          ?.copyWith(fontWeight: FontWeight.w700)),
+                ),
+                TextButton.icon(
+                  onPressed: _creating ? null : _createRfq,
+                  icon: _creating
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.add, size: 18),
+                  label: const Text('Create RFQ'),
+                ),
+              ],
+            ),
+            if (_error != null)
+              Text('$_error', style: const TextStyle(color: AppColors.error)),
+            if (_rfqs == null && _error == null)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: AppDimens.sm),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if ((_rfqs ?? const []).isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppDimens.sm),
+                child: Text('No RFQ raised yet',
+                    style: TextStyle(color: AppColors.onSurfaceVariant)),
+              )
+            else
+              for (final r in _rfqs!)
+                ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(r['name']?.toString() ?? ''),
+                  subtitle: Text(r['status']?.toString() ?? ''),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => RecordDetailScreen(
+                        args: RecordArgs(
+                          recordRegistry['purchase_rfq']!,
+                          r['name'].toString(),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Multi-select Supplier picker for inviting suppliers on a new RFQ.
+class _SupplierMultiSelectSheet extends ConsumerStatefulWidget {
+  const _SupplierMultiSelectSheet();
+  @override
+  ConsumerState<_SupplierMultiSelectSheet> createState() =>
+      _SupplierMultiSelectSheetState();
+}
+
+class _SupplierMultiSelectSheetState
+    extends ConsumerState<_SupplierMultiSelectSheet> {
+  List<Map<String, String>> _results = const [];
+  final Set<String> _selected = {};
+  bool _loading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _search('');
+  }
+
+  Future<void> _search(String txt) async {
+    setState(() => _loading = true);
+    try {
+      final r = await ref
+          .read(recordsRepositoryProvider)
+          .searchLink('Supplier', txt: txt);
+      if (mounted) setState(() => _results = r);
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.75,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppDimens.md),
+              child: TextField(
+                autofocus: true,
+                decoration: const InputDecoration(
+                  prefixIcon: Icon(Icons.search),
+                  hintText: 'Search suppliers…',
+                  border: OutlineInputBorder(),
+                  isDense: true,
+                ),
+                onChanged: _search,
+              ),
+            ),
+            if (_loading) const LinearProgressIndicator(),
+            Expanded(
+              child: ListView.separated(
+                itemCount: _results.length,
+                separatorBuilder: (_, _) => const Divider(height: 1),
+                itemBuilder: (_, i) {
+                  final r = _results[i];
+                  final value = r['value'] ?? '';
+                  return CheckboxListTile(
+                    value: _selected.contains(value),
+                    title: Text(r['label'] ?? ''),
+                    subtitle:
+                        (r['label'] != value) ? Text(value) : null,
+                    onChanged: (checked) => setState(() {
+                      if (checked == true) {
+                        _selected.add(value);
+                      } else {
+                        _selected.remove(value);
+                      }
+                    }),
+                  );
+                },
+              ),
+            ),
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(AppDimens.md),
+                child: FilledButton(
+                  onPressed: _selected.isEmpty
+                      ? null
+                      : () => Navigator.of(context).pop(_selected.toList()),
+                  child: Text('Invite ${_selected.length} supplier(s)'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Searchable User picker, reused for "assign project" and "assign task".
 class _UserSearchSheet extends ConsumerStatefulWidget {
   const _UserSearchSheet();
@@ -553,6 +850,97 @@ class _UserSearchSheetState extends ConsumerState<_UserSearchSheet> {
                 },
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One document-conversion action (e.g. "Create Delivery Note" from a Sales
+/// Order). `targetKey` is the recordRegistry key to open on success, or null
+/// when the created doc has no generic record screen (e.g. Sales Invoice,
+/// which uses the bespoke invoices/ feature instead).
+class _SalesAction {
+  const _SalesAction({
+    required this.label,
+    required this.targetKey,
+    required this.run,
+  });
+  final String label;
+  final String? targetKey;
+  final Future<String> Function(SalesRepository repo) run;
+}
+
+/// Sales-cycle conversion buttons shown on Quotation/Sales Order/Delivery
+/// Note detail screens. Mirrors the Purchase module's conversion-action
+/// pattern (_MaterialRequestRfqSection) but as simple one-tap buttons since
+/// each of these steps creates exactly one draft document, not a list.
+class _SalesConversionSection extends ConsumerStatefulWidget {
+  const _SalesConversionSection({required this.actions});
+  final List<_SalesAction> actions;
+
+  @override
+  ConsumerState<_SalesConversionSection> createState() =>
+      _SalesConversionSectionState();
+}
+
+class _SalesConversionSectionState
+    extends ConsumerState<_SalesConversionSection> {
+  bool _running = false;
+
+  void _snack(String m) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+
+  Future<void> _run(_SalesAction action) async {
+    setState(() => _running = true);
+    try {
+      final repo = ref.read(salesRepositoryProvider);
+      final name = await action.run(repo);
+      if (!mounted) return;
+      _snack('${action.label}: $name');
+      final targetKey = action.targetKey;
+      if (targetKey != null) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => RecordDetailScreen(
+              args: RecordArgs(recordRegistry[targetKey]!, name),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) _snack('Failed: $e');
+    } finally {
+      if (mounted) setState(() => _running = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimens.md),
+        child: Wrap(
+          spacing: AppDimens.sm,
+          runSpacing: AppDimens.sm,
+          children: [
+            for (final action in widget.actions)
+              FilledButton.icon(
+                onPressed: _running ? null : () => _run(action),
+                icon: _running
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.arrow_forward, size: 18),
+                label: Text(action.label),
+              ),
           ],
         ),
       ),

@@ -9,6 +9,8 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../../shared/widgets/date_range_bar.dart';
+import '../../../shared/widgets/employee_only_notice.dart';
+import '../../auth/application/auth_controller.dart';
 import '../application/payslip_controller.dart';
 import '../domain/models.dart';
 
@@ -35,6 +37,8 @@ class PayslipsScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(authControllerProvider).profile;
+    final noEmployee = profile != null && !profile.hasEmployee;
     final async = ref.watch(payslipListProvider);
     final revealed = ref.watch(_payrollRevealedProvider);
     return Scaffold(
@@ -43,24 +47,28 @@ class PayslipsScreen extends ConsumerWidget {
         backgroundColor: AppColors.surfaceContainerLowest,
         title: const Text('Payroll'),
         actions: [
-          IconButton(
-            tooltip: revealed ? 'Hide amounts' : 'Show amounts',
-            icon: Icon(
-                revealed
-                    ? Icons.visibility_outlined
-                    : Icons.visibility_off_outlined,
-                color: AppColors.primary),
-            onPressed: () =>
-                ref.read(_payrollRevealedProvider.notifier).toggle(),
-          ),
-          IconButton(
-            tooltip: 'Refresh',
-            icon: Icon(Icons.refresh, color: AppColors.primary),
-            onPressed: () => ref.read(payslipListProvider.notifier).reload(),
-          ),
+          if (!noEmployee) ...[
+            IconButton(
+              tooltip: revealed ? 'Hide amounts' : 'Show amounts',
+              icon: Icon(
+                  revealed
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                  color: AppColors.primary),
+              onPressed: () =>
+                  ref.read(_payrollRevealedProvider.notifier).toggle(),
+            ),
+            IconButton(
+              tooltip: 'Refresh',
+              icon: Icon(Icons.refresh, color: AppColors.primary),
+              onPressed: () => ref.read(payslipListProvider.notifier).reload(),
+            ),
+          ],
         ],
       ),
-      body: async.when(
+      body: noEmployee
+          ? const EmployeeOnlyNotice(feature: 'Payroll')
+          : async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => _Error(
           msg: e is ApiException ? e.message : 'Could not load payslips.',

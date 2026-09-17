@@ -128,6 +128,15 @@ class ApiPaths {
       '/api/method/tcb_portal_erp.api.attendance.get_context';
   static const String attendanceMark =
       '/api/method/tcb_portal_erp.api.attendance.mark';
+  // Attendance calendar / history / HR management
+  static const String attendanceMonthly =
+      '/api/method/tcb_portal_erp.api.attendance_report.get_monthly';
+  static const String attendanceDayLogs =
+      '/api/method/tcb_portal_erp.api.attendance_report.get_day_logs';
+  static const String attendanceRoster =
+      '/api/method/tcb_portal_erp.api.attendance_report.list_attendance';
+  static const String attendanceMarkStatus =
+      '/api/method/tcb_portal_erp.api.attendance_report.mark_attendance';
 
   // Leave
   static const String leaveContext =
@@ -141,6 +150,20 @@ class ApiPaths {
       '/api/method/tcb_portal_erp.api.expense.get_context';
   static const String expenseApply =
       '/api/method/tcb_portal_erp.api.expense.apply';
+  static const String expenseClaimDetail =
+      '/api/method/tcb_portal_erp.api.expense.get_claim_detail';
+  static const String expensePendingApprovals =
+      '/api/method/tcb_portal_erp.api.expense.get_pending_approvals';
+  static const String expenseActOnClaim =
+      '/api/method/tcb_portal_erp.api.expense.act_on_claim';
+
+  // Comp-Off (Compensatory Leave Request) approvals
+  static const String compOffDetail =
+      '/api/method/tcb_portal_erp.api.leave.get_comp_off_detail';
+  static const String compOffPendingApprovals =
+      '/api/method/tcb_portal_erp.api.leave.get_comp_off_pending_approvals';
+  static const String compOffActOnRequest =
+      '/api/method/tcb_portal_erp.api.leave.act_on_comp_off';
 
   // Payslips
   static const String payslipList =
@@ -172,6 +195,8 @@ class ApiPaths {
   // Timesheet
   static const String timesheetContext =
       '/api/method/tcb_portal_erp.api.timesheet.get_context';
+  static const String timesheetListAll =
+      '/api/method/tcb_portal_erp.api.timesheet.list_all';
   static const String timesheetDetail =
       '/api/method/tcb_portal_erp.api.timesheet.get_detail';
   static const String timesheetCreate =
@@ -336,6 +361,42 @@ class ApiPaths {
       '/api/method/tcb_portal_erp.api.portal_forms.save_doc';
   static const String portalSubmitDoc =
       '/api/method/tcb_portal_erp.api.portal_forms.submit_doc';
+
+  // Purchase cycle conversions (PR -> RFQ -> SQ -> PO -> GRN -> PI -> Return)
+  static const String purchaseCreateRfqFromMr =
+      '/api/method/tcb_portal_erp.api.purchase.create_rfq_from_material_request';
+  static const String purchaseRfqsForMr =
+      '/api/method/tcb_portal_erp.api.purchase.list_rfqs_for_material_request';
+  static const String purchaseCreateSqFromRfq =
+      '/api/method/tcb_portal_erp.api.purchase.create_supplier_quotation_from_rfq';
+  static const String purchaseCompareQuotations =
+      '/api/method/tcb_portal_erp.api.purchase.compare_quotations';
+  static const String purchaseCreatePoFromSq =
+      '/api/method/tcb_portal_erp.api.purchase.create_po_from_supplier_quotation';
+  static const String purchaseCreateReceiptFromPo =
+      '/api/method/tcb_portal_erp.api.purchase.create_receipt_from_po';
+  static const String purchaseCreateInvoiceFromReceipt =
+      '/api/method/tcb_portal_erp.api.purchase.create_invoice_from_receipt';
+  static const String purchaseCreateReturn =
+      '/api/method/tcb_portal_erp.api.purchase.create_purchase_return';
+  static const String purchaseDashboard =
+      '/api/method/tcb_portal_erp.api.purchase_dashboard.get_summary';
+
+  // Sales cycle conversions (Quotation -> SO -> DN -> Invoice -> Return)
+  static const String salesCreateSoFromQuotation =
+      '/api/method/tcb_portal_erp.api.sales.create_so_from_quotation';
+  static const String salesCreateDeliveryNoteFromSo =
+      '/api/method/tcb_portal_erp.api.sales.create_delivery_note_from_so';
+  static const String salesCreateInvoiceFromSo =
+      '/api/method/tcb_portal_erp.api.sales.create_invoice_from_so';
+  static const String salesCreateInvoiceFromDeliveryNote =
+      '/api/method/tcb_portal_erp.api.sales.create_invoice_from_delivery_note';
+  static const String salesCreateReturn =
+      '/api/method/tcb_portal_erp.api.sales.create_sales_return';
+  static const String salesCreatePaymentEntryFromSo =
+      '/api/method/tcb_portal_erp.api.sales.create_payment_entry_from_so';
+  static const String salesDashboardSummary =
+      '/api/method/tcb_portal_erp.api.sales_dashboard.get_summary';
 
   // Stock module (Phase 1)
   static const String stockListItems =

@@ -77,6 +77,79 @@ class PendingLeaveApproval {
       );
 }
 
+/// One of the signed-in user's own comp-off requests, with its approval stage.
+@immutable
+class CompOffSummary {
+  const CompOffSummary({
+    required this.name,
+    required this.leaveType,
+    required this.workFromDate,
+    required this.workEndDate,
+    required this.stageLabel,
+    this.halfDay = false,
+    this.reason,
+  });
+
+  final String name;
+  final String leaveType;
+  final DateTime workFromDate;
+  final DateTime workEndDate;
+  final String stageLabel;
+  final bool halfDay;
+  final String? reason;
+
+  factory CompOffSummary.fromJson(Map<String, dynamic> j) => CompOffSummary(
+        name: j['name'] as String,
+        leaveType: (j['leave_type'] ?? '') as String,
+        workFromDate: DateTime.parse(j['work_from_date'] as String),
+        workEndDate: DateTime.parse(
+            (j['work_end_date'] ?? j['work_from_date']) as String),
+        stageLabel: (j['stage_label'] ?? '') as String,
+        halfDay: (j['half_day'] as num?)?.toInt() == 1,
+        reason: j['reason'] as String?,
+      );
+}
+
+/// One comp-off request waiting on the signed in user, at either approval hop.
+@immutable
+class PendingCompOffApproval {
+  const PendingCompOffApproval({
+    required this.name,
+    required this.employeeName,
+    required this.leaveType,
+    required this.workFromDate,
+    required this.workEndDate,
+    required this.stageLabel,
+    required this.asHr,
+    this.halfDay = false,
+    this.reason,
+  });
+
+  final String name;
+  final String employeeName;
+  final String leaveType;
+  final DateTime workFromDate;
+  final DateTime workEndDate;
+  final String stageLabel;
+  final bool asHr;
+  final bool halfDay;
+  final String? reason;
+
+  factory PendingCompOffApproval.fromJson(Map<String, dynamic> j) =>
+      PendingCompOffApproval(
+        name: j['name'] as String,
+        employeeName: (j['employee_name'] ?? j['employee'] ?? '') as String,
+        leaveType: (j['leave_type'] ?? '') as String,
+        workFromDate: DateTime.parse(j['work_from_date'] as String),
+        workEndDate: DateTime.parse(
+            (j['work_end_date'] ?? j['work_from_date']) as String),
+        stageLabel: (j['stage_label'] ?? '') as String,
+        asHr: (j['as_hr'] ?? false) as bool,
+        halfDay: (j['half_day'] as num?)?.toInt() == 1,
+        reason: j['reason'] as String?,
+      );
+}
+
 enum LeaveStatus { open, approved, rejected, cancelled }
 
 LeaveStatus leaveStatusFrom(String? s) {
@@ -194,10 +267,12 @@ class LeaveContext {
     required this.applications,
     required this.leaveTypes,
     required this.compensatoryLeaveTypes,
+    this.compOffRequests = const [],
     this.leaveApprover,
     this.leaveApproverName,
     this.holidays = const {},
     this.pendingApprovalCount = 0,
+    this.compOffPendingCount = 0,
     this.isHr = false,
   });
 
@@ -206,6 +281,9 @@ class LeaveContext {
   final String? leaveApproverName;
   final List<LeaveBalance> balances;
   final List<LeaveApplication> applications;
+
+  /// The signed-in user's own comp-off requests, most recent first.
+  final List<CompOffSummary> compOffRequests;
   final List<String> leaveTypes;
 
   /// Holiday and weekly off dates for this employee, as yyyy-MM-dd strings.
@@ -216,6 +294,9 @@ class LeaveContext {
   /// How many requests are waiting on this user across both hops. Non zero
   /// means the Approvals entry is worth showing.
   final int pendingApprovalCount;
+
+  /// How many comp-off requests are waiting on this user across both hops.
+  final int compOffPendingCount;
   final bool isHr;
 
   bool isHoliday(DateTime d) =>
@@ -246,12 +327,17 @@ class LeaveContext {
             .toSet(),
         pendingApprovalCount:
             (j['pending_approval_count'] as num?)?.toInt() ?? 0,
+        compOffPendingCount:
+            (j['comp_off_pending_count'] as num?)?.toInt() ?? 0,
         isHr: (j['is_hr'] ?? false) as bool,
         balances: ((j['balances'] as List?) ?? [])
             .map((e) => LeaveBalance.fromJson(e as Map<String, dynamic>))
             .toList(),
         applications: ((j['applications'] as List?) ?? [])
             .map((e) => LeaveApplication.fromJson(e as Map<String, dynamic>))
+            .toList(),
+        compOffRequests: ((j['comp_off_requests'] as List?) ?? [])
+            .map((e) => CompOffSummary.fromJson(e as Map<String, dynamic>))
             .toList(),
         leaveTypes: ((j['leave_types'] as List?) ?? [])
             .map((e) => e.toString())

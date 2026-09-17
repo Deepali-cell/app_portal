@@ -10,9 +10,12 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/location/location_service.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
+import '../../../shared/widgets/employee_only_notice.dart';
+import '../../auth/application/auth_controller.dart';
 import '../application/attendance_controller.dart';
 import '../data/attendance_repository.dart';
 import '../domain/models.dart';
+import 'widgets/month_calendar_view.dart';
 
 final _dayFmt = DateFormat('EEEE, MMMM d');
 final _timeFmt = DateFormat('hh:mm a');
@@ -134,8 +137,22 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       if (online) ref.read(attendanceControllerProvider.notifier).trySync();
     });
 
+    final profile = ref.watch(authControllerProvider).profile;
+    if (profile != null && !profile.hasEmployee) {
+      return Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          backgroundColor: AppColors.surfaceContainerLowest,
+          title: const Text('Time'),
+        ),
+        body: const EmployeeOnlyNotice(feature: 'Attendance'),
+      );
+    }
+
     final async = ref.watch(attendanceControllerProvider);
-    return Scaffold(
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.surfaceContainerLowest,
@@ -148,8 +165,12 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
                 ref.read(attendanceControllerProvider.notifier).reload(),
           ),
         ],
+        bottom: const TabBar(
+          tabs: [Tab(text: 'Today'), Tab(text: 'Calendar')],
+        ),
       ),
-      body: async.when(
+      body: TabBarView(children: [
+        async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(
           child: Padding(
@@ -185,6 +206,9 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
             ],
           ),
         ),
+      ),
+        const MonthCalendarView(),
+      ]),
       ),
     );
   }

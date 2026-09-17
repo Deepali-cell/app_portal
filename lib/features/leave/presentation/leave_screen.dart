@@ -8,6 +8,8 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../../shared/widgets/brand_button.dart';
+import '../../../shared/widgets/employee_only_notice.dart';
+import '../../auth/application/auth_controller.dart';
 import '../application/leave_controller.dart';
 import '../domain/models.dart';
 
@@ -19,6 +21,8 @@ class LeaveScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(authControllerProvider).profile;
+    final noEmployee = profile != null && !profile.hasEmployee;
     final async = ref.watch(leaveControllerProvider);
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -26,14 +30,18 @@ class LeaveScreen extends ConsumerWidget {
         backgroundColor: AppColors.surfaceContainerLowest,
         title: const Text('Leave'),
         actions: [
-          IconButton(
-            tooltip: 'Refresh',
-            icon: Icon(Icons.refresh, color: AppColors.primary),
-            onPressed: () => ref.read(leaveControllerProvider.notifier).reload(),
-          ),
+          if (!noEmployee)
+            IconButton(
+              tooltip: 'Refresh',
+              icon: Icon(Icons.refresh, color: AppColors.primary),
+              onPressed: () =>
+                  ref.read(leaveControllerProvider.notifier).reload(),
+            ),
         ],
       ),
-      body: async.when(
+      body: noEmployee
+          ? const EmployeeOnlyNotice(feature: 'Leave')
+          : async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => _Error(
           msg: e is ApiException ? e.message : 'Could not load leave.',
@@ -49,9 +57,10 @@ class LeaveScreen extends ConsumerWidget {
                 AppDimens.xl),
             children: [
               _HeaderSection(ctx: ctx),
-              if (ctx.pendingApprovalCount > 0) ...[
+              if (ctx.pendingApprovalCount + ctx.compOffPendingCount > 0) ...[
                 const SizedBox(height: AppDimens.lg),
-                _ApprovalsEntry(count: ctx.pendingApprovalCount),
+                _ApprovalsEntry(
+                    count: ctx.pendingApprovalCount + ctx.compOffPendingCount),
               ],
               const SizedBox(height: AppDimens.lg),
               if (ctx.balances.isEmpty)
@@ -60,6 +69,10 @@ class LeaveScreen extends ConsumerWidget {
                 _BalancesGrid(balances: ctx.balances),
               const SizedBox(height: AppDimens.lg),
               _MyRequestsSection(applications: ctx.applications),
+              if (ctx.compOffRequests.isNotEmpty) ...[
+                const SizedBox(height: AppDimens.lg),
+                _MyCompOffSection(requests: ctx.compOffRequests),
+              ],
             ],
           ),
         ),
@@ -382,6 +395,87 @@ class _MyRequestsSection extends StatelessWidget {
   }
 }
 
+/// The signed-in user's own comp-off requests, with the stage each has reached.
+class _MyCompOffSection extends StatelessWidget {
+  const _MyCompOffSection({required this.requests});
+  final List<CompOffSummary> requests;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+                AppDimens.md, AppDimens.md, AppDimens.md, AppDimens.sm),
+            child: Text('My Comp-Off Requests',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: AppColors.primary, fontWeight: FontWeight.w600)),
+          ),
+          for (var i = 0; i < requests.length; i++) ...[
+            if (i > 0)
+              Divider(height: 1, indent: 64, color: AppColors.outlineVariant),
+            _CompOffRow(req: requests[i]),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CompOffRow extends StatelessWidget {
+  const _CompOffRow({required this.req});
+  final CompOffSummary req;
+
+  @override
+  Widget build(BuildContext context) {
+    final range = req.workFromDate == req.workEndDate
+        ? _dateFmt.format(req.workFromDate)
+        : '${_dateShort.format(req.workFromDate)} – ${_dateFmt.format(req.workEndDate)}';
+    return Padding(
+      padding: const EdgeInsets.all(AppDimens.md),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceContainerHigh,
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: Icon(Icons.savings_outlined,
+                color: AppColors.onSurface, size: 20),
+          ),
+          const SizedBox(width: AppDimens.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Worked $range'
+                    '${req.halfDay ? " · half day" : ""}',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: AppColors.onSurface,
+                        fontWeight: FontWeight.w600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+                if (req.stageLabel.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(req.stageLabel,
+                      style: Theme.of(context).textTheme.labelSmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _RequestRow extends StatelessWidget {
   const _RequestRow({required this.app});
   final LeaveApplication app;
@@ -558,7 +652,7 @@ class _ApprovalsEntry extends StatelessWidget {
     return Card(
       child: InkWell(
         borderRadius: BorderRadius.circular(AppDimens.radiusXl),
-        onTap: () => context.push(Routes.leaveApprovals),
+        onTap: () => context.push(Routes.approvals),
         child: Padding(
           padding: const EdgeInsets.all(AppDimens.md),
           child: Row(
@@ -579,7 +673,7 @@ class _ApprovalsEntry extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Leave approvals',
+                    Text('Approval Requests',
                         style: Theme.of(context)
                             .textTheme
                             .titleMedium
