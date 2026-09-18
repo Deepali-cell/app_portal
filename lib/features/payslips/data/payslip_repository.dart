@@ -33,6 +33,31 @@ class PayslipRepository {
     }
   }
 
+  /// Org-wide payslip list (Finance > All Payslips). `year` scopes the list;
+  /// `month` (1-12) narrows to one month; `status` is "all" | "draft" |
+  /// "submitted".
+  Future<AllPayslipsContext> getAllList({
+    required int year,
+    int? month,
+    String status = 'all',
+  }) async {
+    try {
+      final resp = await _dio.get(
+        ApiPaths.payslipAllList,
+        queryParameters: {
+          'year': year,
+          'month': ?month,
+          if (status != 'all') 'status': status,
+        },
+      );
+      return AllPayslipsContext.fromJson(
+        (resp.data['message'] as Map).cast<String, dynamic>(),
+      );
+    } on DioException catch (e) {
+      throw _asApiException(e);
+    }
+  }
+
   /// Downloads the PDF of `name` and writes it to a temp file. Returns the
   /// absolute file path so the caller can hand it off to share_plus / open.
   Future<String> downloadPdf(String name) async {

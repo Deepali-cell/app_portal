@@ -41,6 +41,51 @@ class PayslipListController extends AsyncNotifier<PayslipContext> {
   }
 }
 
+/// Filter state + data for the Finance > All Payslips screen.
+final allPayslipsProvider =
+    AsyncNotifierProvider<AllPayslipsController, AllPayslipsContext>(
+        AllPayslipsController.new);
+
+class AllPayslipsController extends AsyncNotifier<AllPayslipsContext> {
+  int _year = DateTime.now().year;
+  int? _month; // null = whole year
+  String _status = 'all'; // all | draft | submitted
+
+  int get year => _year;
+  int? get month => _month;
+  String get status => _status;
+
+  Future<AllPayslipsContext> _fetch() =>
+      ref.read(payslipRepositoryProvider).getAllList(
+            year: _year,
+            month: _month,
+            status: _status,
+          );
+
+  @override
+  Future<AllPayslipsContext> build() => _fetch();
+
+  Future<void> reload() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(_fetch);
+  }
+
+  Future<void> setYear(int year) async {
+    _year = year;
+    await reload();
+  }
+
+  Future<void> setMonth(int? month) async {
+    _month = month;
+    await reload();
+  }
+
+  Future<void> setStatus(String status) async {
+    _status = status;
+    await reload();
+  }
+}
+
 /// Detail for a single payslip, fetched on demand by name.
 final payslipDetailProvider =
     FutureProvider.family<PayslipDetail, String>((ref, name) {

@@ -66,3 +66,54 @@ class RoleMatrixController extends AsyncNotifier<Map<String, PermFlags>> {
 final roleMatrixProvider =
     AsyncNotifierProvider<RoleMatrixController, Map<String, PermFlags>>(
         RoleMatrixController.new);
+
+// --- Reports: per-role access management ----------------------------------
+
+final reportAdminMetaProvider = FutureProvider<ReportAdminMeta>(
+    (ref) => ref.read(adminRepositoryProvider).getReportMeta());
+
+/// Holds the role-access state for one selected report. `load(reportKey)`
+/// switches report; `toggle(role, value)` optimistically updates and persists.
+class ReportRolesController extends AsyncNotifier<ReportRolesState?> {
+  String? _reportKey;
+  String? get reportKey => _reportKey;
+
+  @override
+  Future<ReportRolesState?> build() async => null;
+
+  Future<void> load(String reportKey) async {
+    _reportKey = reportKey;
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(
+        () => ref.read(adminRepositoryProvider).getReportRoles(reportKey));
+  }
+
+  Future<void> toggle(String role, bool value) async {
+    final key = _reportKey;
+    final current = state.asData?.value;
+    if (key == null || current == null) return;
+
+    final optimisticRoles = Map<String, bool>.from(current.roles)
+      ..[role] = value;
+    state = AsyncData(current.copyWith(
+      roles: optimisticRoles,
+      hasExplicitRoles: optimisticRoles.values.any((v) => v),
+    ));
+
+    try {
+      final fresh = await ref.read(adminRepositoryProvider).setReportRole(
+            reportKey: key,
+            role: role,
+            value: value,
+          );
+      state = AsyncData(fresh);
+    } catch (_) {
+      state = AsyncData(current); // revert
+      rethrow;
+    }
+  }
+}
+
+final reportRolesProvider =
+    AsyncNotifierProvider<ReportRolesController, ReportRolesState?>(
+        ReportRolesController.new);

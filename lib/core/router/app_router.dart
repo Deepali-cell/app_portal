@@ -36,6 +36,8 @@ import '../../features/sales_workspace/presentation/sales_workspace_screen.dart'
 import '../../features/admin/presentation/admin_screen.dart';
 import '../../features/purchase/presentation/purchase_dashboard_screen.dart';
 import '../../features/sales/presentation/sales_dashboard_screen.dart';
+import '../../features/reports/presentation/reports_hub_screen.dart';
+import '../../features/reports/presentation/report_view_screen.dart';
 import '../../features/records/domain/descriptor.dart';
 import '../../features/records/presentation/record_list_screen.dart';
 import '../../features/records/presentation/record_detail_screen.dart';
@@ -45,6 +47,7 @@ import '../../features/stock/presentation/item_create_screen.dart';
 import '../../features/stock/presentation/item_edit_screen.dart';
 import '../../features/stock/domain/models.dart';
 import '../../features/notifications/presentation/notifications_screen.dart';
+import '../../features/payslips/presentation/all_payslips_screen.dart';
 import '../../features/payslips/presentation/payslip_detail_screen.dart';
 import '../../features/payslips/presentation/payslips_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
@@ -94,12 +97,19 @@ class Routes {
   static const purchaseReceipt = '/purchase/receipt';
   static const salesDashboard = '/sales/dashboard';
   static const salesCustomer = '/sales/customer';
+  // Reports hubs (curated ERPNext reports, per-report role gated)
+  static const accountsReports = '/accounts/reports';
+  static const salesReports = '/sales/reports';
+  static const purchaseReports = '/purchase/reports';
+  static const stockReports = '/stock/reports';
+  static const reportView = '/report-view';
   static const salesQuotation = '/sales/quotation';
   static const salesOrder = '/sales/order';
   static const salesDelivery = '/sales/delivery';
   // HR
   static const hrEmployees = '/hr/employees';
   static const allAttendance = '/hr/all-attendance';
+  static const allPayslips = '/finance/all-payslips';
   static const hrAttendance = '/hr/attendance-management';
   static const approvals = '/hr/approvals';
   // Projects
@@ -224,6 +234,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ]),
           StatefulShellBranch(routes: [
+            GoRoute(
+              path: Routes.allPayslips,
+              builder: (_, _) => const AllPayslipsScreen(),
+            ),
+          ]),
+          StatefulShellBranch(routes: [
             GoRoute(path: Routes.tasks, builder: (_, _) => const TasksScreen()),
           ]),
           StatefulShellBranch(routes: [
@@ -328,6 +344,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           _recordBranch(Routes.salesQuotation, 'sales_quotation'),
           _recordBranch(Routes.salesOrder, 'sales_order'),
           _recordBranch(Routes.salesDelivery, 'sales_delivery'),
+          _reportsBranch(Routes.accountsReports, 'Accounts', 'Accounts Reports'),
+          _reportsBranch(Routes.salesReports, 'Sales', 'Sales Reports'),
+          _reportsBranch(Routes.purchaseReports, 'Purchase', 'Purchase Reports'),
+          _reportsBranch(Routes.stockReports, 'Stock', 'Stock Reports'),
         ],
       ),
       GoRoute(
@@ -335,6 +355,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: rootNavigatorKey,
         builder: (_, state) =>
             RecordDetailScreen(args: state.extra! as RecordArgs),
+      ),
+      GoRoute(
+        path: Routes.reportView,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, state) =>
+            ReportViewScreen(args: state.extra! as ReportViewArgs),
       ),
       GoRoute(
           path: Routes.profile,
@@ -403,6 +429,18 @@ StatefulShellBranch _recordBranch(String path, String key) {
     GoRoute(
       path: path,
       builder: (_, _) => RecordListScreen(descriptor: descriptor),
+    ),
+  ]);
+}
+
+/// A shell branch that hosts the [ReportsHubScreen] for one backend module
+/// (Accounts/Sales/Purchase/Stock). The hub lists only the reports the user is
+/// permitted to run.
+StatefulShellBranch _reportsBranch(String path, String module, String title) {
+  return StatefulShellBranch(routes: [
+    GoRoute(
+      path: path,
+      builder: (_, _) => ReportsHubScreen(module: module, title: title),
     ),
   ]);
 }

@@ -55,4 +55,50 @@ class AdminRepository {
       throw ApiException.fromDio(e);
     }
   }
+
+  // --- Reports: per-role access to the curated reports ---------------------
+
+  Future<ReportAdminMeta> getReportMeta() async {
+    try {
+      final resp = await _dio.get(ApiPaths.adminReportMeta);
+      return ReportAdminMeta.fromJson(
+          (resp.data['message'] as Map).cast<String, dynamic>());
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  Future<ReportRolesState> getReportRoles(String reportKey) async {
+    try {
+      final resp = await _dio.get(
+        ApiPaths.adminReportRoles,
+        queryParameters: {'report_key': reportKey},
+      );
+      return ReportRolesState.fromJson(
+          (resp.data['message'] as Map).cast<String, dynamic>());
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  Future<ReportRolesState> setReportRole({
+    required String reportKey,
+    required String role,
+    required bool value,
+  }) async {
+    try {
+      final resp = await _dio.post(
+        ApiPaths.adminSetReportRole,
+        data: {
+          'report_key': reportKey,
+          'role': role,
+          'value': value ? 1 : 0,
+        },
+      );
+      return ReportRolesState.fromJson(
+          (resp.data['message'] as Map).cast<String, dynamic>());
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
 }

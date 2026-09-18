@@ -6,70 +6,37 @@ import '../../../core/theme/app_dimens.dart';
 import '../application/admin_controller.dart';
 import '../domain/models.dart';
 
-/// In-app Administrator: pick a role, toggle its real Frappe permissions per
-/// screen. Writes go straight to Custom DocPerm - no parallel config. Visible
-/// only to System Manager (nav gated by the `admin` capability).
-class AdminScreen extends ConsumerStatefulWidget {
+/// In-app Administrator, ERPNext Role Permission Manager style. Two tabs:
+///
+///  * Doctypes: pick a Doctype + Role, toggle that role's real Frappe
+///    permissions (writes to Custom DocPerm - the same store the desk Role
+///    Permission Manager edits).
+///  * Reports: pick a curated report, toggle which roles may run it (writes to
+///    the report's own Frappe roles list).
+///
+/// Visible only to System Manager (nav gated by the `admin` capability).
+class AdminScreen extends StatelessWidget {
   const AdminScreen({super.key});
 
   @override
-  ConsumerState<AdminScreen> createState() => _AdminScreenState();
-}
-
-class _AdminScreenState extends ConsumerState<AdminScreen> {
-  String? _role;
-
-  @override
   Widget build(BuildContext context) {
-    final metaAsync = ref.watch(adminMetaProvider);
-
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Administrator')),
-      body: metaAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-          child: Padding(
-            padding: const EdgeInsets.all(AppDimens.lg),
-            child: Text('$e', textAlign: TextAlign.center),
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: AppBar(
+          title: const Text('Administrator'),
+          bottom: const TabBar(
+            tabs: [
+              Tab(text: 'Doctypes'),
+              Tab(text: 'Reports'),
+            ],
           ),
         ),
-        data: (meta) => Column(
+        body: const TabBarView(
           children: [
-            Padding(
-              padding: const EdgeInsets.all(AppDimens.md),
-              child: Row(
-                children: [
-                  const Icon(Icons.admin_panel_settings_outlined),
-                  const SizedBox(width: AppDimens.sm),
-                  const Text('Role:'),
-                  const SizedBox(width: AppDimens.sm),
-                  Expanded(
-                    child: DropdownButton<String>(
-                      isExpanded: true,
-                      value: _role,
-                      hint: const Text('Select a role'),
-                      items: meta.roles
-                          .map((r) =>
-                              DropdownMenuItem(value: r, child: Text(r)))
-                          .toList(),
-                      onChanged: (v) {
-                        if (v == null) return;
-                        setState(() => _role = v);
-                        ref.read(roleMatrixProvider.notifier).load(v);
-                      },
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1),
-            Expanded(
-              child: _role == null
-                  ? const Center(
-                      child: Text('Pick a role to configure its screens'))
-                  : _RoleMatrix(modules: meta.modules),
-            ),
+            _DoctypePermTab(),
+            _ReportPermTab(),
           ],
         ),
       ),
@@ -77,9 +44,158 @@ class _AdminScreenState extends ConsumerState<AdminScreen> {
   }
 }
 
-class _RoleMatrix extends ConsumerWidget {
-  const _RoleMatrix({required this.modules});
-  final List<AdminModule> modules;
+/// Tab 1: pick a Module -> DocType -> Role, then toggle actions.
+class _DoctypePermTab extends ConsumerStatefulWidget {
+  const _DoctypePermTab();
+
+  @override
+  ConsumerState<_DoctypePermTab> createState() => _DoctypePermTabState();
+}
+
+class _DoctypePermTabState extends ConsumerState<_DoctypePermTab> {
+  String? _module;
+  AdminScreenRef? _screen;
+  String? _role;
+
+  @override
+  Widget build(BuildContext context) {
+    final metaAsync = ref.watch(adminMetaProvider);
+
+    return metaAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppDimens.lg),
+          child: Text('$e', textAlign: TextAlign.center),
+        ),
+      ),
+      data: (meta) {
+        final modules = meta.modules.where((m) => m.screens.isNotEmpty).toList();
+        final screensInModule = <AdminScreenRef>[
+          for (final m in modules)
+            if (m.module == _module) ...m.screens,
+        ];
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppDimens.md),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.category_outlined),
+                      const SizedBox(width: AppDimens.sm),
+                      const SizedBox(width: 74, child: Text('Module:')),
+                      Expanded(
+                        child: DropdownButton<String>(
+                          isExpanded: true,
+                          value: _module,
+                          hint: const Text('Select a module'),
+                          items: modules
+                              .map((m) => DropdownMenuItem(
+                                  value: m.module, child: Text(m.module)))
+                              .toList(),
+                          onChanged: (v) => setState(() {
+                            _module = v;
+                            _screen = null;
+                          }),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppDimens.xs),
+                  Row(
+                    children: [
+                      const Icon(Icons.description_outlined),
+                      const SizedBox(width: AppDimens.sm),
+                      const SizedBox(width: 74, child: Text('Document\nType:')),
+                      Expanded(
+                        child: DropdownButton<AdminScreenRef>(
+                          isExpanded: true,
+                          value: _screen,
+                          hint: Text(_module == null
+                              ? 'Select a module first'
+                              : 'Select a document type'),
+                          items: [
+                            for (final s in screensInModule)
+                              DropdownMenuItem(
+                                value: s,
+                                child: Text(s.label,
+                                    overflow: TextOverflow.ellipsis),
+                              ),
+                          ],
+                          onChanged: _module == null
+                              ? null
+                              : (v) => setState(() => _screen = v),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppDimens.xs),
+                  Row(
+                    children: [
+                      const Icon(Icons.admin_panel_settings_outlined),
+                      const SizedBox(width: AppDimens.sm),
+                      const SizedBox(width: 74, child: Text('Role:')),
+                      Expanded(
+                        child: DropdownButton<String>(
+                          isExpanded: true,
+                          value: _role,
+                          hint: const Text('Select a role'),
+                          items: meta.roles
+                              .map((r) =>
+                                  DropdownMenuItem(value: r, child: Text(r)))
+                              .toList(),
+                          onChanged: (v) {
+                            if (v == null) return;
+                            setState(() => _role = v);
+                            ref.read(roleMatrixProvider.notifier).load(v);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: (_screen == null || _role == null)
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(AppDimens.lg),
+                        child: Text(
+                          'Pick a module, a document type and a role to set '
+                          'its permissions',
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    )
+                  : _PermEditor(screen: _screen!),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// The action toggles for the currently-selected Doctype, read from the loaded
+/// role matrix.
+class _PermEditor extends ConsumerWidget {
+  const _PermEditor({required this.screen});
+  final AdminScreenRef screen;
+
+  List<(String, String)> _typesFor(AdminScreenRef s) => [
+        ('read', 'View'),
+        ('create', 'Create'),
+        ('write', 'Edit'),
+        if (s.submittable) ('submit', 'Submit'),
+        ('delete', 'Delete'),
+        ('if_owner', 'Own only'),
+      ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -92,82 +208,252 @@ class _RoleMatrix extends ConsumerWidget {
           child: Text('$e', textAlign: TextAlign.center),
         ),
       ),
-      data: (matrix) => ListView(
-        children: [
-          for (final m in modules)
-            ExpansionTile(
-              title: Text(m.module,
-                  style: const TextStyle(fontWeight: FontWeight.w700)),
-              childrenPadding: const EdgeInsets.only(bottom: AppDimens.sm),
+      data: (matrix) {
+        final flags = matrix[screen.doctype] ?? const PermFlags();
+        return ListView(
+          padding: const EdgeInsets.all(AppDimens.md),
+          children: [
+            Text(screen.label,
+                style:
+                    const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+            Text(screen.doctype,
+                style:
+                    TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant)),
+            const SizedBox(height: AppDimens.md),
+            const Text('Allowed actions:',
+                style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: AppDimens.sm),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
               children: [
-                for (final s in m.screens)
-                  _ScreenRow(
-                    screen: s,
-                    flags: matrix[s.doctype] ?? const PermFlags(),
+                for (final t in _typesFor(screen))
+                  FilterChip(
+                    label: Text(t.$2),
+                    selected: flags.byType(t.$1),
+                    onSelected: (v) async {
+                      try {
+                        await ref
+                            .read(roleMatrixProvider.notifier)
+                            .toggle(screen.doctype, t.$1, v);
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Failed: $e')),
+                          );
+                        }
+                      }
+                    },
                   ),
               ],
             ),
-        ],
-      ),
+            const SizedBox(height: AppDimens.md),
+            Text(
+              '"Own only" means the role can act only on records it created. '
+              'Changes here are saved to Frappe instantly and match the desk '
+              'Role Permission Manager.',
+              style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+            ),
+          ],
+        );
+      },
     );
   }
 }
 
-class _ScreenRow extends ConsumerWidget {
-  const _ScreenRow({required this.screen, required this.flags});
-  final AdminScreenRef screen;
-  final PermFlags flags;
+/// Tab 2: pick a Module -> Report, then toggle which roles may run it.
+class _ReportPermTab extends ConsumerStatefulWidget {
+  const _ReportPermTab();
 
-  static const _types = [
-    ('read', 'View'),
-    ('create', 'Create'),
-    ('write', 'Edit'),
-    ('submit', 'Submit'),
-    ('delete', 'Delete'),
-    ('if_owner', 'Own only'),
-  ];
+  @override
+  ConsumerState<_ReportPermTab> createState() => _ReportPermTabState();
+}
+
+class _ReportPermTabState extends ConsumerState<_ReportPermTab> {
+  String? _module;
+  ReportAdminRef? _report;
+
+  @override
+  Widget build(BuildContext context) {
+    final metaAsync = ref.watch(reportAdminMetaProvider);
+
+    return metaAsync.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppDimens.lg),
+          child: Text('$e', textAlign: TextAlign.center),
+        ),
+      ),
+      data: (meta) {
+        final modules = meta.modules.where((m) => m.reports.isNotEmpty).toList();
+        final reportsInModule = <ReportAdminRef>[
+          for (final m in modules)
+            if (m.module == _module) ...m.reports,
+        ];
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppDimens.md),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.category_outlined),
+                      const SizedBox(width: AppDimens.sm),
+                      const SizedBox(width: 74, child: Text('Module:')),
+                      Expanded(
+                        child: DropdownButton<String>(
+                          isExpanded: true,
+                          value: _module,
+                          hint: const Text('Select a module'),
+                          items: modules
+                              .map((m) => DropdownMenuItem(
+                                  value: m.module, child: Text(m.module)))
+                              .toList(),
+                          onChanged: (v) => setState(() {
+                            _module = v;
+                            _report = null;
+                          }),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: AppDimens.xs),
+                  Row(
+                    children: [
+                      const Icon(Icons.assessment_outlined),
+                      const SizedBox(width: AppDimens.sm),
+                      const SizedBox(width: 74, child: Text('Report:')),
+                      Expanded(
+                        child: DropdownButton<ReportAdminRef>(
+                          isExpanded: true,
+                          value: _report,
+                          hint: Text(_module == null
+                              ? 'Select a module first'
+                              : 'Select a report'),
+                          items: [
+                            for (final r in reportsInModule)
+                              DropdownMenuItem(
+                                value: r,
+                                child: Text(r.label,
+                                    overflow: TextOverflow.ellipsis),
+                              ),
+                          ],
+                          onChanged: _module == null
+                              ? null
+                              : (v) {
+                                  setState(() => _report = v);
+                                  if (v != null) {
+                                    ref
+                                        .read(reportRolesProvider.notifier)
+                                        .load(v.key);
+                                  }
+                                },
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+            Expanded(
+              child: _report == null
+                  ? const Center(
+                      child: Padding(
+                        padding: EdgeInsets.all(AppDimens.lg),
+                        child: Text(
+                          'Pick a module and a report to choose which roles '
+                          'can see it',
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    )
+                  : _ReportRoleEditor(report: _report!, allRoles: meta.roles),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+/// The per-role access toggles for the currently-selected report.
+class _ReportRoleEditor extends ConsumerWidget {
+  const _ReportRoleEditor({required this.report, required this.allRoles});
+  final ReportAdminRef report;
+  final List<String> allRoles;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-          AppDimens.md, AppDimens.xs, AppDimens.md, AppDimens.sm),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(screen.label,
-              style: const TextStyle(fontWeight: FontWeight.w600)),
-          Text(screen.doctype,
-              style:
-                  TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant)),
-          const SizedBox(height: 4),
-          Wrap(
-            spacing: 6,
-            runSpacing: 2,
-            children: [
-              for (final t in _types)
-                FilterChip(
-                  label: Text(t.$2),
-                  selected: flags.byType(t.$1),
-                  visualDensity: VisualDensity.compact,
-                  onSelected: (v) async {
-                    try {
-                      await ref
-                          .read(roleMatrixProvider.notifier)
-                          .toggle(screen.doctype, t.$1, v);
-                    } catch (e) {
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Failed: $e')),
-                        );
-                      }
-                    }
-                  },
-                ),
-            ],
-          ),
-        ],
+    final async = ref.watch(reportRolesProvider);
+    return async.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(
+        child: Padding(
+          padding: const EdgeInsets.all(AppDimens.lg),
+          child: Text('$e', textAlign: TextAlign.center),
+        ),
       ),
+      data: (rolesState) {
+        if (rolesState == null || rolesState.reportKey != report.key) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        final roles = rolesState.roles;
+        return ListView(
+          padding: const EdgeInsets.all(AppDimens.md),
+          children: [
+            Text(report.label,
+                style:
+                    const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+            Text(report.report,
+                style:
+                    TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant)),
+            const SizedBox(height: AppDimens.md),
+            const Text('Roles that can see this report:',
+                style: TextStyle(fontWeight: FontWeight.w600)),
+            const SizedBox(height: AppDimens.sm),
+            Wrap(
+              spacing: 8,
+              runSpacing: 6,
+              children: [
+                for (final role in allRoles)
+                  FilterChip(
+                    label: Text(role),
+                    selected: roles[role] ?? false,
+                    onSelected: (v) async {
+                      try {
+                        await ref
+                            .read(reportRolesProvider.notifier)
+                            .toggle(role, v);
+                      } catch (e) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Failed: $e')),
+                          );
+                        }
+                      }
+                    },
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppDimens.md),
+            Text(
+              rolesState.hasExplicitRoles
+                  ? 'Only the selected roles (and Administrator / System '
+                      'Manager) can see this report. Changes save to Frappe '
+                      'instantly.'
+                  : 'No role selected yet: the report currently follows the '
+                      'read permission of ${report.refDoctype ?? 'its document'}. '
+                      'Pick one or more roles to restrict it.',
+              style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+            ),
+          ],
+        );
+      },
     );
   }
 }

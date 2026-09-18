@@ -1,12 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/format/money.dart';
 import '../../../core/network/api_exception.dart';
-import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../../shared/widgets/brand_button.dart';
@@ -67,10 +65,6 @@ class ExpensesScreen extends ConsumerWidget {
                 cta: 'New Claim',
                 onPressed: () => _openSheet(context, ctx),
               ),
-              if (ctx.pendingApprovalCount > 0) ...[
-                const SizedBox(height: AppDimens.md),
-                _ExpenseApprovalsEntry(count: ctx.pendingApprovalCount),
-              ],
               const SizedBox(height: AppDimens.md),
               DateRangeBar(
                 from: ctx.fromDate,
@@ -189,64 +183,6 @@ class _Header extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-/// Entry into the Approval Requests screen's Expense tab. Only rendered when
-/// claims are actually waiting on this user, so a non-approver never sees it.
-class _ExpenseApprovalsEntry extends StatelessWidget {
-  const _ExpenseApprovalsEntry({required this.count});
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppDimens.radiusXl),
-        onTap: () => context.push('${Routes.approvals}?tab=2'),
-        child: Padding(
-          padding: const EdgeInsets.all(AppDimens.md),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.secondaryFixed,
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Icon(Icons.fact_check_outlined,
-                    color: AppColors.primary, size: 22),
-              ),
-              const SizedBox(width: AppDimens.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Approval Requests',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 2),
-                    Text(
-                        count == 1
-                            ? '1 claim is waiting for you'
-                            : '$count claims are waiting for you',
-                        style: Theme.of(context).textTheme.bodySmall),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right,
-                  size: 20, color: AppColors.onSurfaceVariant),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

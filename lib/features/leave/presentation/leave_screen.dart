@@ -57,11 +57,6 @@ class LeaveScreen extends ConsumerWidget {
                 AppDimens.xl),
             children: [
               _HeaderSection(ctx: ctx),
-              if (ctx.pendingApprovalCount + ctx.compOffPendingCount > 0) ...[
-                const SizedBox(height: AppDimens.lg),
-                _ApprovalsEntry(
-                    count: ctx.pendingApprovalCount + ctx.compOffPendingCount),
-              ],
               const SizedBox(height: AppDimens.lg),
               if (ctx.balances.isEmpty)
                 _EmptyBalances()
@@ -640,64 +635,6 @@ class _Error extends StatelessWidget {
 }
 
 // ---- Apply sheet (kept compatible with the previous implementation) ----
-
-/// Entry point into the approvals queue. Only rendered when something is
-/// actually waiting on this user, so an employee with no reports never sees it.
-class _ApprovalsEntry extends StatelessWidget {
-  const _ApprovalsEntry({required this.count});
-  final int count;
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppDimens.radiusXl),
-        onTap: () => context.push(Routes.approvals),
-        child: Padding(
-          padding: const EdgeInsets.all(AppDimens.md),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.secondaryFixed,
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Icon(Icons.fact_check_outlined,
-                    color: AppColors.primary, size: 22),
-              ),
-              const SizedBox(width: AppDimens.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Approval Requests',
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 2),
-                    Text(
-                        count == 1
-                            ? '1 request is waiting for you'
-                            : '$count requests are waiting for you',
-                        style: Theme.of(context).textTheme.bodySmall),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right,
-                  size: 20, color: AppColors.onSurfaceVariant),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _ApplyLeaveSheet extends ConsumerStatefulWidget {
   const _ApplyLeaveSheet({required this.ctx});

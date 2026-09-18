@@ -170,6 +170,8 @@ class ApiPaths {
       '/api/method/tcb_portal_erp.api.payslip.get_list';
   static const String payslipDetail =
       '/api/method/tcb_portal_erp.api.payslip.get_detail';
+  static const String payslipAllList =
+      '/api/method/tcb_portal_erp.api.payslip.get_all_list';
 
   // Tasks
   static const String taskContext =
@@ -346,6 +348,19 @@ class ApiPaths {
       '/api/method/tcb_portal_erp.api.admin.get_role_matrix';
   static const String adminSetPerm =
       '/api/method/tcb_portal_erp.api.admin.set_role_perm';
+  // Administrator - per-role access to the curated reports
+  static const String adminReportMeta =
+      '/api/method/tcb_portal_erp.api.admin.get_report_admin_meta';
+  static const String adminReportRoles =
+      '/api/method/tcb_portal_erp.api.admin.get_report_roles';
+  static const String adminSetReportRole =
+      '/api/method/tcb_portal_erp.api.admin.set_report_role';
+
+  // Reports (curated standard ERPNext reports, per-report role gated)
+  static const String reportsList =
+      '/api/method/tcb_portal_erp.api.reports.list_reports';
+  static const String reportRun =
+      '/api/method/tcb_portal_erp.api.reports.run_report';
 
   // Generic portal records (Manufacturing, HR, Sales, Purchase…)
   static const String portalListDocs =
