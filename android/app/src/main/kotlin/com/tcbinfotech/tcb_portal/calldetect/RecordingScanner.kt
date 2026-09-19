@@ -48,12 +48,29 @@ object RecordingScanner {
         // MIUI / HyperOS
         "MIUI/sound_recorder/call_rec",
         "Sounds/CallRecorder",
-        // Vivo
+        // Vivo / iQOO (FuntouchOS / OriginOS)
         "Record/Call",
+        "Record/PhoneRecord",
+        "PhoneRecord",
+        "Recordings/Call Recordings",
+        "vivo/Record/Call",
+        "录音/通话录音",
         // OnePlus / others
         "Recordings",
         "Call recordings",
         "CallRecordings",
+    )
+
+    // Recording "root" folders whose immediate subfolders we also scan, so an
+    // OEM whose exact leaf name differs from the list above (common on Vivo /
+    // OnePlus builds) is still caught without hardcoding every variant.
+    private val RECORDING_ROOTS = listOf(
+        "Recordings",
+        "Record",
+        "Music/Recordings",
+        "Sounds",
+        "PhoneRecord",
+        "录音",
     )
 
     private val AUDIO_EXTS = setOf("mp3", "m4a", "amr", "wav", "aac", "ogg", "opus")
@@ -110,9 +127,25 @@ object RecordingScanner {
             ?.takeLast(10)
             ?.takeIf { it.length >= 7 }
 
+        // Expand the fixed folder list with the immediate subfolders of each
+        // recording root, so OEM-specific leaf names we did not hardcode are
+        // still scanned. De-duped, order-preserving.
+        val foldersToScan = LinkedHashSet<String>(KNOWN_FOLDERS)
+        for (rootRel in RECORDING_ROOTS) {
+            val rootDir = File(root, rootRel)
+            if (!rootDir.exists() || !rootDir.isDirectory) continue
+            try {
+                rootDir.listFiles()?.forEach { sub ->
+                    if (sub.isDirectory) foldersToScan.add("$rootRel/${sub.name}")
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Root scan failed for $rootRel: ${e.message}")
+            }
+        }
+
         var byNumberHit: Hit? = null
         var anyHit: Hit? = null
-        for (rel in KNOWN_FOLDERS) {
+        for (rel in foldersToScan) {
             val dir = File(root, rel)
             if (!dir.exists() || !dir.isDirectory) continue
             try {

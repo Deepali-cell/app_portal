@@ -310,9 +310,13 @@ class CallEventBridge {
               errorMessage: e.toString(),
             ),
           );
+      // Surface the real error so a device without USB/logcat can still be
+      // diagnosed — the user reads the message back to us. Trimmed so the
+      // system tray doesn't truncate the useful part.
+      final diag = e.toString().replaceAll('\n', ' ');
       await postLocalNotification(
         title: "Couldn't upload recording",
-        body: "We saved the audio locally and will retry on next call.",
+        body: diag.length > 220 ? diag.substring(0, 220) : diag,
       );
     }
   }
