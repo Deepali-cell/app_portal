@@ -155,6 +155,40 @@ class _DynamicFormScreenState extends ConsumerState<DynamicFormScreen> {
   /// Public rebuild hook for the child field widgets below.
   void update(VoidCallback fn) => setState(fn);
 
+  /// When [linkField] is picked, fetch source-doc values for any field whose
+  /// `fetch_from` starts with `linkField.fieldname.` and fill them in.
+  Future<void> applyFetch(FieldMeta linkField, String value) async {
+    final meta = _meta;
+    if (meta == null) return;
+    final prefix = '${linkField.fieldname}.';
+    final targets = <String, String>{}; // source field -> target fieldname
+    for (final f in meta.fields) {
+      final ff = f.fetchFrom;
+      if (ff != null && ff.startsWith(prefix)) {
+        targets[ff.substring(prefix.length)] = f.fieldname;
+      }
+    }
+    final srcDoctype = linkField.options;
+    if (targets.isEmpty || srcDoctype == null || srcDoctype.isEmpty) return;
+    try {
+      final vals = await ref
+          .read(recordsRepositoryProvider)
+          .fetchLinkValues(srcDoctype, value, targets.keys.toList());
+      if (!mounted) return;
+      setState(() {
+        targets.forEach((src, target) {
+          final v = vals[src];
+          if (v == null) return;
+          _values[target] = v;
+          final c = _controllers[target];
+          if (c != null) c.text = v.toString();
+        });
+      });
+    } catch (_) {
+      // Auto-fill is best-effort; ignore failures.
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -320,6 +354,7 @@ class _LinkTile extends StatelessWidget {
               );
               if (picked != null) {
                 state.update(() => state._values[field.fieldname] = picked);
+                state.applyFetch(field, picked);
               }
             },
       child: InputDecorator(
@@ -525,6 +560,67 @@ class _RowEditorState extends ConsumerState<_RowEditor> {
 
   bool _numeric(String t) => const {'Int', 'Float', 'Currency', 'Percent'}.contains(t);
 
+  /// Auto-fill row fields whose fetch_from points at the just-picked Link.
+  Future<void> _applyFetch(FieldMeta linkField, String value) async {
+    final prefix = '${linkField.fieldname}.';
+    final targets = <String, String>{}; // source field -> target fieldname
+    for (final f in widget.fields) {
+      final ff = f.fetchFrom;
+      if (ff != null && ff.startsWith(prefix)) {
+        targets[ff.substring(prefix.length)] = f.fieldname;
+      }
+    }
+    final srcDoctype = linkField.options;
+    if (targets.isEmpty || srcDoctype == null || srcDoctype.isEmpty) return;
+    try {
+      final vals = await ref
+          .read(recordsRepositoryProvider)
+          .fetchLinkValues(srcDoctype, value, targets.keys.toList());
+      if (!mounted) return;
+      setState(() {
+        targets.forEach((src, target) {
+          final v = vals[src];
+          if (v == null) return;
+          _row[target] = v;
+          final c = _ctrls[target];
+          if (c != null) c.text = v.toString();
+        });
+      });
+    } catch (_) {
+      // Best-effort.
+    }
+  }
+
+  Future<void> _pickDate(BuildContext context, FieldMeta f) async {
+    String two(int n) => n.toString().padLeft(2, '0');
+    if (f.fieldtype == 'Time') {
+      final t =
+          await showTimePicker(context: context, initialTime: TimeOfDay.now());
+      if (t != null) {
+        setState(() =>
+            _row[f.fieldname] = '${two(t.hour)}:${two(t.minute)}:00');
+      }
+      return;
+    }
+    final d = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2100),
+    );
+    if (d == null) return;
+    final ds = '${d.year}-${two(d.month)}-${two(d.day)}';
+    if (f.fieldtype == 'Date') {
+      setState(() => _row[f.fieldname] = ds);
+    } else {
+      if (!context.mounted) return;
+      final t =
+          await showTimePicker(context: context, initialTime: TimeOfDay.now());
+      final ts = t == null ? '00:00:00' : '${two(t.hour)}:${two(t.minute)}:00';
+      setState(() => _row[f.fieldname] = '$ds $ts');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -630,8 +726,32 @@ class _RowEditorState extends ConsumerState<_RowEditor> {
               isScrollControlled: true,
               builder: (_) => _LinkSearchSheetRow(doctype: f.options ?? ''),
             );
-            if (picked != null) setState(() => _row[f.fieldname] = picked);
+            if (picked != null) {
+              setState(() => _row[f.fieldname] = picked);
+              _applyFetch(f, picked);
+            }
           },
+          child: InputDecorator(
+            decoration: InputDecoration(
+                labelText: f.reqd ? '${f.label} *' : f.label,
+                border: const OutlineInputBorder(),
+                isDense: true),
+            child: Text(value?.isNotEmpty == true ? value! : 'Tap to select',
+                style: value?.isNotEmpty == true
+                    ? null
+                    : TextStyle(color: AppColors.onSurfaceVariant)),
+          ),
+        ),
+      );
+    }
+    if (f.fieldtype == 'Date' ||
+        f.fieldtype == 'Datetime' ||
+        f.fieldtype == 'Time') {
+      final value = _row[f.fieldname] as String?;
+      return Padding(
+        padding: pad,
+        child: InkWell(
+          onTap: () => _pickDate(context, f),
           child: InputDecorator(
             decoration: InputDecoration(
                 labelText: f.reqd ? '${f.label} *' : f.label,

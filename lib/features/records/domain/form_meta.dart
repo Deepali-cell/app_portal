@@ -11,6 +11,7 @@ class FieldMeta {
     this.reqd = false,
     this.readOnly = false,
     this.defaultValue,
+    this.fetchFrom,
     this.childFields = const [],
   });
 
@@ -21,6 +22,10 @@ class FieldMeta {
   final bool reqd;
   final bool readOnly;
   final String? defaultValue;
+
+  /// "link_fieldname.source_field" - when that Link is picked this field is
+  /// auto-filled from the source doc (ERPNext fetch_from).
+  final String? fetchFrom;
   final List<FieldMeta> childFields;
 
   bool get isTable => fieldtype == 'Table';
@@ -33,6 +38,9 @@ class FieldMeta {
         reqd: (j['reqd'] ?? 0) == 1,
         readOnly: (j['read_only'] ?? 0) == 1,
         defaultValue: j['default']?.toString(),
+        fetchFrom: (j['fetch_from'] as String?)?.isNotEmpty == true
+            ? j['fetch_from'] as String
+            : null,
         childFields: ((j['child_fields'] as List?) ?? const [])
             .map((e) => FieldMeta.fromJson((e as Map).cast<String, dynamic>()))
             .toList(),

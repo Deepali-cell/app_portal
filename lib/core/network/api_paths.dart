@@ -372,6 +372,8 @@ class ApiPaths {
       '/api/method/tcb_portal_erp.api.portal_forms.get_meta';
   static const String portalSearchLink =
       '/api/method/tcb_portal_erp.api.portal_forms.search_link';
+  static const String portalFetchLink =
+      '/api/method/tcb_portal_erp.api.portal_forms.fetch_link_values';
   static const String portalSaveDoc =
       '/api/method/tcb_portal_erp.api.portal_forms.save_doc';
   static const String portalSubmitDoc =
@@ -382,6 +384,10 @@ class ApiPaths {
       '/api/method/tcb_portal_erp.api.purchase.create_rfq_from_material_request';
   static const String purchaseRfqsForMr =
       '/api/method/tcb_portal_erp.api.purchase.list_rfqs_for_material_request';
+  static const String purchaseRfqSuppliers =
+      '/api/method/tcb_portal_erp.api.purchase.list_rfq_suppliers';
+  static const String purchaseReceiptItems =
+      '/api/method/tcb_portal_erp.api.purchase.list_receipt_items';
   static const String purchaseCreateSqFromRfq =
       '/api/method/tcb_portal_erp.api.purchase.create_supplier_quotation_from_rfq';
   static const String purchaseCompareQuotations =
@@ -412,6 +418,12 @@ class ApiPaths {
       '/api/method/tcb_portal_erp.api.sales.create_payment_entry_from_so';
   static const String salesDashboardSummary =
       '/api/method/tcb_portal_erp.api.sales_dashboard.get_summary';
+
+  // Manufacturing cycle conversions (BOM -> Work Order -> Stock Entry)
+  static const String mfgCreateWorkOrderFromBom =
+      '/api/method/tcb_portal_erp.api.manufacturing.create_work_order_from_bom';
+  static const String mfgCreateStockEntryFromWorkOrder =
+      '/api/method/tcb_portal_erp.api.manufacturing.create_stock_entry_from_work_order';
 
   // Stock module (Phase 1)
   static const String stockListItems =

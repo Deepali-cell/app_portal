@@ -8,6 +8,8 @@ import '../../../core/theme/app_dimens.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../projects/data/project_repository.dart';
 import '../../purchase/data/purchase_repository.dart';
+import '../../purchase/presentation/purchase_comparison_screen.dart';
+import '../../manufacturing/data/manufacturing_repository.dart';
 import '../../sales/data/sales_repository.dart';
 import '../../tasks/application/task_controller.dart';
 import '../../tasks/domain/models.dart';
@@ -128,6 +130,33 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
           const SizedBox(height: AppDimens.lg),
           _MaterialRequestRfqSection(materialRequest: widget.args.name),
         ],
+        // ---- Purchase chain: next-step conversion buttons ----
+        if (d.doctype == 'Request for Quotation' &&
+            !{'Draft', 'Cancelled'}.contains(_str(doc['status']))) ...[
+          const SizedBox(height: AppDimens.lg),
+          _PurchaseConversionSection(
+              doctype: d.doctype, name: widget.args.name),
+        ],
+        if (d.doctype == 'Supplier Quotation' &&
+            !{'Draft', 'Cancelled', 'Expired', 'Lost', 'Stopped'}
+                .contains(_str(doc['status']))) ...[
+          const SizedBox(height: AppDimens.lg),
+          _PurchaseConversionSection(
+              doctype: d.doctype, name: widget.args.name),
+        ],
+        if (d.doctype == 'Purchase Order' &&
+            {'To Receive and Bill', 'To Receive'}
+                .contains(_str(doc['status']))) ...[
+          const SizedBox(height: AppDimens.lg),
+          _PurchaseConversionSection(
+              doctype: d.doctype, name: widget.args.name),
+        ],
+        if (d.doctype == 'Purchase Receipt' &&
+            !{'Draft', 'Cancelled'}.contains(_str(doc['status']))) ...[
+          const SizedBox(height: AppDimens.lg),
+          _PurchaseConversionSection(
+              doctype: d.doctype, name: widget.args.name),
+        ],
         if (d.doctype == 'Quotation' &&
             !{'Draft', 'Cancelled', 'Lost'}.contains(_str(doc['status']))) ...[
           const SizedBox(height: AppDimens.lg),
@@ -174,6 +203,44 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
                 label: 'Create Return',
                 targetKey: 'sales_delivery',
                 run: (repo) => repo.createSalesReturn(widget.args.name),
+              ),
+            ],
+          ),
+        ],
+        // ---- Manufacturing chain: next-step conversion buttons ----
+        if (d.doctype == 'BOM' &&
+            (doc['is_active'] == 1 || doc['is_active'] == true)) ...[
+          const SizedBox(height: AppDimens.lg),
+          _ManufacturingConversionSection(
+            actions: [
+              _ManufacturingAction(
+                label: 'Create Work Order',
+                targetKey: 'mfg_work_order',
+                run: (repo) => repo.createWorkOrderFromBom(widget.args.name),
+              ),
+            ],
+          ),
+        ],
+        if (d.doctype == 'Work Order' &&
+            {'Not Started', 'In Process'}.contains(_str(doc['status']))) ...[
+          const SizedBox(height: AppDimens.lg),
+          _ManufacturingConversionSection(
+            actions: [
+              _ManufacturingAction(
+                label: 'Transfer Material',
+                targetKey: 'stock_entry',
+                run: (repo) => repo.createStockEntryFromWorkOrder(
+                  widget.args.name,
+                  purpose: 'Material Transfer for Manufacture',
+                ),
+              ),
+              _ManufacturingAction(
+                label: 'Manufacture',
+                targetKey: 'stock_entry',
+                run: (repo) => repo.createStockEntryFromWorkOrder(
+                  widget.args.name,
+                  purpose: 'Manufacture',
+                ),
               ),
             ],
           ),
@@ -689,6 +756,314 @@ class _MaterialRequestRfqSectionState
   }
 }
 
+/// Purchase-chain "Next step" buttons shown on RFQ / Supplier Quotation /
+/// Purchase Order / Purchase Receipt detail screens. Mirrors the Sales
+/// conversion pattern; the RFQ and Return steps need a small picker first,
+/// the rest are one tap. Backed by tcb_portal_erp.api.purchase.
+class _PurchaseConversionSection extends ConsumerStatefulWidget {
+  const _PurchaseConversionSection({required this.doctype, required this.name});
+  final String doctype;
+  final String name;
+
+  @override
+  ConsumerState<_PurchaseConversionSection> createState() =>
+      _PurchaseConversionSectionState();
+}
+
+class _PurchaseConversionSectionState
+    extends ConsumerState<_PurchaseConversionSection> {
+  bool _running = false;
+
+  PurchaseRepository get _repo => ref.read(purchaseRepositoryProvider);
+
+  void _snack(String m) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+
+  Future<void> _oneTap(
+    Future<String> Function() run,
+    String label, {
+    String? targetKey,
+  }) async {
+    setState(() => _running = true);
+    try {
+      final name = await run();
+      if (!mounted) return;
+      _snack('$label: $name');
+      if (targetKey != null) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => RecordDetailScreen(
+              args: RecordArgs(recordRegistry[targetKey]!, name),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) _snack('Failed: $e');
+    } finally {
+      if (mounted) setState(() => _running = false);
+    }
+  }
+
+  Future<void> _createSqFromRfq() async {
+    List<Map<String, dynamic>> suppliers;
+    try {
+      suppliers = await _repo.rfqSuppliers(widget.name);
+    } catch (e) {
+      if (mounted) _snack('Failed: $e');
+      return;
+    }
+    if (!mounted) return;
+    if (suppliers.isEmpty) {
+      _snack('No suppliers invited on this RFQ');
+      return;
+    }
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(AppDimens.lg),
+              child: Text('Create quotation for supplier',
+                  style: TextStyle(fontWeight: FontWeight.w700)),
+            ),
+            for (final s in suppliers)
+              ListTile(
+                title: Text((s['supplier_name'] ?? s['supplier']).toString()),
+                subtitle: Text((s['supplier'] ?? '').toString()),
+                onTap: () =>
+                    Navigator.pop(context, (s['supplier'] ?? '').toString()),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (picked == null || picked.isEmpty) return;
+    await _oneTap(
+      () => _repo.createSupplierQuotationFromRfq(widget.name, picked),
+      'Supplier Quotation',
+      targetKey: 'purchase_supplier_quotation',
+    );
+  }
+
+  Future<void> _createReturn() async {
+    List<Map<String, dynamic>> items;
+    try {
+      items = await _repo.receiptItems(widget.name);
+    } catch (e) {
+      if (mounted) _snack('Failed: $e');
+      return;
+    }
+    if (!mounted) return;
+    final result = await showModalBottomSheet<List<Map<String, dynamic>>>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _ReturnItemsSheet(items: items),
+    );
+    if (result == null || result.isEmpty) return;
+    await _oneTap(
+      () => _repo.createPurchaseReturn(widget.name, result),
+      'Return',
+      targetKey: 'purchase_receipt',
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final spinner = _running;
+    Widget primaryBtn(String label, IconData icon, VoidCallback onTap) =>
+        FilledButton.icon(
+          onPressed: spinner ? null : onTap,
+          icon: spinner
+              ? const SizedBox(
+                  height: 16,
+                  width: 16,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: Colors.white),
+                )
+              : Icon(icon, size: 18),
+          label: Text(label),
+        );
+    Widget outlineBtn(String label, IconData icon, VoidCallback onTap) =>
+        OutlinedButton.icon(
+          onPressed: spinner ? null : onTap,
+          icon: Icon(icon, size: 18),
+          label: Text(label),
+        );
+
+    final buttons = <Widget>[];
+    switch (widget.doctype) {
+      case 'Request for Quotation':
+        buttons.add(primaryBtn('Create Supplier Quotation',
+            Icons.request_quote_outlined, _createSqFromRfq));
+        buttons.add(outlineBtn(
+            'Compare Quotations',
+            Icons.compare_arrows,
+            () => Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => PurchaseComparisonScreen(
+                      requestForQuotation: widget.name),
+                ))));
+        break;
+      case 'Supplier Quotation':
+        buttons.add(primaryBtn(
+            'Create Purchase Order',
+            Icons.shopping_cart_outlined,
+            () => _oneTap(
+                () => _repo.createPoFromSupplierQuotation(widget.name),
+                'Purchase Order',
+                targetKey: 'purchase_order')));
+        break;
+      case 'Purchase Order':
+        buttons.add(primaryBtn(
+            'Create Receipt (GRN)',
+            Icons.inventory_2_outlined,
+            () => _oneTap(() => _repo.createReceiptFromPo(widget.name),
+                'Purchase Receipt',
+                targetKey: 'purchase_receipt')));
+        break;
+      case 'Purchase Receipt':
+        buttons.add(primaryBtn(
+            'Create Invoice',
+            Icons.receipt_long_outlined,
+            () => _oneTap(() => _repo.createInvoiceFromReceipt(widget.name),
+                'Purchase Invoice')));
+        buttons.add(outlineBtn('Create Return',
+            Icons.assignment_return_outlined, _createReturn));
+        break;
+    }
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimens.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Next step',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: AppDimens.sm),
+            Wrap(
+              spacing: AppDimens.sm,
+              runSpacing: AppDimens.sm,
+              children: buttons,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Quantity sheet for a Purchase Return: lists the receipt's items with their
+/// returnable qty (received - already returned) and lets the user enter how
+/// much of each to return. Returns [{item_code, qty}] for the picked rows.
+class _ReturnItemsSheet extends StatefulWidget {
+  const _ReturnItemsSheet({required this.items});
+  final List<Map<String, dynamic>> items;
+
+  @override
+  State<_ReturnItemsSheet> createState() => _ReturnItemsSheetState();
+}
+
+class _ReturnItemsSheetState extends State<_ReturnItemsSheet> {
+  late final Map<String, TextEditingController> _controllers;
+
+  double _returnable(Map<String, dynamic> it) {
+    final rec = (it['received_qty'] as num?)?.toDouble() ?? 0;
+    final ret = (it['returned_qty'] as num?)?.toDouble() ?? 0;
+    final left = rec - ret;
+    return left < 0 ? 0 : left;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _controllers = {
+      for (final it in widget.items)
+        (it['item_code'] ?? '').toString(): TextEditingController(),
+    };
+  }
+
+  @override
+  void dispose() {
+    for (final c in _controllers.values) {
+      c.dispose();
+    }
+    super.dispose();
+  }
+
+  void _submit() {
+    final out = <Map<String, dynamic>>[];
+    for (final it in widget.items) {
+      final code = (it['item_code'] ?? '').toString();
+      final qty = double.tryParse(_controllers[code]?.text.trim() ?? '') ?? 0;
+      if (qty > 0) out.add({'item_code': code, 'qty': qty});
+    }
+    Navigator.of(context).pop(out);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      child: SizedBox(
+        height: MediaQuery.of(context).size.height * 0.7,
+        child: Column(
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(AppDimens.lg),
+              child: Text('Return quantities',
+                  style: TextStyle(fontWeight: FontWeight.w700)),
+            ),
+            Expanded(
+              child: ListView.separated(
+                itemCount: widget.items.length,
+                separatorBuilder: (_, _) => const Divider(height: 1),
+                itemBuilder: (_, i) {
+                  final it = widget.items[i];
+                  final code = (it['item_code'] ?? '').toString();
+                  final name = (it['item_name'] ?? code).toString();
+                  final left = _returnable(it);
+                  return ListTile(
+                    title: Text(name),
+                    subtitle: Text('$code  •  returnable: $left'),
+                    trailing: SizedBox(
+                      width: 90,
+                      child: TextField(
+                        controller: _controllers[code],
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        decoration: const InputDecoration(
+                          labelText: 'Qty',
+                          isDense: true,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(AppDimens.md),
+                child: FilledButton(
+                  onPressed: _submit,
+                  child: const Text('Create Return'),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Multi-select Supplier picker for inviting suppliers on a new RFQ.
 class _SupplierMultiSelectSheet extends ConsumerStatefulWidget {
   const _SupplierMultiSelectSheet();
@@ -896,6 +1271,94 @@ class _SalesConversionSectionState
     setState(() => _running = true);
     try {
       final repo = ref.read(salesRepositoryProvider);
+      final name = await action.run(repo);
+      if (!mounted) return;
+      _snack('${action.label}: $name');
+      final targetKey = action.targetKey;
+      if (targetKey != null) {
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => RecordDetailScreen(
+              args: RecordArgs(recordRegistry[targetKey]!, name),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) _snack('Failed: $e');
+    } finally {
+      if (mounted) setState(() => _running = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimens.md),
+        child: Wrap(
+          spacing: AppDimens.sm,
+          runSpacing: AppDimens.sm,
+          children: [
+            for (final action in widget.actions)
+              FilledButton.icon(
+                onPressed: _running ? null : () => _run(action),
+                icon: _running
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.arrow_forward, size: 18),
+                label: Text(action.label),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One next-step action on the Manufacturing detail (e.g. BOM -> Work Order).
+/// `targetKey` is the recordRegistry key to open on success.
+class _ManufacturingAction {
+  const _ManufacturingAction({
+    required this.label,
+    required this.targetKey,
+    required this.run,
+  });
+  final String label;
+  final String? targetKey;
+  final Future<String> Function(ManufacturingRepository repo) run;
+}
+
+/// Manufacturing-cycle conversion buttons shown on BOM/Work Order detail
+/// screens. Mirrors the Sales/Purchase conversion-action pattern: each tap
+/// creates exactly one draft document and opens it.
+class _ManufacturingConversionSection extends ConsumerStatefulWidget {
+  const _ManufacturingConversionSection({required this.actions});
+  final List<_ManufacturingAction> actions;
+
+  @override
+  ConsumerState<_ManufacturingConversionSection> createState() =>
+      _ManufacturingConversionSectionState();
+}
+
+class _ManufacturingConversionSectionState
+    extends ConsumerState<_ManufacturingConversionSection> {
+  bool _running = false;
+
+  void _snack(String m) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+
+  Future<void> _run(_ManufacturingAction action) async {
+    setState(() => _running = true);
+    try {
+      final repo = ref.read(manufacturingRepositoryProvider);
       final name = await action.run(repo);
       if (!mounted) return;
       _snack('${action.label}: $name');

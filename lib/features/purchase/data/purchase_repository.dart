@@ -49,6 +49,17 @@ class PurchaseRepository {
     }
   }
 
+  Future<List<Map<String, dynamic>>> rfqSuppliers(
+      String requestForQuotation) async {
+    return _getList(ApiPaths.purchaseRfqSuppliers,
+        {'request_for_quotation': requestForQuotation});
+  }
+
+  Future<List<Map<String, dynamic>>> receiptItems(String purchaseReceipt) async {
+    return _getList(
+        ApiPaths.purchaseReceiptItems, {'purchase_receipt': purchaseReceipt});
+  }
+
   Future<String> createSupplierQuotationFromRfq(
     String requestForQuotation,
     String supplier,
@@ -96,6 +107,17 @@ class PurchaseRepository {
       'return_against_rejected': returnAgainstRejected ? 1 : 0,
     });
     return (data['name'] ?? '').toString();
+  }
+
+  Future<List<Map<String, dynamic>>> _getList(
+      String path, Map<String, dynamic> query) async {
+    try {
+      final resp = await _dio.get(path, queryParameters: query);
+      final list = (resp.data['message'] as List?) ?? const [];
+      return list.map((e) => (e as Map).cast<String, dynamic>()).toList();
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
   }
 
   Future<Map<String, dynamic>> _get(

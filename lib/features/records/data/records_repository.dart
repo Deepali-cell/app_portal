@@ -79,6 +79,31 @@ class RecordsRepository {
     }
   }
 
+  /// Read source fields of a linked record so the form can auto-fill
+  /// fetch_from fields when a Link is picked. Returns {field: value}.
+  Future<Map<String, dynamic>> fetchLinkValues(
+    String doctype,
+    String name,
+    List<String> fields,
+  ) async {
+    if (name.isEmpty || fields.isEmpty) return const {};
+    try {
+      final resp = await _dio.get(
+        ApiPaths.portalFetchLink,
+        queryParameters: {
+          'doctype': doctype,
+          'name': name,
+          'fields': jsonEncode(fields),
+        },
+      );
+      final msg = resp.data['message'];
+      if (msg is Map) return msg.cast<String, dynamic>();
+      return const {};
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
   /// Insert (name null) or update, optionally submit. Returns {name, docstatus}.
   Future<Map<String, dynamic>> saveDoc(
     String doctype,
