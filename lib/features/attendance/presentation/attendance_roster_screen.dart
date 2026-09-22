@@ -88,7 +88,16 @@ class _AttendanceRosterScreenState
     final async = ref.watch(attendanceRosterProvider(_key));
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: Text(widget.title)),
+      appBar: AppBar(
+        title: Text(widget.title),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            icon: Icon(Icons.refresh, color: AppColors.primary),
+            onPressed: () => ref.invalidate(attendanceRosterProvider(_key)),
+          ),
+        ],
+      ),
       body: Column(
         children: [
           Padding(

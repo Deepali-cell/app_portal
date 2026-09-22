@@ -24,6 +24,12 @@ class ProfileScreen extends ConsumerWidget {
         ),
         title: const Text('My Profile'),
         actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            icon: Icon(Icons.refresh, color: AppColors.primary),
+            onPressed: () =>
+                ref.read(authControllerProvider.notifier).refresh(),
+          ),
           if (profile?.employee != null)
             IconButton(
               tooltip: 'Edit',

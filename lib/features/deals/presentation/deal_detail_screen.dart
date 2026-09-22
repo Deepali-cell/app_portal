@@ -119,6 +119,11 @@ class _DealDetailScreenState extends ConsumerState<DealDetailScreen>
       appBar: AppBar(
         title: Text(deal?.title ?? 'Deal'),
         actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            icon: Icon(Icons.refresh, color: AppColors.primary),
+            onPressed: () => ref.invalidate(dealDetailProvider(widget.name)),
+          ),
           if (onDetailsTab && deal != null && !_editing)
             IconButton(
               tooltip: 'Edit',

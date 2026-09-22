@@ -34,8 +34,6 @@ import '../../features/location_tracking/presentation/team_live_list_screen.dart
 import '../../features/location_tracking/presentation/team_live_map_screen.dart';
 import '../../features/sales_workspace/presentation/sales_workspace_screen.dart';
 import '../../features/admin/presentation/admin_screen.dart';
-import '../../features/purchase/presentation/purchase_dashboard_screen.dart';
-import '../../features/sales/presentation/sales_dashboard_screen.dart';
 import '../../features/reports/presentation/reports_hub_screen.dart';
 import '../../features/reports/presentation/report_view_screen.dart';
 import '../../features/records/domain/descriptor.dart';
@@ -89,13 +87,11 @@ class Routes {
   static const stockMaterialRequest = '/stock/material-request';
   static const stockEntry = '/stock/entry';
   // Purchase
-  static const purchaseDashboard = '/purchase/dashboard';
   static const purchaseSupplier = '/purchase/supplier';
   static const purchaseRfq = '/purchase/rfq';
   static const purchaseSupplierQuotation = '/purchase/supplier-quotation';
   static const purchaseOrder = '/purchase/order';
   static const purchaseReceipt = '/purchase/receipt';
-  static const salesDashboard = '/sales/dashboard';
   static const salesCustomer = '/sales/customer';
   // Reports hubs (curated ERPNext reports, per-report role gated)
   static const accountsReports = '/accounts/reports';
@@ -322,24 +318,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           _recordBranch(Routes.stockWarehouse, 'stock_warehouse'),
           _recordBranch(Routes.stockMaterialRequest, 'stock_material_request'),
           _recordBranch(Routes.stockEntry, 'stock_entry'),
-          StatefulShellBranch(routes: [
-            GoRoute(
-              path: Routes.purchaseDashboard,
-              builder: (_, _) => const PurchaseDashboardScreen(),
-            ),
-          ]),
           _recordBranch(Routes.purchaseSupplier, 'purchase_supplier'),
           _recordBranch(Routes.purchaseRfq, 'purchase_rfq'),
           _recordBranch(
               Routes.purchaseSupplierQuotation, 'purchase_supplier_quotation'),
           _recordBranch(Routes.purchaseOrder, 'purchase_order'),
           _recordBranch(Routes.purchaseReceipt, 'purchase_receipt'),
-          StatefulShellBranch(routes: [
-            GoRoute(
-              path: Routes.salesDashboard,
-              builder: (_, _) => const SalesDashboardScreen(),
-            ),
-          ]),
           _recordBranch(Routes.salesCustomer, 'sales_customer'),
           _recordBranch(Routes.salesQuotation, 'sales_quotation'),
           _recordBranch(Routes.salesOrder, 'sales_order'),

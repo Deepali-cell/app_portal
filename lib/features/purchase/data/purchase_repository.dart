@@ -8,19 +8,14 @@ import '../../../core/network/api_paths.dart';
 import '../../../core/providers.dart';
 import '../domain/models.dart';
 
-/// Purchase-cycle conversion actions + dashboard, backed by
-/// tcb_portal_erp.api.purchase / purchase_dashboard. Everyday CRUD for
-/// Supplier/RFQ/Supplier Quotation/Purchase Order/Purchase Receipt goes
-/// through the generic RecordsRepository instead - this repository only
-/// covers the step-to-step conversions that engine doesn't do.
+/// Purchase-cycle conversion actions + quotation comparison, backed by
+/// tcb_portal_erp.api.purchase. Everyday CRUD for Supplier/RFQ/Supplier
+/// Quotation/Purchase Order/Purchase Receipt goes through the generic
+/// RecordsRepository instead - this repository only covers the
+/// step-to-step conversions that engine doesn't do.
 class PurchaseRepository {
   PurchaseRepository(this._dio);
   final Dio _dio;
-
-  Future<PurchaseSummary> dashboard() async {
-    final data = await _get(ApiPaths.purchaseDashboard, const {});
-    return PurchaseSummary.fromJson(data);
-  }
 
   Future<String> createRfqFromMaterialRequest(
     String materialRequest,
@@ -76,6 +71,12 @@ class PurchaseRepository {
     final data = await _get(ApiPaths.purchaseCompareQuotations,
         {'request_for_quotation': requestForQuotation});
     return QuotationComparison.fromJson(data);
+  }
+
+  Future<List<Map<String, dynamic>>> posForSupplierQuotation(
+      String supplierQuotation) async {
+    return _getList(ApiPaths.purchasePosForSq,
+        {'supplier_quotation': supplierQuotation});
   }
 
   Future<String> createPoFromSupplierQuotation(String supplierQuotation) async {
@@ -143,8 +144,3 @@ class PurchaseRepository {
 
 final purchaseRepositoryProvider = Provider<PurchaseRepository>(
     (ref) => PurchaseRepository(ref.watch(dioProvider)));
-
-final purchaseDashboardProvider =
-    FutureProvider.autoDispose<PurchaseSummary>((ref) {
-  return ref.read(purchaseRepositoryProvider).dashboard();
-});

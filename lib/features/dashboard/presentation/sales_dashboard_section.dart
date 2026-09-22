@@ -7,7 +7,9 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
+import '../../deals/presentation/deal_detail_screen.dart';
 import '../../leads/application/leads_view_prefs.dart';
+import '../../leads/presentation/lead_detail_screen.dart';
 import '../data/dashboard_repository.dart';
 import '../domain/models.dart';
 
@@ -415,19 +417,22 @@ class _FollowupItemRow extends StatelessWidget {
       onTap: !canOpen
           ? null
           : () {
-              final router = GoRouter.of(context);
-              final path = item.referenceDoctype == 'Lead'
-                  ? Routes.leadDetail
-                  : Routes.dealDetail;
-              final docname = item.referenceDocname;
-              final currentLoc =
-                  router.routerDelegate.currentConfiguration.uri.path;
+              final docname = item.referenceDocname!;
+              final isLead = item.referenceDoctype == 'Lead';
+              // Close the follow-ups sheet, then open the detail screen with a
+              // plain MaterialPageRoute on the root navigator. The Sales
+              // workspace is a root-level page that sits outside the
+              // StatefulShellRoute, so pushing the shell-branch leadDetail /
+              // dealDetail routes via go_router crashes. A direct page push
+              // (same pattern used elsewhere for linked docs) works reliably.
               Navigator.of(context).pop();
-              if (currentLoc == path) {
-                router.go(path, extra: docname);
-              } else {
-                router.push(path, extra: docname);
-              }
+              Navigator.of(context, rootNavigator: true).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => isLead
+                      ? LeadDetailScreen(name: docname)
+                      : DealDetailScreen(name: docname),
+                ),
+              );
             },
       child: Container(
         margin: const EdgeInsets.only(bottom: 6),

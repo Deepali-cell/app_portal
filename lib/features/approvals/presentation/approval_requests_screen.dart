@@ -35,6 +35,19 @@ class ApprovalRequestsScreen extends StatelessWidget {
         appBar: AppBar(
           backgroundColor: AppColors.surfaceContainerLowest,
           title: const Text('Approval Requests'),
+          actions: [
+            Consumer(
+              builder: (context, ref, _) => IconButton(
+                tooltip: 'Refresh',
+                icon: Icon(Icons.refresh, color: AppColors.primary),
+                onPressed: () {
+                  ref.invalidate(pendingLeaveApprovalsProvider);
+                  ref.invalidate(pendingCompOffApprovalsProvider);
+                  ref.invalidate(pendingExpenseApprovalsProvider);
+                },
+              ),
+            ),
+          ],
           bottom: const TabBar(
             isScrollable: true,
             tabAlignment: TabAlignment.start,

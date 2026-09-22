@@ -394,14 +394,14 @@ class ApiPaths {
       '/api/method/tcb_portal_erp.api.purchase.compare_quotations';
   static const String purchaseCreatePoFromSq =
       '/api/method/tcb_portal_erp.api.purchase.create_po_from_supplier_quotation';
+  static const String purchasePosForSq =
+      '/api/method/tcb_portal_erp.api.purchase.list_pos_for_supplier_quotation';
   static const String purchaseCreateReceiptFromPo =
       '/api/method/tcb_portal_erp.api.purchase.create_receipt_from_po';
   static const String purchaseCreateInvoiceFromReceipt =
       '/api/method/tcb_portal_erp.api.purchase.create_invoice_from_receipt';
   static const String purchaseCreateReturn =
       '/api/method/tcb_portal_erp.api.purchase.create_purchase_return';
-  static const String purchaseDashboard =
-      '/api/method/tcb_portal_erp.api.purchase_dashboard.get_summary';
 
   // Sales cycle conversions (Quotation -> SO -> DN -> Invoice -> Return)
   static const String salesCreateSoFromQuotation =
@@ -416,14 +416,24 @@ class ApiPaths {
       '/api/method/tcb_portal_erp.api.sales.create_sales_return';
   static const String salesCreatePaymentEntryFromSo =
       '/api/method/tcb_portal_erp.api.sales.create_payment_entry_from_so';
-  static const String salesDashboardSummary =
-      '/api/method/tcb_portal_erp.api.sales_dashboard.get_summary';
 
   // Manufacturing cycle conversions (BOM -> Work Order -> Stock Entry)
   static const String mfgCreateWorkOrderFromBom =
       '/api/method/tcb_portal_erp.api.manufacturing.create_work_order_from_bom';
   static const String mfgCreateStockEntryFromWorkOrder =
       '/api/method/tcb_portal_erp.api.manufacturing.create_stock_entry_from_work_order';
+  static const String mfgSubmitWorkOrder =
+      '/api/method/tcb_portal_erp.api.manufacturing.submit_work_order';
+
+  // Job Card shop-floor (list / detail / start / complete)
+  static const String jobCardList =
+      '/api/method/tcb_portal_erp.api.job_card.list_job_cards';
+  static const String jobCardDetail =
+      '/api/method/tcb_portal_erp.api.job_card.get_job_card';
+  static const String jobCardStart =
+      '/api/method/tcb_portal_erp.api.job_card.start_job_card';
+  static const String jobCardComplete =
+      '/api/method/tcb_portal_erp.api.job_card.complete_job_card';
 
   // Stock module (Phase 1)
   static const String stockListItems =

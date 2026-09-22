@@ -73,7 +73,16 @@ class _RecordListScreenState extends ConsumerState<RecordListScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: Text(d.title)),
+      appBar: AppBar(
+        title: Text(d.title),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            icon: Icon(Icons.refresh, color: AppColors.primary),
+            onPressed: _load,
+          ),
+        ],
+      ),
       floatingActionButton: canCreate
           ? FloatingActionButton.extended(
               onPressed: () async {

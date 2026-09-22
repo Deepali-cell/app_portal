@@ -160,6 +160,11 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen>
       appBar: AppBar(
         title: Text(lead?.title ?? 'Lead'),
         actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            icon: Icon(Icons.refresh, color: AppColors.primary),
+            onPressed: () => ref.invalidate(leadDetailProvider(widget.name)),
+          ),
           if (onDetailsTab && lead != null && !_editing)
             IconButton(
               tooltip: 'Edit',

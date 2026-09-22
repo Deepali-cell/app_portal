@@ -70,6 +70,11 @@ class _PayslipDetailScreenState extends ConsumerState<PayslipDetailScreen> {
         title: const Text('Payslip'),
         actions: [
           IconButton(
+            tooltip: 'Refresh',
+            icon: Icon(Icons.refresh, color: AppColors.primary),
+            onPressed: () => ref.invalidate(payslipDetailProvider(widget.name)),
+          ),
+          IconButton(
             tooltip: revealed ? 'Hide amounts' : 'Show amounts',
             icon: Icon(revealed
                 ? Icons.visibility_outlined

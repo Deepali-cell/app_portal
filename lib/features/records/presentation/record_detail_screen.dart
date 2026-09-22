@@ -6,6 +6,8 @@ import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../crm_shared/application/providers.dart';
+import '../../crm_shared/domain/crm_ref.dart';
 import '../../projects/data/project_repository.dart';
 import '../../purchase/data/purchase_repository.dart';
 import '../../purchase/presentation/purchase_comparison_screen.dart';
@@ -68,6 +70,11 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
       appBar: AppBar(
         title: Text(d.title),
         actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            icon: Icon(Icons.refresh, color: AppColors.primary),
+            onPressed: _load,
+          ),
           if (canEdit)
             IconButton(
               icon: const Icon(Icons.edit_outlined),
@@ -140,6 +147,8 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
         if (d.doctype == 'Supplier Quotation' &&
             !{'Draft', 'Cancelled', 'Expired', 'Lost', 'Stopped'}
                 .contains(_str(doc['status']))) ...[
+          const SizedBox(height: AppDimens.lg),
+          _SupplierQuotationPoSection(supplierQuotation: widget.args.name),
           const SizedBox(height: AppDimens.lg),
           _PurchaseConversionSection(
               doctype: d.doctype, name: widget.args.name),
@@ -221,8 +230,15 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
             ],
           ),
         ],
+        if (d.doctype == 'Work Order' && _str(doc['status']) == 'Draft') ...[
+          const SizedBox(height: AppDimens.lg),
+          _WorkOrderSubmitSection(
+              workOrder: widget.args.name, onSubmitted: _load),
+        ],
         if (d.doctype == 'Work Order' &&
             {'Not Started', 'In Process'}.contains(_str(doc['status']))) ...[
+          const SizedBox(height: AppDimens.lg),
+          _WorkOrderJobCardsSection(workOrder: widget.args.name),
           const SizedBox(height: AppDimens.lg),
           _ManufacturingConversionSection(
             actions: [
@@ -244,6 +260,10 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
               ),
             ],
           ),
+        ],
+        if (d.doctype == 'Job Card') ...[
+          const SizedBox(height: AppDimens.lg),
+          _JobCardShopFloorSection(jobCard: widget.args.name),
         ],
       ],
     );
@@ -743,6 +763,98 @@ class _MaterialRequestRfqSectionState
                       builder: (_) => RecordDetailScreen(
                         args: RecordArgs(
                           recordRegistry['purchase_rfq']!,
+                          r['name'].toString(),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Supplier Quotation -> Purchase Order links. Read-only list of the POs
+/// already created from this Supplier Quotation (a PO carries its source SQ on
+/// each PO item). Creating a new PO is handled separately by the "Next step"
+/// conversion section, so this section only surfaces existing links.
+class _SupplierQuotationPoSection extends ConsumerStatefulWidget {
+  const _SupplierQuotationPoSection({required this.supplierQuotation});
+  final String supplierQuotation;
+
+  @override
+  ConsumerState<_SupplierQuotationPoSection> createState() =>
+      _SupplierQuotationPoSectionState();
+}
+
+class _SupplierQuotationPoSectionState
+    extends ConsumerState<_SupplierQuotationPoSection> {
+  List<Map<String, dynamic>>? _pos;
+  Object? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final pos = await ref
+          .read(purchaseRepositoryProvider)
+          .posForSupplierQuotation(widget.supplierQuotation);
+      if (mounted) {
+        setState(() {
+          _pos = pos;
+          _error = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = e);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimens.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Purchase Orders',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w700)),
+            if (_error != null)
+              Text('$_error', style: const TextStyle(color: AppColors.error)),
+            if (_pos == null && _error == null)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: AppDimens.sm),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if ((_pos ?? const []).isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppDimens.sm),
+                child: Text('No Purchase Order created yet',
+                    style: TextStyle(color: AppColors.onSurfaceVariant)),
+              )
+            else
+              for (final r in _pos!)
+                ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(r['name']?.toString() ?? ''),
+                  subtitle: Text(r['status']?.toString() ?? ''),
+                  onTap: () => Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (_) => RecordDetailScreen(
+                        args: RecordArgs(
+                          recordRegistry['purchase_order']!,
                           r['name'].toString(),
                         ),
                       ),
@@ -1409,4 +1521,414 @@ class _ManufacturingConversionSectionState
       ),
     );
   }
+}
+
+/// Draft Work Order -> "Submit (create Job Cards)". Submitting a Work Order is
+/// what makes ERPNext auto-create its Job Cards (one per BOM operation), so this
+/// is the shop-floor entry point. After submit we refresh the detail so the
+/// Job Cards list + conversion buttons appear.
+class _WorkOrderSubmitSection extends ConsumerStatefulWidget {
+  const _WorkOrderSubmitSection(
+      {required this.workOrder, required this.onSubmitted});
+  final String workOrder;
+  final VoidCallback onSubmitted;
+
+  @override
+  ConsumerState<_WorkOrderSubmitSection> createState() =>
+      _WorkOrderSubmitSectionState();
+}
+
+class _WorkOrderSubmitSectionState
+    extends ConsumerState<_WorkOrderSubmitSection> {
+  bool _running = false;
+
+  void _snack(String m) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+
+  Future<void> _submit() async {
+    setState(() => _running = true);
+    try {
+      final cards = await ref
+          .read(manufacturingRepositoryProvider)
+          .submitWorkOrder(widget.workOrder);
+      if (!mounted) return;
+      _snack(cards.isEmpty
+          ? 'Work Order submitted. No Job Cards (BOM has no operations).'
+          : 'Work Order submitted. ${cards.length} Job Card(s) created.');
+      widget.onSubmitted();
+    } catch (e) {
+      if (mounted) _snack('Failed: $e');
+    } finally {
+      if (mounted) setState(() => _running = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimens.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Production',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: AppDimens.xs),
+            Text(
+              'Submit this Work Order to release it to production. Job Cards '
+              'are created automatically for each operation.',
+              style: TextStyle(color: AppColors.onSurfaceVariant),
+            ),
+            const SizedBox(height: AppDimens.sm),
+            FilledButton.icon(
+              onPressed: _running ? null : _submit,
+              icon: _running
+                  ? const SizedBox(
+                      height: 16,
+                      width: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white),
+                    )
+                  : const Icon(Icons.play_circle_outline, size: 18),
+              label: const Text('Submit (create Job Cards)'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Submitted Work Order -> read-only list of its Job Cards, each tappable to
+/// open the Job Card (where the operator can assign / start / stop).
+class _WorkOrderJobCardsSection extends ConsumerStatefulWidget {
+  const _WorkOrderJobCardsSection({required this.workOrder});
+  final String workOrder;
+
+  @override
+  ConsumerState<_WorkOrderJobCardsSection> createState() =>
+      _WorkOrderJobCardsSectionState();
+}
+
+class _WorkOrderJobCardsSectionState
+    extends ConsumerState<_WorkOrderJobCardsSection> {
+  List<Map<String, dynamic>>? _cards;
+  Object? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final cards = await ref
+          .read(manufacturingRepositoryProvider)
+          .listJobCards(mine: false, workOrder: widget.workOrder);
+      if (mounted) {
+        setState(() {
+          _cards = cards;
+          _error = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = e);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimens.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Job Cards',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w700)),
+            if (_error != null)
+              Text('$_error', style: const TextStyle(color: AppColors.error)),
+            if (_cards == null && _error == null)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: AppDimens.sm),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if ((_cards ?? const []).isEmpty)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: AppDimens.sm),
+                child: Text('No Job Cards for this Work Order',
+                    style: TextStyle(color: AppColors.onSurfaceVariant)),
+              )
+            else
+              for (final c in _cards!)
+                ListTile(
+                  dense: true,
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(c['operation']?.toString() ??
+                      c['name']?.toString() ??
+                      ''),
+                  subtitle: Text(c['status']?.toString() ?? ''),
+                  trailing: const Icon(Icons.chevron_right, size: 18),
+                  onTap: () async {
+                    await Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => RecordDetailScreen(
+                          args: RecordArgs(
+                            recordRegistry['mfg_job_card']!,
+                            c['name'].toString(),
+                          ),
+                        ),
+                      ),
+                    );
+                    _load();
+                  },
+                ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Job Card shop-floor controls: who it is assigned to (assign / unassign via
+/// Frappe's standard document assignment), required vs. completed qty, and the
+/// Start / Stop timer buttons that drive ERPNext's own time logging.
+class _JobCardShopFloorSection extends ConsumerStatefulWidget {
+  const _JobCardShopFloorSection({required this.jobCard});
+  final String jobCard;
+
+  @override
+  ConsumerState<_JobCardShopFloorSection> createState() =>
+      _JobCardShopFloorSectionState();
+}
+
+class _JobCardShopFloorSectionState
+    extends ConsumerState<_JobCardShopFloorSection> {
+  Map<String, dynamic>? _detail;
+  Object? _error;
+  bool _busy = false;
+
+  CrmRef get _ref => CrmRef(doctype: 'Job Card', name: widget.jobCard);
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final d = await ref
+          .read(manufacturingRepositoryProvider)
+          .jobCardDetail(widget.jobCard);
+      if (mounted) {
+        setState(() {
+          _detail = d;
+          _error = null;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _error = e);
+    }
+  }
+
+  void _snack(String m) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+
+  Future<void> _start() async {
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(manufacturingRepositoryProvider)
+          .startJobCard(widget.jobCard);
+      if (!mounted) return;
+      _snack('Started');
+      await _load();
+    } catch (e) {
+      if (mounted) _snack('Failed: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _stop() async {
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(manufacturingRepositoryProvider)
+          .completeJobCard(widget.jobCard);
+      if (!mounted) return;
+      _snack('Stopped and recorded');
+      await _load();
+    } catch (e) {
+      if (mounted) _snack('Failed: $e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _assign() async {
+    final picked = await showModalBottomSheet<String>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => const _UserSearchSheet(),
+    );
+    if (picked == null) return;
+    try {
+      await ref.read(crmCollabRepositoryProvider).addAssignee(_ref, picked);
+      ref.invalidate(assigneesProvider(_ref));
+      _load();
+    } catch (e) {
+      if (mounted) _snack('$e');
+    }
+  }
+
+  Future<void> _unassign(String user) async {
+    try {
+      await ref.read(crmCollabRepositoryProvider).removeAssignee(_ref, user);
+      ref.invalidate(assigneesProvider(_ref));
+      _load();
+    } catch (e) {
+      if (mounted) _snack('$e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final d = _detail;
+    final assignees = ref.watch(assigneesProvider(_ref));
+    final isRunning = d?['is_running'] == true;
+    final forQty = (d?['for_quantity'] as num?)?.toDouble() ?? 0;
+    final doneQty = (d?['total_completed_qty'] as num?)?.toDouble() ?? 0;
+    final status = d?['status']?.toString() ?? '';
+    final docstatus = (d?['docstatus'] as num?)?.toInt() ?? 0;
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimens.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Shop floor',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w700)),
+            if (_error != null)
+              Text('$_error', style: const TextStyle(color: AppColors.error)),
+            if (d == null && _error == null)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: AppDimens.sm),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (d != null) ...[
+              const SizedBox(height: AppDimens.xs),
+              Row(
+                children: [
+                  _chip(
+                      status.isEmpty ? 'Open' : status,
+                      isRunning
+                          ? AppColors.primary
+                          : AppColors.onSurfaceVariant),
+                  const SizedBox(width: AppDimens.sm),
+                  Text('Done ${_fmt(doneQty)} / ${_fmt(forQty)}',
+                      style: TextStyle(color: AppColors.onSurfaceVariant)),
+                ],
+              ),
+              const SizedBox(height: AppDimens.sm),
+              Row(
+                children: [
+                  Expanded(
+                    child: Text('Assigned to',
+                        style: Theme.of(context).textTheme.labelLarge),
+                  ),
+                  TextButton.icon(
+                    onPressed: _assign,
+                    icon: const Icon(Icons.person_add_alt_1_outlined, size: 18),
+                    label: const Text('Assign'),
+                  ),
+                ],
+              ),
+              assignees.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.symmetric(vertical: AppDimens.xs),
+                  child: LinearProgressIndicator(),
+                ),
+                error: (e, _) =>
+                    Text('$e', style: const TextStyle(color: AppColors.error)),
+                data: (list) => list.isEmpty
+                    ? Padding(
+                        padding: const EdgeInsets.only(bottom: AppDimens.xs),
+                        child: Text('Nobody assigned yet',
+                            style:
+                                TextStyle(color: AppColors.onSurfaceVariant)),
+                      )
+                    : Wrap(
+                        spacing: AppDimens.sm,
+                        children: [
+                          for (final a in list)
+                            InputChip(
+                              label: Text(a.fullName),
+                              onDeleted: () => _unassign(a.user),
+                            ),
+                        ],
+                      ),
+              ),
+              const SizedBox(height: AppDimens.sm),
+              if (docstatus == 0)
+                Row(
+                  children: [
+                    if (!isRunning)
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: _busy ? null : _start,
+                          icon: const Icon(Icons.play_arrow, size: 18),
+                          label: const Text('Start'),
+                        ),
+                      )
+                    else
+                      Expanded(
+                        child: FilledButton.icon(
+                          style: FilledButton.styleFrom(
+                              backgroundColor: AppColors.error),
+                          onPressed: _busy ? null : _stop,
+                          icon: const Icon(Icons.stop, size: 18),
+                          label: const Text('Stop'),
+                        ),
+                      ),
+                  ],
+                )
+              else
+                Text('This Job Card is submitted.',
+                    style: TextStyle(color: AppColors.onSurfaceVariant)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  static String _fmt(double v) =>
+      v == v.roundToDouble() ? v.toStringAsFixed(0) : v.toStringAsFixed(2);
+
+  Widget _chip(String text, Color color) => Container(
+        padding:
+            const EdgeInsets.symmetric(horizontal: AppDimens.sm, vertical: 2),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+        ),
+        child: Text(text,
+            style: TextStyle(color: color, fontWeight: FontWeight.w600)),
+      );
 }

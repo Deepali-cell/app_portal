@@ -47,16 +47,7 @@ class HomeScreen extends ConsumerWidget {
         child: RefreshIndicator(
           color: AppColors.primary,
           onRefresh: () async {
-            ref.invalidate(salesDashboardProvider);
-            ref.invalidate(hrSummaryProvider);
-            ref.invalidate(projectsSummaryProvider);
-            ref.invalidate(accountsSummaryProvider);
-            ref.invalidate(teamLiveProvider);
-            ref.invalidate(todaysPlanControllerProvider);
-            ref.invalidate(attendanceControllerProvider);
-            ref.invalidate(leaveControllerProvider);
-            ref.invalidate(payslipListProvider);
-            ref.invalidate(unreadCountProvider);
+            _refreshHome(ref);
             await Future<void>.delayed(const Duration(milliseconds: 400));
           },
           child: SingleChildScrollView(
@@ -126,6 +117,21 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
+/// Re-fetches every data source shown on the Home dashboard. Shared by the
+/// pull-to-refresh gesture and the AppBar refresh button.
+void _refreshHome(WidgetRef ref) {
+  ref.invalidate(salesDashboardProvider);
+  ref.invalidate(hrSummaryProvider);
+  ref.invalidate(projectsSummaryProvider);
+  ref.invalidate(accountsSummaryProvider);
+  ref.invalidate(teamLiveProvider);
+  ref.invalidate(todaysPlanControllerProvider);
+  ref.invalidate(attendanceControllerProvider);
+  ref.invalidate(leaveControllerProvider);
+  ref.invalidate(payslipListProvider);
+  ref.invalidate(unreadCountProvider);
+}
+
 class _HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
   const _HomeAppBar({required this.profile});
   final Profile profile;
@@ -164,6 +170,11 @@ class _HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
         ],
       ),
       actions: [
+        IconButton(
+          onPressed: () => _refreshHome(ref),
+          tooltip: 'Refresh',
+          icon: Icon(Icons.refresh, color: AppColors.primary),
+        ),
         Consumer(builder: (context, ref, _) {
           final unread = ref.watch(unreadCountProvider).value ?? 0;
           return IconButton(

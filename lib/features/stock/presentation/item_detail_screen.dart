@@ -24,6 +24,11 @@ class ItemDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Item'),
         actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            icon: Icon(Icons.refresh, color: AppColors.primary),
+            onPressed: () => ref.invalidate(itemDetailProvider(name)),
+          ),
           if (canEdit && loadedItem != null)
             IconButton(
               icon: const Icon(Icons.edit_outlined),

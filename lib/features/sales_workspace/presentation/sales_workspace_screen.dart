@@ -9,6 +9,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../dashboard/data/dashboard_repository.dart';
 import '../../dashboard/presentation/sales_dashboard_section.dart';
 import '../../home/presentation/app_shell.dart';
 
@@ -80,6 +81,13 @@ class _SalesWorkspaceScreenState extends ConsumerState<SalesWorkspaceScreen>
       appBar: AppBar(
         backgroundColor: AppColors.surfaceContainerLowest,
         title: const Text('Sales workspace'),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            icon: Icon(Icons.refresh, color: AppColors.primary),
+            onPressed: () => ref.invalidate(salesDashboardProvider),
+          ),
+        ],
         bottom: TabBar(
           controller: _tabs,
           isScrollable: true,

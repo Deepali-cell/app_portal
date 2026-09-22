@@ -41,7 +41,17 @@ class _ItemsScreenState extends ConsumerState<ItemsScreen> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Items')),
+      appBar: AppBar(
+        title: const Text('Items'),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            icon: Icon(Icons.refresh, color: AppColors.primary),
+            onPressed: () =>
+                ref.read(itemsControllerProvider.notifier).reload(),
+          ),
+        ],
+      ),
       floatingActionButton: canCreate
           ? FloatingActionButton.extended(
               onPressed: () => context.push(Routes.stockItemCreate),

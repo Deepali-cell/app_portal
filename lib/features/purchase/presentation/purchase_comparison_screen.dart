@@ -46,7 +46,16 @@ class _PurchaseComparisonScreenState
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(title: const Text('Compare Quotations')),
+      appBar: AppBar(
+        title: const Text('Compare Quotations'),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            icon: Icon(Icons.refresh, color: AppColors.primary),
+            onPressed: _load,
+          ),
+        ],
+      ),
       body: _body(),
     );
   }
