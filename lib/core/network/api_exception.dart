@@ -313,6 +313,9 @@ class ApiException implements Exception {
       .replaceAll(RegExp(r'\n{3,}'), '\n\n')
       .trim();
 
+  /// User-facing text. [toString] returns ONLY the human message (no kind or
+  /// HTTP code) because it is shown directly in SnackBars via `'$e'`. Internal
+  /// details are still available through [kind] / [statusCode] for logging.
   @override
-  String toString() => 'ApiException($kind, $statusCode): $message';
+  String toString() => message;
 }

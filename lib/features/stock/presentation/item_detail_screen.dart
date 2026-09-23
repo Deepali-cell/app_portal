@@ -6,6 +6,7 @@ import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../records/data/records_repository.dart';
 import '../application/stock_controller.dart';
 
 class ItemDetailScreen extends ConsumerWidget {
@@ -17,6 +18,7 @@ class ItemDetailScreen extends ConsumerWidget {
     final async = ref.watch(itemDetailProvider(name));
     final profile = ref.watch(authControllerProvider.select((s) => s.profile));
     final canEdit = profile?.canDo('stock_item', 'write') ?? false;
+    final canDelete = profile?.canDo('stock_item', 'delete') ?? false;
     final loadedItem = async.value;
 
     return Scaffold(
@@ -70,10 +72,57 @@ class ItemDetailScreen extends ConsumerWidget {
               const SizedBox(height: AppDimens.xs),
               Text(item.description!),
             ],
+            if (canDelete) ...[
+              const SizedBox(height: AppDimens.lg),
+              OutlinedButton.icon(
+                onPressed: () => _confirmAndDelete(context, ref),
+                icon: Icon(Icons.delete_outline, color: AppColors.error),
+                label: Text('Delete',
+                    style: TextStyle(color: AppColors.error)),
+                style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48)),
+              ),
+            ],
           ],
         ),
       ),
     );
+  }
+
+  Future<void> _confirmAndDelete(BuildContext context, WidgetRef ref) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final router = GoRouter.of(context);
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete this item?'),
+        content: const Text(
+            'This item will be permanently deleted. Are you sure?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('No'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Delete it'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ref.read(recordsRepositoryProvider).deleteDoc('Item', name);
+      messenger.showSnackBar(
+          const SnackBar(content: Text('Deleted successfully.')));
+      router.pop();
+    } catch (e) {
+      messenger.showSnackBar(SnackBar(
+        content: Text("Couldn't delete. $e",
+            maxLines: 6, overflow: TextOverflow.ellipsis),
+        duration: const Duration(seconds: 6),
+      ));
+    }
   }
 
   Widget _row(String label, String? value) {

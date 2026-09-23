@@ -370,6 +370,8 @@ class ApiPaths {
   // Generic metadata-driven forms
   static const String portalFormMeta =
       '/api/method/tcb_portal_erp.api.portal_forms.get_meta';
+  static const String portalFormValues =
+      '/api/method/tcb_portal_erp.api.portal_forms.get_doc_values';
   static const String portalSearchLink =
       '/api/method/tcb_portal_erp.api.portal_forms.search_link';
   static const String portalFetchLink =
@@ -378,6 +380,12 @@ class ApiPaths {
       '/api/method/tcb_portal_erp.api.portal_forms.save_doc';
   static const String portalSubmitDoc =
       '/api/method/tcb_portal_erp.api.portal_forms.submit_doc';
+  static const String portalCancelDoc =
+      '/api/method/tcb_portal_erp.api.portal_forms.cancel_doc';
+  static const String portalDeleteDoc =
+      '/api/method/tcb_portal_erp.api.portal_forms.delete_doc';
+  static const String portalCreatedTargets =
+      '/api/method/tcb_portal_erp.api.portal_forms.get_created_targets';
 
   // Purchase cycle conversions (PR -> RFQ -> SQ -> PO -> GRN -> PI -> Return)
   static const String purchaseCreateRfqFromMr =

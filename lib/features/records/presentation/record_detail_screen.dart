@@ -32,8 +32,18 @@ class RecordDetailScreen extends ConsumerStatefulWidget {
 
 class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
   Map<String, dynamic>? _doc;
+  Map<String, dynamic> _created = const {};
   Object? _error;
   bool _loading = true;
+
+  /// True if a downstream [targetDoctype] (draft or submitted) already exists
+  /// for this record - so its "Create ..." button should hide.
+  bool _made(String targetDoctype) =>
+      (_created[targetDoctype]?['exists'] as num?)?.toInt() == 1;
+
+  /// A sample name of the already-created [targetDoctype], for the message.
+  String _madeSample(String targetDoctype) =>
+      _str(_created[targetDoctype]?['sample']);
 
   @override
   void initState() {
@@ -47,11 +57,25 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
       _error = null;
     });
     try {
-      final doc = await ref.read(recordsRepositoryProvider).getDoc(
-            widget.args.descriptor.doctype,
-            widget.args.name,
-          );
-      if (mounted) setState(() => _doc = doc);
+      final repo = ref.read(recordsRepositoryProvider);
+      final doc = await repo.getDoc(
+        widget.args.descriptor.doctype,
+        widget.args.name,
+      );
+      // Best-effort: which next-step docs already exist. Never block the screen.
+      Map<String, dynamic> created = const {};
+      try {
+        created = await repo.getCreatedTargets(
+          widget.args.descriptor.doctype,
+          widget.args.name,
+        );
+      } catch (_) {}
+      if (mounted) {
+        setState(() {
+          _doc = doc;
+          _created = created;
+        });
+      }
     } catch (e) {
       if (mounted) setState(() => _error = e);
     } finally {
@@ -124,6 +148,23 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
                 ?.copyWith(color: AppColors.onSurfaceVariant)),
         const SizedBox(height: AppDimens.lg),
         for (final f in d.detailFields) _row(f, doc[f.key]),
+        // Work Order / Job Card carry their own bespoke submit/lifecycle
+        // sections below, so skip the generic one to avoid duplicate buttons.
+        if (d.doctype != 'Work Order' && d.doctype != 'Job Card') ...[
+          const SizedBox(height: AppDimens.lg),
+          _LifecycleSection(
+            doctype: d.doctype,
+            name: widget.args.name,
+            docstatus: (doc['docstatus'] as num?)?.toInt() ?? 0,
+            status: _str(doc['status']),
+            onChanged: _load,
+            onDeleted: () {
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop('deleted');
+              }
+            },
+          ),
+        ],
         if (d.doctype == 'Project') ...[
           const SizedBox(height: AppDimens.lg),
           _ProjectTeamSection(project: widget.args.name),
@@ -142,78 +183,123 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
             !{'Draft', 'Cancelled'}.contains(_str(doc['status']))) ...[
           const SizedBox(height: AppDimens.lg),
           _PurchaseConversionSection(
-              doctype: d.doctype, name: widget.args.name),
+              doctype: d.doctype,
+              name: widget.args.name,
+              created: _created,
+              onChanged: _load),
         ],
         if (d.doctype == 'Supplier Quotation' &&
             !{'Draft', 'Cancelled', 'Expired', 'Lost', 'Stopped'}
                 .contains(_str(doc['status']))) ...[
           const SizedBox(height: AppDimens.lg),
-          _SupplierQuotationPoSection(supplierQuotation: widget.args.name),
-          const SizedBox(height: AppDimens.lg),
           _PurchaseConversionSection(
-              doctype: d.doctype, name: widget.args.name),
+              doctype: d.doctype,
+              name: widget.args.name,
+              created: _created,
+              onChanged: _load),
         ],
         if (d.doctype == 'Purchase Order' &&
             {'To Receive and Bill', 'To Receive'}
                 .contains(_str(doc['status']))) ...[
           const SizedBox(height: AppDimens.lg),
           _PurchaseConversionSection(
-              doctype: d.doctype, name: widget.args.name),
+              doctype: d.doctype,
+              name: widget.args.name,
+              created: _created,
+              onChanged: _load),
         ],
         if (d.doctype == 'Purchase Receipt' &&
             !{'Draft', 'Cancelled'}.contains(_str(doc['status']))) ...[
           const SizedBox(height: AppDimens.lg),
           _PurchaseConversionSection(
-              doctype: d.doctype, name: widget.args.name),
+              doctype: d.doctype,
+              name: widget.args.name,
+              created: _created,
+              onChanged: _load),
         ],
         if (d.doctype == 'Quotation' &&
-            !{'Draft', 'Cancelled', 'Lost'}.contains(_str(doc['status']))) ...[
+            !{'Draft', 'Cancelled', 'Lost', 'Expired'}
+                .contains(_str(doc['status']))) ...[
           const SizedBox(height: AppDimens.lg),
           _SalesConversionSection(
-            actions: [
-              _SalesAction(
-                label: 'Create Sales Order',
-                targetKey: 'sales_order',
-                run: (repo) => repo.createSoFromQuotation(widget.args.name),
-              ),
-            ],
+            status: _str(doc['status']),
+            // A newly created Sales Order is a DRAFT, so the Quotation stays
+            // "Open" until it is submitted. Detect the SO directly (draft too)
+            // so the button hides the moment the SO exists.
+            doneNote: _made('Sales Order')
+                ? 'Sales Order already created (${_madeSample('Sales Order')}). '
+                    'The next steps are now available on that Sales Order.'
+                : null,
+            actions: _made('Sales Order')
+                ? const []
+                : [
+                    _SalesAction(
+                      label: 'Create Sales Order',
+                      targetKey: 'sales_order',
+                      run: (repo) =>
+                          repo.createSoFromQuotation(widget.args.name),
+                    ),
+                  ],
+            onDone: _load,
           ),
         ],
         if (d.doctype == 'Sales Order' &&
             !{'Draft', 'Cancelled', 'Closed'}.contains(_str(doc['status']))) ...[
           const SizedBox(height: AppDimens.lg),
           _SalesConversionSection(
+            status: _str(doc['status']),
+            // Hide each button once that next-step doc exists (draft counts).
+            doneNote: (_made('Delivery Note') || _made('Sales Invoice'))
+                ? [
+                    if (_made('Delivery Note'))
+                      'Delivery Note already created (${_madeSample('Delivery Note')}).',
+                    if (_made('Sales Invoice'))
+                      'Invoice already created (${_madeSample('Sales Invoice')}).',
+                  ].join(' ')
+                : null,
             actions: [
-              _SalesAction(
-                label: 'Create Delivery Note',
-                targetKey: 'sales_delivery',
-                run: (repo) => repo.createDeliveryNoteFromSo(widget.args.name),
-              ),
-              _SalesAction(
-                label: 'Create Invoice',
-                targetKey: null,
-                run: (repo) => repo.createInvoiceFromSo(widget.args.name),
-              ),
+              if (!_made('Delivery Note'))
+                _SalesAction(
+                  label: 'Create Delivery Note',
+                  targetKey: 'sales_delivery',
+                  run: (repo) =>
+                      repo.createDeliveryNoteFromSo(widget.args.name),
+                ),
+              if (!_made('Sales Invoice'))
+                _SalesAction(
+                  label: 'Create Invoice',
+                  targetKey: null,
+                  run: (repo) => repo.createInvoiceFromSo(widget.args.name),
+                ),
             ],
+            onDone: _load,
           ),
         ],
         if (d.doctype == 'Delivery Note' &&
             !{'Draft', 'Cancelled'}.contains(_str(doc['status']))) ...[
           const SizedBox(height: AppDimens.lg),
           _SalesConversionSection(
+            status: _str(doc['status']),
+            // Hide the invoice button once an invoice exists (draft counts).
+            doneNote: _made('Sales Invoice')
+                ? 'Invoice already created (${_madeSample('Sales Invoice')}). '
+                    'You can still create a Return if needed.'
+                : null,
             actions: [
-              _SalesAction(
-                label: 'Create Invoice',
-                targetKey: null,
-                run: (repo) =>
-                    repo.createInvoiceFromDeliveryNote(widget.args.name),
-              ),
+              if (!_made('Sales Invoice'))
+                _SalesAction(
+                  label: 'Create Invoice',
+                  targetKey: null,
+                  run: (repo) =>
+                      repo.createInvoiceFromDeliveryNote(widget.args.name),
+                ),
               _SalesAction(
                 label: 'Create Return',
                 targetKey: 'sales_delivery',
                 run: (repo) => repo.createSalesReturn(widget.args.name),
               ),
             ],
+            onDone: _load,
           ),
         ],
         // ---- Manufacturing chain: next-step conversion buttons ----
@@ -293,6 +379,216 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
   String _str(dynamic v) => v == null ? '' : v.toString();
 }
 
+/// Universal document lifecycle actions driven by ERPNext docstatus:
+/// draft (0) -> Submit + Delete, submitted (1) -> Cancel, cancelled (2) -> note.
+/// Non-submittable doctypes only ever show Delete. All backend calls enforce
+/// the matching ERPNext permission (submit/cancel/delete) and link checks.
+class _LifecycleSection extends ConsumerStatefulWidget {
+  const _LifecycleSection({
+    required this.doctype,
+    required this.name,
+    required this.docstatus,
+    required this.status,
+    required this.onChanged,
+    required this.onDeleted,
+  });
+
+  final String doctype;
+  final String name;
+  final int docstatus;
+  final String status;
+
+  /// Refresh the detail after submit/cancel so the stage and forward actions update.
+  final VoidCallback onChanged;
+
+  /// Called after a successful delete (the record no longer exists).
+  final VoidCallback onDeleted;
+
+  /// Doctypes this app works with that are submittable in ERPNext. A draft of
+  /// these can be submitted; anything else only offers Delete.
+  static const Set<String> _submittable = {
+    'Quotation',
+    'Sales Order',
+    'Delivery Note',
+    'Sales Invoice',
+    'Purchase Order',
+    'Purchase Receipt',
+    'Purchase Invoice',
+    'Material Request',
+    'Request for Quotation',
+    'Supplier Quotation',
+    'Stock Entry',
+    'Work Order',
+    'Job Card',
+    'BOM',
+    'Payment Entry',
+  };
+
+  @override
+  ConsumerState<_LifecycleSection> createState() => _LifecycleSectionState();
+}
+
+class _LifecycleSectionState extends ConsumerState<_LifecycleSection> {
+  bool _busy = false;
+
+  bool get _isSubmittable =>
+      _LifecycleSection._submittable.contains(widget.doctype);
+
+  void _snack(String m) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(m, maxLines: 6, overflow: TextOverflow.ellipsis),
+        duration: const Duration(seconds: 6)));
+  }
+
+  Future<bool> _confirm(String title, String message, String action) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('No'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(action),
+          ),
+        ],
+      ),
+    );
+    return ok ?? false;
+  }
+
+  Future<void> _submit() async {
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(recordsRepositoryProvider)
+          .submitDoc(widget.doctype, widget.name);
+      _snack('Submitted successfully.');
+      widget.onChanged();
+    } catch (e) {
+      _snack('$e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _cancel() async {
+    if (!await _confirm('Cancel this document?',
+        'This document will be cancelled. Are you sure?', 'Cancel it')) {
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(recordsRepositoryProvider)
+          .cancelDoc(widget.doctype, widget.name);
+      _snack('Cancelled successfully.');
+      widget.onChanged();
+    } catch (e) {
+      _snack('$e');
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _delete() async {
+    if (!await _confirm('Delete this record?',
+        'This record will be permanently deleted. Are you sure?', 'Delete it')) {
+      return;
+    }
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(recordsRepositoryProvider)
+          .deleteDoc(widget.doctype, widget.name);
+      _snack('Deleted successfully.');
+      widget.onDeleted();
+    } catch (e) {
+      _snack('$e');
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ds = widget.docstatus;
+    final buttons = <Widget>[];
+
+    if (ds == 0) {
+      if (_isSubmittable) {
+        buttons.add(FilledButton.icon(
+          onPressed: _busy ? null : _submit,
+          icon: const Icon(Icons.check),
+          label: const Text('Submit'),
+        ));
+      }
+      buttons.add(OutlinedButton.icon(
+        onPressed: _busy ? null : _delete,
+        icon: Icon(Icons.delete_outline, color: AppColors.error),
+        label: Text('Delete', style: TextStyle(color: AppColors.error)),
+      ));
+    } else if (ds == 1) {
+      buttons.add(OutlinedButton.icon(
+        onPressed: _busy ? null : _cancel,
+        icon: Icon(Icons.cancel_outlined, color: AppColors.error),
+        label: Text('Cancel', style: TextStyle(color: AppColors.error)),
+      ));
+    } else {
+      // Cancelled - allow removing the record entirely.
+      buttons.add(OutlinedButton.icon(
+        onPressed: _busy ? null : _delete,
+        icon: Icon(Icons.delete_outline, color: AppColors.error),
+        label: Text('Delete', style: TextStyle(color: AppColors.error)),
+      ));
+    }
+
+    final stageLabel = ds == 0
+        ? 'Draft'
+        : ds == 2
+            ? 'Cancelled'
+            : (widget.status.isEmpty ? 'Submitted' : widget.status);
+
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimens.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text('Document',
+                    style: TextStyle(fontWeight: FontWeight.w700)),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AppDimens.sm, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+                  ),
+                  child: Text(stageLabel,
+                      style: TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12)),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppDimens.sm),
+            Wrap(spacing: AppDimens.sm, runSpacing: AppDimens.sm, children: buttons),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Project team ("Assign Projects"): who this project is assigned to, with
 /// add/remove. Separate from the generic edit form because `users` is a
 /// child table Frappe's list query can't select (see project_repository.dart).
@@ -354,7 +650,9 @@ class _ProjectTeamSectionState extends ConsumerState<_ProjectTeamSection> {
   }
 
   void _snack(String m) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(m, maxLines: 6, overflow: TextOverflow.ellipsis),
+        duration: const Duration(seconds: 6)));
 
   @override
   Widget build(BuildContext context) {
@@ -458,7 +756,9 @@ class _ProjectTasksSectionState extends ConsumerState<_ProjectTasksSection> {
   }
 
   void _snack(String m) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(m, maxLines: 6, overflow: TextOverflow.ellipsis),
+        duration: const Duration(seconds: 6)));
 
   Future<void> _addTask() async {
     final subject = await showModalBottomSheet<String>(
@@ -675,7 +975,9 @@ class _MaterialRequestRfqSectionState
   }
 
   void _snack(String m) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(m, maxLines: 6, overflow: TextOverflow.ellipsis),
+        duration: const Duration(seconds: 6)));
 
   Future<void> _createRfq() async {
     final suppliers = await showModalBottomSheet<List<String>>(
@@ -701,7 +1003,7 @@ class _MaterialRequestRfqSectionState
         ),
       );
     } catch (e) {
-      if (mounted) _snack('Failed: $e');
+      if (mounted) _snack("Couldn't complete. $e");
     } finally {
       if (mounted) setState(() => _creating = false);
     }
@@ -780,102 +1082,25 @@ class _MaterialRequestRfqSectionState
 /// already created from this Supplier Quotation (a PO carries its source SQ on
 /// each PO item). Creating a new PO is handled separately by the "Next step"
 /// conversion section, so this section only surfaces existing links.
-class _SupplierQuotationPoSection extends ConsumerStatefulWidget {
-  const _SupplierQuotationPoSection({required this.supplierQuotation});
-  final String supplierQuotation;
-
-  @override
-  ConsumerState<_SupplierQuotationPoSection> createState() =>
-      _SupplierQuotationPoSectionState();
-}
-
-class _SupplierQuotationPoSectionState
-    extends ConsumerState<_SupplierQuotationPoSection> {
-  List<Map<String, dynamic>>? _pos;
-  Object? _error;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  Future<void> _load() async {
-    try {
-      final pos = await ref
-          .read(purchaseRepositoryProvider)
-          .posForSupplierQuotation(widget.supplierQuotation);
-      if (mounted) {
-        setState(() {
-          _pos = pos;
-          _error = null;
-        });
-      }
-    } catch (e) {
-      if (mounted) setState(() => _error = e);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      margin: EdgeInsets.zero,
-      child: Padding(
-        padding: const EdgeInsets.all(AppDimens.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Purchase Orders',
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w700)),
-            if (_error != null)
-              Text('$_error', style: const TextStyle(color: AppColors.error)),
-            if (_pos == null && _error == null)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: AppDimens.sm),
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if ((_pos ?? const []).isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: AppDimens.sm),
-                child: Text('No Purchase Order created yet',
-                    style: TextStyle(color: AppColors.onSurfaceVariant)),
-              )
-            else
-              for (final r in _pos!)
-                ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(r['name']?.toString() ?? ''),
-                  subtitle: Text(r['status']?.toString() ?? ''),
-                  onTap: () => Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => RecordDetailScreen(
-                        args: RecordArgs(
-                          recordRegistry['purchase_order']!,
-                          r['name'].toString(),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 /// Purchase-chain "Next step" buttons shown on RFQ / Supplier Quotation /
 /// Purchase Order / Purchase Receipt detail screens. Mirrors the Sales
 /// conversion pattern; the RFQ and Return steps need a small picker first,
 /// the rest are one tap. Backed by tcb_portal_erp.api.purchase.
 class _PurchaseConversionSection extends ConsumerStatefulWidget {
-  const _PurchaseConversionSection({required this.doctype, required this.name});
+  const _PurchaseConversionSection({
+    required this.doctype,
+    required this.name,
+    this.created = const {},
+    this.onChanged,
+  });
   final String doctype;
   final String name;
+
+  /// {targetDoctype: {exists, count, sample}} - which next-step docs exist.
+  final Map<String, dynamic> created;
+
+  /// Refresh the source detail after a conversion so buttons update.
+  final VoidCallback? onChanged;
 
   @override
   ConsumerState<_PurchaseConversionSection> createState() =>
@@ -889,7 +1114,9 @@ class _PurchaseConversionSectionState
   PurchaseRepository get _repo => ref.read(purchaseRepositoryProvider);
 
   void _snack(String m) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(m, maxLines: 6, overflow: TextOverflow.ellipsis),
+        duration: const Duration(seconds: 6)));
 
   Future<void> _oneTap(
     Future<String> Function() run,
@@ -901,6 +1128,8 @@ class _PurchaseConversionSectionState
       final name = await run();
       if (!mounted) return;
       _snack('$label: $name');
+      // Refresh the source so the just-created step's button hides.
+      widget.onChanged?.call();
       if (targetKey != null) {
         Navigator.of(context).push(
           MaterialPageRoute(
@@ -911,7 +1140,7 @@ class _PurchaseConversionSectionState
         );
       }
     } catch (e) {
-      if (mounted) _snack('Failed: $e');
+      if (mounted) _snack("Couldn't complete. $e");
     } finally {
       if (mounted) setState(() => _running = false);
     }
@@ -922,7 +1151,7 @@ class _PurchaseConversionSectionState
     try {
       suppliers = await _repo.rfqSuppliers(widget.name);
     } catch (e) {
-      if (mounted) _snack('Failed: $e');
+      if (mounted) _snack("Couldn't complete. $e");
       return;
     }
     if (!mounted) return;
@@ -965,7 +1194,7 @@ class _PurchaseConversionSectionState
     try {
       items = await _repo.receiptItems(widget.name);
     } catch (e) {
-      if (mounted) _snack('Failed: $e');
+      if (mounted) _snack("Couldn't complete. $e");
       return;
     }
     if (!mounted) return;
@@ -1005,11 +1234,21 @@ class _PurchaseConversionSectionState
           label: Text(label),
         );
 
+    bool made(String target) =>
+        (widget.created[target]?['exists'] as num?)?.toInt() == 1;
+    String sample(String target) =>
+        (widget.created[target]?['sample'] ?? '').toString();
+
     final buttons = <Widget>[];
+    final notes = <String>[];
     switch (widget.doctype) {
       case 'Request for Quotation':
-        buttons.add(primaryBtn('Create Supplier Quotation',
-            Icons.request_quote_outlined, _createSqFromRfq));
+        if (made('Supplier Quotation')) {
+          notes.add('Supplier Quotation already created (${sample('Supplier Quotation')}).');
+        } else {
+          buttons.add(primaryBtn('Create Supplier Quotation',
+              Icons.request_quote_outlined, _createSqFromRfq));
+        }
         buttons.add(outlineBtn(
             'Compare Quotations',
             Icons.compare_arrows,
@@ -1019,28 +1258,45 @@ class _PurchaseConversionSectionState
                 ))));
         break;
       case 'Supplier Quotation':
-        buttons.add(primaryBtn(
-            'Create Purchase Order',
-            Icons.shopping_cart_outlined,
-            () => _oneTap(
-                () => _repo.createPoFromSupplierQuotation(widget.name),
-                'Purchase Order',
-                targetKey: 'purchase_order')));
+        if (made('Purchase Order')) {
+          notes.add('Purchase Order already created (${sample('Purchase Order')}).');
+        } else {
+          buttons.add(primaryBtn(
+              'Create Purchase Order',
+              Icons.shopping_cart_outlined,
+              () => _oneTap(
+                  () => _repo.createPoFromSupplierQuotation(widget.name),
+                  'Purchase Order',
+                  targetKey: 'purchase_order')));
+        }
         break;
       case 'Purchase Order':
-        buttons.add(primaryBtn(
-            'Create Receipt (GRN)',
-            Icons.inventory_2_outlined,
-            () => _oneTap(() => _repo.createReceiptFromPo(widget.name),
-                'Purchase Receipt',
-                targetKey: 'purchase_receipt')));
+        if (made('Purchase Receipt')) {
+          notes.add('Receipt (GRN) already created (${sample('Purchase Receipt')}).');
+        } else {
+          buttons.add(primaryBtn(
+              'Create Receipt (GRN)',
+              Icons.inventory_2_outlined,
+              () => _oneTap(() => _repo.createReceiptFromPo(widget.name),
+                  'Purchase Receipt',
+                  targetKey: 'purchase_receipt')));
+        }
+        // Show the invoice status too (a PO can be billed directly), so the
+        // user can see at a glance whether this PO has been invoiced.
+        if (made('Purchase Invoice')) {
+          notes.add('Invoice already created (${sample('Purchase Invoice')}).');
+        }
         break;
       case 'Purchase Receipt':
-        buttons.add(primaryBtn(
-            'Create Invoice',
-            Icons.receipt_long_outlined,
-            () => _oneTap(() => _repo.createInvoiceFromReceipt(widget.name),
-                'Purchase Invoice')));
+        if (made('Purchase Invoice')) {
+          notes.add('Invoice already created (${sample('Purchase Invoice')}).');
+        } else {
+          buttons.add(primaryBtn(
+              'Create Invoice',
+              Icons.receipt_long_outlined,
+              () => _oneTap(() => _repo.createInvoiceFromReceipt(widget.name),
+                  'Purchase Invoice')));
+        }
         buttons.add(outlineBtn('Create Return',
             Icons.assignment_return_outlined, _createReturn));
         break;
@@ -1058,6 +1314,17 @@ class _PurchaseConversionSectionState
                     .textTheme
                     .titleMedium
                     ?.copyWith(fontWeight: FontWeight.w700)),
+            for (final n in notes) ...[
+              const SizedBox(height: AppDimens.sm),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.check_circle, size: 18, color: AppColors.success),
+                  const SizedBox(width: AppDimens.xs),
+                  Expanded(child: Text(n)),
+                ],
+              ),
+            ],
             const SizedBox(height: AppDimens.sm),
             Wrap(
               spacing: AppDimens.sm,
@@ -1364,8 +1631,24 @@ class _SalesAction {
 /// pattern (_MaterialRequestRfqSection) but as simple one-tap buttons since
 /// each of these steps creates exactly one draft document, not a list.
 class _SalesConversionSection extends ConsumerStatefulWidget {
-  const _SalesConversionSection({required this.actions});
+  const _SalesConversionSection({
+    required this.actions,
+    this.status = '',
+    this.doneNote,
+    this.onDone,
+  });
   final List<_SalesAction> actions;
+
+  /// Current ERPNext status of the source doc, shown as a stage chip.
+  final String status;
+
+  /// Shown (with a check) when a step is already done, e.g. the Sales Order
+  /// has been created from this Quotation.
+  final String? doneNote;
+
+  /// Called after a successful conversion so the detail can refresh its
+  /// status - the button then hides itself and the stage updates.
+  final VoidCallback? onDone;
 
   @override
   ConsumerState<_SalesConversionSection> createState() =>
@@ -1377,7 +1660,9 @@ class _SalesConversionSectionState
   bool _running = false;
 
   void _snack(String m) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(m, maxLines: 6, overflow: TextOverflow.ellipsis),
+        duration: const Duration(seconds: 6)));
 
   Future<void> _run(_SalesAction action) async {
     setState(() => _running = true);
@@ -1386,6 +1671,9 @@ class _SalesConversionSectionState
       final name = await action.run(repo);
       if (!mounted) return;
       _snack('${action.label}: $name');
+      // Refresh the source doc so its status advances and any completed
+      // step's button disappears.
+      widget.onDone?.call();
       final targetKey = action.targetKey;
       if (targetKey != null) {
         Navigator.of(context).push(
@@ -1397,7 +1685,7 @@ class _SalesConversionSectionState
         );
       }
     } catch (e) {
-      if (mounted) _snack('Failed: $e');
+      if (mounted) _snack("Couldn't complete. $e");
     } finally {
       if (mounted) setState(() => _running = false);
     }
@@ -1409,24 +1697,72 @@ class _SalesConversionSectionState
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(AppDimens.md),
-        child: Wrap(
-          spacing: AppDimens.sm,
-          runSpacing: AppDimens.sm,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            for (final action in widget.actions)
-              FilledButton.icon(
-                onPressed: _running ? null : () => _run(action),
-                icon: _running
-                    ? const SizedBox(
-                        height: 16,
-                        width: 16,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
-                    : const Icon(Icons.arrow_forward, size: 18),
-                label: Text(action.label),
+            Row(
+              children: [
+                Text('Next step',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleMedium
+                        ?.copyWith(fontWeight: FontWeight.w700)),
+                const Spacer(),
+                if (widget.status.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AppDimens.sm, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+                    ),
+                    child: Text(widget.status,
+                        style: TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 12)),
+                  ),
+              ],
+            ),
+            const SizedBox(height: AppDimens.sm),
+            if (widget.doneNote != null)
+              Padding(
+                padding: EdgeInsets.only(
+                    bottom: widget.actions.isEmpty ? 0 : AppDimens.sm),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.check_circle,
+                        color: AppColors.success, size: 18),
+                    const SizedBox(width: AppDimens.xs),
+                    Expanded(
+                      child: Text(widget.doneNote!,
+                          style: TextStyle(color: AppColors.success)),
+                    ),
+                  ],
+                ),
+              ),
+            if (widget.actions.isNotEmpty)
+              Wrap(
+                spacing: AppDimens.sm,
+                runSpacing: AppDimens.sm,
+                children: [
+                  for (final action in widget.actions)
+                    FilledButton.icon(
+                      onPressed: _running ? null : () => _run(action),
+                      icon: _running
+                          ? const SizedBox(
+                              height: 16,
+                              width: 16,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.arrow_forward, size: 18),
+                      label: Text(action.label),
+                    ),
+                ],
               ),
           ],
         ),
@@ -1465,7 +1801,9 @@ class _ManufacturingConversionSectionState
   bool _running = false;
 
   void _snack(String m) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(m, maxLines: 6, overflow: TextOverflow.ellipsis),
+        duration: const Duration(seconds: 6)));
 
   Future<void> _run(_ManufacturingAction action) async {
     setState(() => _running = true);
@@ -1485,7 +1823,7 @@ class _ManufacturingConversionSectionState
         );
       }
     } catch (e) {
-      if (mounted) _snack('Failed: $e');
+      if (mounted) _snack("Couldn't complete. $e");
     } finally {
       if (mounted) setState(() => _running = false);
     }
@@ -1543,7 +1881,9 @@ class _WorkOrderSubmitSectionState
   bool _running = false;
 
   void _snack(String m) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(m, maxLines: 6, overflow: TextOverflow.ellipsis),
+        duration: const Duration(seconds: 6)));
 
   Future<void> _submit() async {
     setState(() => _running = true);
@@ -1557,7 +1897,7 @@ class _WorkOrderSubmitSectionState
           : 'Work Order submitted. ${cards.length} Job Card(s) created.');
       widget.onSubmitted();
     } catch (e) {
-      if (mounted) _snack('Failed: $e');
+      if (mounted) _snack("Couldn't complete. $e");
     } finally {
       if (mounted) setState(() => _running = false);
     }
@@ -1742,7 +2082,9 @@ class _JobCardShopFloorSectionState
   }
 
   void _snack(String m) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(m, maxLines: 6, overflow: TextOverflow.ellipsis),
+        duration: const Duration(seconds: 6)));
 
   Future<void> _start() async {
     setState(() => _busy = true);
@@ -1754,7 +2096,7 @@ class _JobCardShopFloorSectionState
       _snack('Started');
       await _load();
     } catch (e) {
-      if (mounted) _snack('Failed: $e');
+      if (mounted) _snack("Couldn't complete. $e");
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -1770,7 +2112,7 @@ class _JobCardShopFloorSectionState
       _snack('Stopped and recorded');
       await _load();
     } catch (e) {
-      if (mounted) _snack('Failed: $e');
+      if (mounted) _snack("Couldn't complete. $e");
     } finally {
       if (mounted) setState(() => _busy = false);
     }

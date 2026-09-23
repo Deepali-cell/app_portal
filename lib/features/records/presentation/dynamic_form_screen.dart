@@ -54,10 +54,33 @@ class _DynamicFormScreenState extends ConsumerState<DynamicFormScreen> {
 
   Future<void> _load() async {
     try {
-      final meta =
-          await ref.read(recordsRepositoryProvider).getFormMeta(widget.doctype);
+      final repo = ref.read(recordsRepositoryProvider);
+      final meta = await repo.getFormMeta(widget.doctype);
+      // When editing an existing record, pull the FULL saved values (all
+      // editable fields + child rows). `initialValues` from the detail screen
+      // only carries the trimmed display fields, so on its own the edit form
+      // would show blank. New records (name == null) skip this.
+      Map<String, dynamic> saved = const {};
+      if (widget.name != null) {
+        try {
+          saved = await repo.getFormValues(widget.doctype, widget.name!);
+        } catch (_) {
+          // fall back to the trimmed initialValues if the fetch fails
+        }
+      }
       for (final f in meta.fields) {
-        final init = widget.initialValues[f.fieldname] ?? _defaultFor(f);
+        dynamic init = saved.containsKey(f.fieldname)
+            ? saved[f.fieldname]
+            : widget.initialValues[f.fieldname];
+        if (f.fieldtype == 'Table') {
+          // Normalise child rows to List<Map<String, dynamic>>.
+          final rows = (init as List?) ?? const [];
+          _values[f.fieldname] = rows
+              .map((e) => (e as Map).cast<String, dynamic>())
+              .toList();
+          continue;
+        }
+        init ??= _defaultFor(f);
         if (init != null) _values[f.fieldname] = init;
         if (_isTextType(f.fieldtype)) {
           _controllers[f.fieldname] =
@@ -132,7 +155,7 @@ class _DynamicFormScreenState extends ConsumerState<DynamicFormScreen> {
         Navigator.of(context).pop(res['name']?.toString());
       }
     } catch (e) {
-      if (mounted) _snack('Failed: $e');
+      if (mounted) _snack("Couldn't save. $e");
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -150,7 +173,10 @@ class _DynamicFormScreenState extends ConsumerState<DynamicFormScreen> {
       v == null || (v is String && v.isEmpty) || (v is List && v.isEmpty);
 
   void _snack(String m) =>
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(m, maxLines: 6, overflow: TextOverflow.ellipsis),
+        duration: const Duration(seconds: 6),
+      ));
 
   /// Public rebuild hook for the child field widgets below.
   void update(VoidCallback fn) => setState(fn);

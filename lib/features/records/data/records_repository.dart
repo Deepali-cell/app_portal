@@ -47,6 +47,22 @@ class RecordsRepository {
     }
   }
 
+  /// Current saved values of an existing record for the editable form fields
+  /// (parent + child rows), so the Edit form can pre-fill. `getDoc` returns
+  /// only the trimmed display fields, which is why edit needs this.
+  Future<Map<String, dynamic>> getFormValues(
+      String doctype, String name) async {
+    try {
+      final resp = await _dio.get(
+        ApiPaths.portalFormValues,
+        queryParameters: {'doctype': doctype, 'name': name},
+      );
+      return (resp.data['message'] as Map).cast<String, dynamic>();
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
   Future<FormMeta> getFormMeta(String doctype) async {
     try {
       final resp = await _dio.get(
@@ -122,6 +138,54 @@ class RecordsRepository {
         },
       );
       return (resp.data['message'] as Map).cast<String, dynamic>();
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// Submit a draft (docstatus 0 -> 1). ERPNext submit permission applies.
+  Future<void> submitDoc(String doctype, String name) async {
+    try {
+      await _dio.post(ApiPaths.portalSubmitDoc,
+          data: {'doctype': doctype, 'name': name});
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// Cancel a submitted doc (docstatus 1 -> 2). ERPNext cancel permission applies.
+  Future<void> cancelDoc(String doctype, String name) async {
+    try {
+      await _dio.post(ApiPaths.portalCancelDoc,
+          data: {'doctype': doctype, 'name': name});
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// Which downstream docs already exist (draft or submitted) for a source doc.
+  /// Returns {targetDoctype: {exists:0/1, count:int, sample:String?}}. Used to
+  /// hide "Create ..." buttons once the next-step doc has been made.
+  Future<Map<String, dynamic>> getCreatedTargets(
+      String doctype, String name) async {
+    try {
+      final resp = await _dio.get(
+        ApiPaths.portalCreatedTargets,
+        queryParameters: {'doctype': doctype, 'name': name},
+      );
+      final msg = resp.data['message'];
+      if (msg is Map) return msg.cast<String, dynamic>();
+      return const {};
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
+  /// Delete a draft/cancelled doc. ERPNext delete permission + link checks apply.
+  Future<void> deleteDoc(String doctype, String name) async {
+    try {
+      await _dio.post(ApiPaths.portalDeleteDoc,
+          data: {'doctype': doctype, 'name': name});
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
     }

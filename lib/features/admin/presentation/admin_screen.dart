@@ -239,7 +239,7 @@ class _PermEditor extends ConsumerWidget {
                       } catch (e) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Failed: $e')),
+                            SnackBar(content: Text("Couldn't complete. $e")),
                           );
                         }
                       }
@@ -432,7 +432,7 @@ class _ReportRoleEditor extends ConsumerWidget {
                       } catch (e) {
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('Failed: $e')),
+                            SnackBar(content: Text("Couldn't complete. $e")),
                           );
                         }
                       }
