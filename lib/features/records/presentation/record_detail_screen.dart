@@ -1281,10 +1281,16 @@ class _PurchaseConversionSectionState
                   'Purchase Receipt',
                   targetKey: 'purchase_receipt')));
         }
-        // Show the invoice status too (a PO can be billed directly), so the
-        // user can see at a glance whether this PO has been invoiced.
+        // A PO can be billed directly (without a receipt): show the invoice
+        // status, and offer a Create Invoice button when none exists yet.
         if (made('Purchase Invoice')) {
           notes.add('Invoice already created (${sample('Purchase Invoice')}).');
+        } else {
+          buttons.add(primaryBtn(
+              'Create Invoice',
+              Icons.receipt_long_outlined,
+              () => _oneTap(() => _repo.createInvoiceFromPo(widget.name),
+                  'Purchase Invoice')));
         }
         break;
       case 'Purchase Receipt':

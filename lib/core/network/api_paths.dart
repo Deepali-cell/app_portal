@@ -406,6 +406,8 @@ class ApiPaths {
       '/api/method/tcb_portal_erp.api.purchase.list_pos_for_supplier_quotation';
   static const String purchaseCreateReceiptFromPo =
       '/api/method/tcb_portal_erp.api.purchase.create_receipt_from_po';
+  static const String purchaseCreateInvoiceFromPo =
+      '/api/method/tcb_portal_erp.api.purchase.create_invoice_from_po';
   static const String purchaseCreateInvoiceFromReceipt =
       '/api/method/tcb_portal_erp.api.purchase.create_invoice_from_receipt';
   static const String purchaseCreateReturn =

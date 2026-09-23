@@ -91,6 +91,12 @@ class PurchaseRepository {
     return (data['name'] ?? '').toString();
   }
 
+  Future<String> createInvoiceFromPo(String purchaseOrder) async {
+    final data = await _post(ApiPaths.purchaseCreateInvoiceFromPo,
+        {'purchase_order': purchaseOrder});
+    return (data['name'] ?? '').toString();
+  }
+
   Future<String> createInvoiceFromReceipt(String purchaseReceipt) async {
     final data = await _post(ApiPaths.purchaseCreateInvoiceFromReceipt,
         {'purchase_receipt': purchaseReceipt});
