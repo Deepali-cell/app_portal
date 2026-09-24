@@ -29,6 +29,22 @@ class ManufacturingRepository {
     return (data['name'] ?? '').toString();
   }
 
+  /// Raw-material availability for a submitted Work Order. Returns
+  /// `all_available` plus a per-item list (required/available/shortage), so the
+  /// UI can warn before a Material Transfer and offer a Material Request.
+  Future<Map<String, dynamic>> workOrderStockStatus(String workOrder) async {
+    return _post(ApiPaths.mfgWorkOrderStockStatus, {'work_order': workOrder});
+  }
+
+  /// Create a draft Material Request (Material Transfer) for the Work Order's
+  /// raw-material shortfall.
+  Future<String> createMaterialRequestFromWorkOrder(String workOrder) async {
+    final data = await _post(
+        ApiPaths.mfgCreateMaterialRequestFromWorkOrder,
+        {'work_order': workOrder});
+    return (data['name'] ?? '').toString();
+  }
+
   /// Submit a Work Order. ERPNext auto-creates its Job Cards on submit, so this
   /// is the "release to production" step. Returns the resulting Job Cards.
   Future<List<Map<String, dynamic>>> submitWorkOrder(String workOrder) async {

@@ -18,7 +18,7 @@ import java.io.File
  *   * Xiaomi/MIUI:    /MIUI/sound_recorder/call_rec/
  *                     or /Sounds/CallRecorder/
  *   * Oppo:           /Music/Recordings/Call Recordings/    (same as Realme)
- *   * Vivo:           /Record/Call/  or  /Recordings/Call/
+ *   * Vivo:           /Record/Call/  or  /Recordings/Call/ or Recordings/Record/Call
  *   * OnePlus:        /Recordings/   (varies by OxygenOS version)
  *
  * Strategy:
@@ -53,6 +53,7 @@ object RecordingScanner {
         "Record/PhoneRecord",
         "PhoneRecord",
         "Recordings/Call Recordings",
+        "Recordings/Record/Call",
         "vivo/Record/Call",
         "录音/通话录音",
         // OnePlus / others

@@ -221,7 +221,10 @@ class CallDetectionService : Service() {
                 ),
                 "${CallLog.Calls.DATE} >= ?",
                 arrayOf(minDate.toString()),
-                "${CallLog.Calls.DATE} DESC LIMIT 1",
+                // NOTE: no "LIMIT 1" here — Android 11+ (API 30) rejects LIMIT
+                // in the sort-order arg ("Invalid token LIMIT"). We sort DATE
+                // DESC and read only moveToFirst(), which is the latest row.
+                "${CallLog.Calls.DATE} DESC",
             )
             if (cursor != null && cursor.moveToFirst()) {
                 val num = cursor.getString(cursor.getColumnIndexOrThrow(CallLog.Calls.NUMBER))
@@ -265,7 +268,10 @@ class CallDetectionService : Service() {
                 CallLog.Calls.CONTENT_URI,
                 arrayOf(CallLog.Calls.TYPE, CallLog.Calls.DURATION),
                 null, null,
-                "${CallLog.Calls.DATE} DESC LIMIT 1",
+                // NOTE: no "LIMIT 1" here — Android 11+ (API 30) rejects LIMIT
+                // in the sort-order arg ("Invalid token LIMIT"). We sort DATE
+                // DESC and read only moveToFirst(), which is the latest row.
+                "${CallLog.Calls.DATE} DESC",
             )
             if (cursor != null && cursor.moveToFirst()) {
                 val type = cursor.getInt(cursor.getColumnIndexOrThrow(CallLog.Calls.TYPE))
@@ -346,7 +352,10 @@ class CallDetectionService : Service() {
                 arrayOf(CallLog.Calls.NUMBER, CallLog.Calls.TYPE, CallLog.Calls.DATE),
                 null,
                 null,
-                "${CallLog.Calls.DATE} DESC LIMIT 1",
+                // NOTE: no "LIMIT 1" here — Android 11+ (API 30) rejects LIMIT
+                // in the sort-order arg ("Invalid token LIMIT"). We sort DATE
+                // DESC and read only moveToFirst(), which is the latest row.
+                "${CallLog.Calls.DATE} DESC",
             )
             if (cursor != null && cursor.moveToFirst()) {
                 val numIdx = cursor.getColumnIndexOrThrow(CallLog.Calls.NUMBER)

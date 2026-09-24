@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
+import '../../../core/ui/app_message_dialog.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../crm_shared/application/providers.dart';
 import '../../crm_shared/domain/crm_ref.dart';
@@ -326,25 +327,14 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
           const SizedBox(height: AppDimens.lg),
           _WorkOrderJobCardsSection(workOrder: widget.args.name),
           const SizedBox(height: AppDimens.lg),
-          _ManufacturingConversionSection(
-            actions: [
-              _ManufacturingAction(
-                label: 'Transfer Material',
-                targetKey: 'stock_entry',
-                run: (repo) => repo.createStockEntryFromWorkOrder(
-                  widget.args.name,
-                  purpose: 'Material Transfer for Manufacture',
-                ),
-              ),
-              _ManufacturingAction(
-                label: 'Manufacture',
-                targetKey: 'stock_entry',
-                run: (repo) => repo.createStockEntryFromWorkOrder(
-                  widget.args.name,
-                  purpose: 'Manufacture',
-                ),
-              ),
-            ],
+          // Stock check drives the next step: short -> Material Request only;
+          // in stock -> Transfer Material only; transferred -> Manufacture only.
+          _WorkOrderStockSection(
+            workOrder: widget.args.name,
+            orderQty: double.tryParse('${doc['qty']}') ?? 0,
+            transferredQty:
+                double.tryParse('${doc['material_transferred_for_manufacturing']}') ??
+                    0,
           ),
         ],
         if (d.doctype == 'Job Card') ...[
@@ -471,7 +461,7 @@ class _LifecycleSectionState extends ConsumerState<_LifecycleSection> {
       _snack('Submitted successfully.');
       widget.onChanged();
     } catch (e) {
-      _snack('$e');
+      if (mounted) await showFriendlyError(context, e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -490,7 +480,7 @@ class _LifecycleSectionState extends ConsumerState<_LifecycleSection> {
       _snack('Cancelled successfully.');
       widget.onChanged();
     } catch (e) {
-      _snack('$e');
+      if (mounted) await showFriendlyError(context, e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -509,7 +499,7 @@ class _LifecycleSectionState extends ConsumerState<_LifecycleSection> {
       _snack('Deleted successfully.');
       widget.onDeleted();
     } catch (e) {
-      _snack('$e');
+      if (mounted) await showFriendlyError(context, e);
       if (mounted) setState(() => _busy = false);
     }
   }
@@ -1691,7 +1681,7 @@ class _SalesConversionSectionState
         );
       }
     } catch (e) {
-      if (mounted) _snack("Couldn't complete. $e");
+      if (mounted) await showFriendlyError(context, e);
     } finally {
       if (mounted) setState(() => _running = false);
     }
@@ -1949,6 +1939,300 @@ class _WorkOrderSubmitSectionState
   }
 }
 
+/// Submitted Work Order -> the single next production step, chosen from stock +
+/// transfer state so the buttons never overlap:
+///  - material already transferred to WIP  -> "Manufacture" only
+///  - raw materials all in stock           -> "Transfer Material" only
+///  - something short                      -> "Create Material Request" only
+class _WorkOrderStockSection extends ConsumerStatefulWidget {
+  const _WorkOrderStockSection({
+    required this.workOrder,
+    required this.orderQty,
+    required this.transferredQty,
+  });
+  final String workOrder;
+  final double orderQty;
+  final double transferredQty;
+
+  @override
+  ConsumerState<_WorkOrderStockSection> createState() =>
+      _WorkOrderStockSectionState();
+}
+
+class _WorkOrderStockSectionState
+    extends ConsumerState<_WorkOrderStockSection> {
+  bool _loading = true;
+  bool _creating = false;
+  bool _running = false;
+  String? _error;
+  bool _allAvailable = true;
+  List<Map<String, dynamic>> _items = const [];
+
+  /// Material has been (fully) issued to WIP, so the only step left is the
+  /// Manufacture stock entry - no need to check raw-material stock again.
+  bool get _transferDone =>
+      widget.orderQty > 0 && widget.transferredQty >= widget.orderQty;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_transferDone) {
+      _loading = false;
+    } else {
+      _load();
+    }
+  }
+
+  void _snack(String m) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text(m, maxLines: 6, overflow: TextOverflow.ellipsis),
+      duration: const Duration(seconds: 6)));
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final data = await ref
+          .read(manufacturingRepositoryProvider)
+          .workOrderStockStatus(widget.workOrder);
+      if (!mounted) return;
+      setState(() {
+        _allAvailable = data['all_available'] == true;
+        _items = ((data['items'] as List?) ?? const [])
+            .map((e) => (e as Map).cast<String, dynamic>())
+            .toList();
+        _loading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _createMaterialRequest() async {
+    setState(() => _creating = true);
+    try {
+      final name = await ref
+          .read(manufacturingRepositoryProvider)
+          .createMaterialRequestFromWorkOrder(widget.workOrder);
+      if (!mounted) return;
+      _snack('Material Request created: $name');
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => RecordDetailScreen(
+            args: RecordArgs(recordRegistry['stock_material_request']!, name),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) await showFriendlyError(context, e);
+    } finally {
+      if (mounted) setState(() => _creating = false);
+    }
+  }
+
+  Future<void> _createStockEntry(String purpose, String label) async {
+    setState(() => _running = true);
+    try {
+      final name = await ref
+          .read(manufacturingRepositoryProvider)
+          .createStockEntryFromWorkOrder(widget.workOrder, purpose: purpose);
+      if (!mounted) return;
+      _snack('$label: $name');
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => RecordDetailScreen(
+            args: RecordArgs(recordRegistry['stock_entry']!, name),
+          ),
+        ),
+      );
+    } catch (e) {
+      if (mounted) await showFriendlyError(context, e);
+    } finally {
+      if (mounted) setState(() => _running = false);
+    }
+  }
+
+  String _n(dynamic v) {
+    final d = v is num ? v.toDouble() : double.tryParse('$v') ?? 0;
+    return d == d.roundToDouble() ? d.toInt().toString() : d.toString();
+  }
+
+  String _str(dynamic v) => v == null ? '' : v.toString();
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimens.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Raw material stock',
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w700)),
+            const SizedBox(height: AppDimens.xs),
+            if (_transferDone) ...[
+              Container(
+                padding: const EdgeInsets.all(AppDimens.sm),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(children: [
+                  Icon(Icons.check_circle, color: Colors.green, size: 18),
+                  SizedBox(width: AppDimens.sm),
+                  Expanded(
+                      child: Text('Materials transferred to WIP. '
+                          'Ready to manufacture.')),
+                ]),
+              ),
+              const SizedBox(height: AppDimens.sm),
+              FilledButton.icon(
+                onPressed: _running
+                    ? null
+                    : () => _createStockEntry('Manufacture', 'Manufacture'),
+                icon: _running
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
+                    : const Icon(Icons.precision_manufacturing_outlined,
+                        size: 18),
+                label: const Text('Manufacture'),
+              ),
+            ] else if (_loading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: AppDimens.sm),
+                child: SizedBox(
+                    height: 18,
+                    width: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2)),
+              )
+            else if (_error != null) ...[
+              Text("Couldn't load stock. $_error",
+                  style: const TextStyle(color: Colors.red)),
+              const SizedBox(height: AppDimens.sm),
+              OutlinedButton.icon(
+                onPressed: _load,
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Retry'),
+              ),
+            ] else ...[
+              for (final it in _items)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: AppDimens.xs),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        (_n(it['shortage_qty']) == '0')
+                            ? Icons.check_circle_outline
+                            : Icons.error_outline,
+                        size: 18,
+                        color: (_n(it['shortage_qty']) == '0')
+                            ? Colors.green
+                            : Colors.orange,
+                      ),
+                      const SizedBox(width: AppDimens.sm),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(_str(it['item_name']).isEmpty
+                                ? _str(it['item_code'])
+                                : _str(it['item_name'])),
+                            Text(
+                              'Need ${_n(it['required_qty'])} ${_str(it['uom'])} '
+                              '· In stock ${_n(it['available_qty'])}'
+                              '${_n(it['shortage_qty']) == '0' ? '' : ' · Short ${_n(it['shortage_qty'])}'}',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: AppColors.onSurfaceVariant),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              const SizedBox(height: AppDimens.sm),
+              if (_allAvailable) ...[
+                Container(
+                  padding: const EdgeInsets.all(AppDimens.sm),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(children: [
+                    Icon(Icons.check_circle, color: Colors.green, size: 18),
+                    SizedBox(width: AppDimens.sm),
+                    Expanded(
+                        child: Text(
+                            'All raw materials in stock. Ready to transfer.')),
+                  ]),
+                ),
+                const SizedBox(height: AppDimens.sm),
+                FilledButton.icon(
+                  onPressed: _running
+                      ? null
+                      : () => _createStockEntry(
+                          'Material Transfer for Manufacture',
+                          'Transfer Material'),
+                  icon: _running
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.move_down, size: 18),
+                  label: const Text('Transfer Material'),
+                ),
+              ] else ...[
+                Container(
+                  padding: const EdgeInsets.all(AppDimens.sm),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(children: [
+                    Icon(Icons.warning_amber_rounded,
+                        color: Colors.orange, size: 18),
+                    SizedBox(width: AppDimens.sm),
+                    Expanded(
+                        child: Text('Some raw materials are short. Create a '
+                            'Material Request to procure them first.')),
+                  ]),
+                ),
+                const SizedBox(height: AppDimens.sm),
+                FilledButton.icon(
+                  onPressed: _creating ? null : _createMaterialRequest,
+                  icon: _creating
+                      ? const SizedBox(
+                          height: 16,
+                          width: 16,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white))
+                      : const Icon(Icons.add_shopping_cart, size: 18),
+                  label: const Text('Create Material Request'),
+                ),
+              ],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Submitted Work Order -> read-only list of its Job Cards, each tappable to
 /// open the Job Card (where the operator can assign / start / stop).
 class _WorkOrderJobCardsSection extends ConsumerStatefulWidget {
@@ -2102,7 +2386,7 @@ class _JobCardShopFloorSectionState
       _snack('Started');
       await _load();
     } catch (e) {
-      if (mounted) _snack("Couldn't complete. $e");
+      if (mounted) await showFriendlyError(context, e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -2118,7 +2402,42 @@ class _JobCardShopFloorSectionState
       _snack('Stopped and recorded');
       await _load();
     } catch (e) {
-      if (mounted) _snack("Couldn't complete. $e");
+      if (mounted) await showFriendlyError(context, e);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  /// After the work is stopped/recorded, the Job Card must be SUBMITTED before
+  /// the Work Order can be manufactured (ERPNext blocks Manufacture while any
+  /// job card is still a draft). Goes through the generic submit endpoint.
+  ///
+  /// ERPNext refuses to submit until the completed qty adds up to the qty to
+  /// manufacture, so if the work has not been recorded yet (still running, or
+  /// zero completed) we record it first, then submit - one tap does the whole
+  /// finish for the operator.
+  Future<void> _submit() async {
+    setState(() => _busy = true);
+    try {
+      final repo = ref.read(manufacturingRepositoryProvider);
+      final running = _detail?['is_running'] == true;
+      final done =
+          (_detail?['total_completed_qty'] as num?)?.toDouble() ?? 0;
+      if (running || done <= 0) {
+        await repo.completeJobCard(widget.jobCard);
+      }
+      await ref
+          .read(recordsRepositoryProvider)
+          .submitDoc('Job Card', widget.jobCard);
+      if (!mounted) return;
+      await showAppMessage(context,
+          kind: AppMessageKind.success,
+          title: 'Job card submitted',
+          message: 'This job card is done. Once every job card of the work '
+              'order is submitted, you can record the Manufacture entry.');
+      await _load();
+    } catch (e) {
+      if (mounted) await showFriendlyError(context, e);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
@@ -2234,31 +2553,51 @@ class _JobCardShopFloorSectionState
               ),
               const SizedBox(height: AppDimens.sm),
               if (docstatus == 0)
+                if (isRunning)
+                  // Work in progress -> only Stop.
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.error),
+                      onPressed: _busy ? null : _stop,
+                      icon: const Icon(Icons.stop, size: 18),
+                      label: const Text('Stop'),
+                    ),
+                  )
+                else if (doneQty > 0)
+                  // Work recorded but not submitted yet. Submit is the step
+                  // that lets the Work Order be manufactured.
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                          backgroundColor: AppColors.success),
+                      onPressed: _busy ? null : _submit,
+                      icon: const Icon(Icons.check, size: 18),
+                      label: const Text('Submit'),
+                    ),
+                  )
+                else
+                  // Not started yet.
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: _busy ? null : _start,
+                      icon: const Icon(Icons.play_arrow, size: 18),
+                      label: const Text('Start'),
+                    ),
+                  )
+              else
                 Row(
                   children: [
-                    if (!isRunning)
-                      Expanded(
-                        child: FilledButton.icon(
-                          onPressed: _busy ? null : _start,
-                          icon: const Icon(Icons.play_arrow, size: 18),
-                          label: const Text('Start'),
-                        ),
-                      )
-                    else
-                      Expanded(
-                        child: FilledButton.icon(
-                          style: FilledButton.styleFrom(
-                              backgroundColor: AppColors.error),
-                          onPressed: _busy ? null : _stop,
-                          icon: const Icon(Icons.stop, size: 18),
-                          label: const Text('Stop'),
-                        ),
-                      ),
+                    Icon(Icons.check_circle,
+                        color: AppColors.success, size: 18),
+                    const SizedBox(width: AppDimens.xs),
+                    Text('Job card submitted.',
+                        style: TextStyle(color: AppColors.success)),
                   ],
-                )
-              else
-                Text('This Job Card is submitted.',
-                    style: TextStyle(color: AppColors.onSurfaceVariant)),
+                ),
             ],
           ],
         ),

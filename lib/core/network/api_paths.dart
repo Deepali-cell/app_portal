@@ -434,6 +434,10 @@ class ApiPaths {
       '/api/method/tcb_portal_erp.api.manufacturing.create_stock_entry_from_work_order';
   static const String mfgSubmitWorkOrder =
       '/api/method/tcb_portal_erp.api.manufacturing.submit_work_order';
+  static const String mfgWorkOrderStockStatus =
+      '/api/method/tcb_portal_erp.api.manufacturing.work_order_stock_status';
+  static const String mfgCreateMaterialRequestFromWorkOrder =
+      '/api/method/tcb_portal_erp.api.manufacturing.create_material_request_from_work_order';
 
   // Job Card shop-floor (list / detail / start / complete)
   static const String jobCardList =
