@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
+import '../../../core/ui/app_message_dialog.dart';
 import '../application/admin_controller.dart';
 import '../domain/models.dart';
 
@@ -66,7 +67,8 @@ class _DoctypePermTabState extends ConsumerState<_DoctypePermTab> {
       error: (e, _) => Center(
         child: Padding(
           padding: const EdgeInsets.all(AppDimens.lg),
-          child: Text('$e', textAlign: TextAlign.center),
+          child: Text(friendlyMessageFor(e).message,
+              textAlign: TextAlign.center),
         ),
       ),
       data: (meta) {
@@ -205,7 +207,8 @@ class _PermEditor extends ConsumerWidget {
       error: (e, _) => Center(
         child: Padding(
           padding: const EdgeInsets.all(AppDimens.lg),
-          child: Text('$e', textAlign: TextAlign.center),
+          child: Text(friendlyMessageFor(e).message,
+              textAlign: TextAlign.center),
         ),
       ),
       data: (matrix) {
@@ -238,9 +241,7 @@ class _PermEditor extends ConsumerWidget {
                             .toggle(screen.doctype, t.$1, v);
                       } catch (e) {
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text("Couldn't complete. $e")),
-                          );
+                          showFriendlyError(context, e);
                         }
                       }
                     },
@@ -282,7 +283,8 @@ class _ReportPermTabState extends ConsumerState<_ReportPermTab> {
       error: (e, _) => Center(
         child: Padding(
           padding: const EdgeInsets.all(AppDimens.lg),
-          child: Text('$e', textAlign: TextAlign.center),
+          child: Text(friendlyMessageFor(e).message,
+              textAlign: TextAlign.center),
         ),
       ),
       data: (meta) {
@@ -395,7 +397,8 @@ class _ReportRoleEditor extends ConsumerWidget {
       error: (e, _) => Center(
         child: Padding(
           padding: const EdgeInsets.all(AppDimens.lg),
-          child: Text('$e', textAlign: TextAlign.center),
+          child: Text(friendlyMessageFor(e).message,
+              textAlign: TextAlign.center),
         ),
       ),
       data: (rolesState) {
@@ -431,9 +434,7 @@ class _ReportRoleEditor extends ConsumerWidget {
                             .toggle(role, v);
                       } catch (e) {
                         if (context.mounted) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text("Couldn't complete. $e")),
-                          );
+                          showFriendlyError(context, e);
                         }
                       }
                     },

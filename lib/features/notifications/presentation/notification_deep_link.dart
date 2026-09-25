@@ -126,10 +126,10 @@ Future<void> _openRecordingLinked(
           "yet. Check the Tcb Call Recording in the desk."),
       duration: const Duration(seconds: 4),
     ));
-  } catch (e) {
+  } catch (_) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text("Couldn't open the recording: $e"),
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text("Couldn't open the recording. Please try again."),
     ));
   }
 }

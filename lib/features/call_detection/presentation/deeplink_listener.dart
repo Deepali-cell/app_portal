@@ -197,10 +197,10 @@ class _DeeplinkListenerState extends ConsumerState<DeeplinkListener> {
       } else if (dt == 'CRM Deal') {
         _safePush(ctx, Routes.dealDetail, dn);
       }
-    } catch (e) {
+    } catch (_) {
       if (ctx.mounted) {
-        ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
-          content: Text("Couldn't open recording: $e"),
+        ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+          content: Text("Couldn't open the recording. Please try again."),
         ));
       }
     }

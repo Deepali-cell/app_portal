@@ -54,6 +54,7 @@ import '../../features/timesheet/presentation/all_timesheets_screen.dart';
 import '../../features/timesheet/presentation/timesheet_detail_screen.dart';
 import '../../features/timesheet/presentation/timesheet_screen.dart';
 import '../config/app_config.dart';
+import 'dashboard_refresh.dart';
 
 class Routes {
   Routes._();
@@ -150,7 +151,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   final refresh = _RouterRefresh(ref);
   ref.onDispose(refresh.dispose);
 
-  return GoRouter(
+  final router = GoRouter(
     navigatorKey: rootNavigatorKey,
     initialLocation: Routes.splash,
     refreshListenable: refresh,
@@ -403,6 +404,22 @@ final routerProvider = Provider<GoRouter>((ref) {
               )),
     ],
   );
+
+  // Keep the roll-up dashboards fresh: whenever the visible top-level route
+  // changes to a dashboard, re-fetch its data so the user never has to pull to
+  // refresh. Guarded by `lastPath` so a rebuild that keeps the same route does
+  // not re-fetch.
+  String? lastPath;
+  void onRouteChanged() {
+    final path = router.routerDelegate.currentConfiguration.uri.path;
+    if (path == lastPath) return;
+    lastPath = path;
+    refreshDashboardFor(ref, path);
+  }
+
+  router.routerDelegate.addListener(onRouteChanged);
+  ref.onDispose(() => router.routerDelegate.removeListener(onRouteChanged));
+  return router;
 });
 
 /// A shell branch that hosts a generic [RecordListScreen] for the descriptor

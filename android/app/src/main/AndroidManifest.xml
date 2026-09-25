@@ -23,6 +23,9 @@
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         tools:ignore="ScopedStorage"/>
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
+    <!-- Restart the persistent call-detection service after a reboot so
+         detection keeps working without the user re-opening the app. -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
     <!-- Live location tracking: background permission is Android 10+ only;
          FOREGROUND_SERVICE_LOCATION was introduced in Android 14 and is
          a hard requirement for our persistent foreground service. -->
@@ -67,6 +70,19 @@
             android:exported="true">
             <intent-filter android:priority="900">
                 <action android:name="android.intent.action.PHONE_STATE"/>
+            </intent-filter>
+        </receiver>
+        <!-- Restarts the persistent CallDetectionService after reboot / app
+             update. Only acts when the user has call detection turned on. -->
+        <receiver
+            android:name="com.tcbinfotech.tcb_portal.calldetect.BootReceiver"
+            android:enabled="true"
+            android:exported="true">
+            <intent-filter android:priority="900">
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON"/>
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
             </intent-filter>
         </receiver>
         <service

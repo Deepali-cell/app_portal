@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
+import '../../../core/ui/app_message_dialog.dart';
 import '../data/purchase_repository.dart';
 import '../domain/models.dart';
 
@@ -30,6 +31,12 @@ class _PurchaseComparisonScreenState
   }
 
   Future<void> _load() async {
+    if (mounted) {
+      setState(() {
+        _loading = true;
+        _error = null;
+      });
+    }
     try {
       final data = await ref
           .read(purchaseRepositoryProvider)
@@ -66,7 +73,8 @@ class _PurchaseComparisonScreenState
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(AppDimens.lg),
-          child: Text('$_error', textAlign: TextAlign.center),
+          child: Text(friendlyMessageFor(_error!).message,
+              textAlign: TextAlign.center),
         ),
       );
     }

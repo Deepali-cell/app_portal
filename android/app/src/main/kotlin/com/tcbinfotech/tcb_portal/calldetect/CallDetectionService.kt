@@ -49,14 +49,30 @@ class CallDetectionService : Service() {
         const val ACTION_RINGING = "tcb.call.RINGING"
         const val ACTION_OFFHOOK = "tcb.call.OFFHOOK"
         const val ACTION_IDLE = "tcb.call.IDLE"
+        // Persistent mode: keep the service (and therefore the app process)
+        // alive between calls so the manifest PHONE_STATE receiver still fires
+        // on OEMs that withhold broadcasts from a "stopped" app (Vivo/Oppo/…).
+        const val ACTION_START_PERSISTENT = "tcb.call.START_PERSISTENT"
+        const val ACTION_STOP_PERSISTENT = "tcb.call.STOP_PERSISTENT"
         const val EXTRA_NUMBER = "tcb.call.number"
 
         private const val CHANNEL_ID = "tcb_call_detection"
         private const val FG_NOTIF_ID = 9101
         private const val EVENT_NOTIF_ID = 9102
+
+        // Whether the foreground service is currently up. Read by the Flutter
+        // side (via MainActivity) to show the correct on/off state.
+        @Volatile
+        var isRunning = false
+            private set
     }
 
     private val mainHandler = Handler(Looper.getMainLooper())
+    // When true, the service stays alive between calls (started via
+    // ACTION_START_PERSISTENT). When false, it tears itself down ~25s after a
+    // call ends (the original per-call behaviour).
+    @Volatile
+    private var persistent = false
     private var lastNumber: String? = null
     // "incoming" if we ever saw RINGING for this call; "outgoing" otherwise.
     // OFFHOOK alone after IDLE → outgoing dial. RINGING then OFFHOOK → incoming pickup.
@@ -68,20 +84,43 @@ class CallDetectionService : Service() {
         super.onCreate()
         createNotificationChannel()
         startForegroundCompat(buildIdleNotification("Listening for calls"))
+        isRunning = true
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val action = intent?.action ?: ACTION_IDLE
         val incoming = intent?.getStringExtra(EXTRA_NUMBER)
-        Log.d(TAG, "onStartCommand action=$action number=$incoming")
+        Log.d(TAG, "onStartCommand action=$action number=$incoming persistent=$persistent")
 
         when (action) {
+            ACTION_START_PERSISTENT -> {
+                persistent = true
+                // Foreground was already established in onCreate; just refresh
+                // the ongoing notification so the user sees the correct state.
+                updateIdleNotification("Listening for calls")
+            }
+            ACTION_STOP_PERSISTENT -> {
+                persistent = false
+                stopForegroundAndSelf()
+            }
             ACTION_RINGING -> handleRinging(incoming)
             ACTION_OFFHOOK -> handleOffhook()
             ACTION_IDLE -> handleIdle()
         }
-        // Sticky so OS restarts us if killed mid-call.
+        // Sticky so OS restarts us if killed mid-call / in persistent mode.
         return START_STICKY
+    }
+
+    private fun stopForegroundAndSelf() {
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+            } else {
+                @Suppress("DEPRECATION")
+                stopForeground(true)
+            }
+        } catch (_: Exception) {}
+        stopSelf()
     }
 
     private fun handleRinging(numberFromIntent: String?) {
@@ -155,7 +194,17 @@ class CallDetectionService : Service() {
             )
             scanAndDispatch(numberAtCallEnd, retried = false)
         }, 10_000)
-        mainHandler.postDelayed({ stopSelf() }, 25_000)
+        // In persistent mode we stay alive between calls (so the OEM can't put
+        // the app back into the stopped state and drop the next broadcast); we
+        // just reset the ongoing notification back to idle. In per-call mode we
+        // tear down ~25s after the call, as before.
+        if (persistent) {
+            mainHandler.postDelayed({
+                updateIdleNotification("Listening for calls")
+            }, 25_000)
+        } else {
+            mainHandler.postDelayed({ stopSelf() }, 25_000)
+        }
         // Reset direction + contact so the next call starts fresh; leave
         // lastNumber alone so scanAndDispatch can still read it.
         lastNumber = null
@@ -461,6 +510,7 @@ class CallDetectionService : Service() {
 
     override fun onDestroy() {
         Log.d(TAG, "Service destroyed")
+        isRunning = false
         super.onDestroy()
     }
 }

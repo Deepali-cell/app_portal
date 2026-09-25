@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
+import '../../../core/ui/app_message_dialog.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../records/data/records_repository.dart';
 import '../application/stock_controller.dart';
@@ -44,7 +45,8 @@ class ItemDetailScreen extends ConsumerWidget {
         error: (e, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(AppDimens.lg),
-            child: Text('$e', textAlign: TextAlign.center),
+            child: Text(friendlyMessageFor(e).message,
+              textAlign: TextAlign.center),
           ),
         ),
         data: (item) => ListView(
@@ -118,7 +120,7 @@ class ItemDetailScreen extends ConsumerWidget {
       router.pop();
     } catch (e) {
       messenger.showSnackBar(SnackBar(
-        content: Text("Couldn't delete. $e",
+        content: Text(friendlyMessageFor(e).message,
             maxLines: 6, overflow: TextOverflow.ellipsis),
         duration: const Duration(seconds: 6),
       ));

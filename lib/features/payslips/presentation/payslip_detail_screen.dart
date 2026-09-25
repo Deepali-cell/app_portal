@@ -54,7 +54,9 @@ class _PayslipDetailScreenState extends ConsumerState<PayslipDetailScreen> {
     } on ApiException catch (e) {
       messenger.showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text('Download failed: $e')));
+      messenger.showSnackBar(const SnackBar(
+          content: Text(
+              "Couldn't download the payslip. Please try again in a moment.")));
     } finally {
       if (mounted) setState(() => _downloading = false);
     }

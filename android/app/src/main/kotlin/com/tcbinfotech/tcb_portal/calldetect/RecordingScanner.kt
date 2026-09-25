@@ -90,15 +90,40 @@ object RecordingScanner {
         val parsedNumber: String?,
     )
 
+    // Trailing timestamp patterns OEMs bake into recording filenames, tried in
+    // order. The contact/number is whatever comes BEFORE the match.
+    //   * Realme / Oppo : "Anuj Sharma-2606251545"      (dash + 10-12 digits)
+    //   * Vivo / iQOO   : "Nonu 2026-09-24 12-31-31"    (space + full date-time)
+    //   * generic       : "Name_20260924123131"         (sep + long digit run)
+    private val TS_PATTERNS = listOf(
+        Regex("-(\\d{10,12})$"),
+        Regex("[ _](\\d{4}-\\d{2}-\\d{2}[ _]\\d{2}[-:.]\\d{2}[-:.]\\d{2})$"),
+        Regex("[ _](\\d{4}\\d{2}\\d{2}[ _]?\\d{2}\\d{2}\\d{2})$"),
+        Regex("[ _](\\d{8,14})$"),
+    )
+
     /**
      * Pull contact-name and/or phone-number from the OEM-baked filename.
-     * Format: `<contact-name-or-plus-number>-<YYMMDDHHmm>.<ext>`
+     * Handles the dash form ("Anuj Sharma-2606251545") AND the space form
+     * Vivo/iQOO use ("Nonu 2026-09-24 12-31-31"), where the older dash-only
+     * parser left the whole name+timestamp as a bogus "contact".
      */
     private fun parseFilename(nameNoExt: String): Pair<String?, String?> {
-        // Trim trailing "-YYMMDDHHmm" timestamp (10 digits)
-        val tsRegex = Regex("-(\\d{10,12})$")
-        val match = tsRegex.find(nameNoExt) ?: return Pair(nameNoExt.trim(), null)
-        val prefix = nameNoExt.substring(0, match.range.first).trim()
+        var prefix = nameNoExt
+        for (re in TS_PATTERNS) {
+            val m = re.find(prefix)
+            if (m != null) {
+                prefix = prefix.substring(0, m.range.first)
+                break
+            }
+        }
+        // Strip common OEM labels + leftover separators.
+        prefix = prefix
+            .replace(Regex("(?i)^(call ?recording|recording|record|通话录音)"), "")
+            .trim()
+            .trim('-', '_', ' ')
+            .trim()
+        if (prefix.isEmpty()) return Pair(null, null)
         return if (prefix.startsWith("+") || prefix.all { it.isDigit() }) {
             // It's a phone number
             Pair(null, prefix)

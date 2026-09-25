@@ -202,9 +202,144 @@ class _AndroidBody extends ConsumerWidget {
             ],
           ),
         ),
+        if (snapshot.enabled) ...[
+          const SizedBox(height: AppDimens.md),
+          const _BackgroundReliabilityCard(),
+        ],
         const SizedBox(height: AppDimens.md),
         _FooterHint(),
       ],
+    );
+  }
+}
+
+/// Guides the user through the two OS settings that keep detection working
+/// when the app is closed - battery optimization (AOSP) and OEM autostart
+/// (brand-specific). Works on every Android brand; the autostart button opens
+/// the right screen per brand and falls back to app details on stock Android.
+class _BackgroundReliabilityCard extends ConsumerStatefulWidget {
+  const _BackgroundReliabilityCard();
+
+  @override
+  ConsumerState<_BackgroundReliabilityCard> createState() =>
+      _BackgroundReliabilityCardState();
+}
+
+class _BackgroundReliabilityCardState
+    extends ConsumerState<_BackgroundReliabilityCard>
+    with WidgetsBindingObserver {
+  bool? _batteryExempt;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _refresh();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // Re-check when the user returns from the system settings screen.
+    if (state == AppLifecycleState.resumed) _refresh();
+  }
+
+  Future<void> _refresh() async {
+    final v =
+        await ref.read(callEventBridgeProvider).isIgnoringBatteryOptimizations();
+    if (mounted) setState(() => _batteryExempt = v);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bridge = ref.read(callEventBridgeProvider);
+    final exempt = _batteryExempt == true;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimens.md),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(children: [
+              Icon(Icons.battery_saver, color: AppColors.primary),
+              const SizedBox(width: AppDimens.sm),
+              Expanded(
+                child: Text('Keep detection alive in the background',
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleSmall
+                        ?.copyWith(fontWeight: FontWeight.w700)),
+              ),
+            ]),
+            const SizedBox(height: AppDimens.xs),
+            Text(
+              'Some phones (Vivo, Xiaomi, Oppo, Realme and others) stop the app '
+              'in the background, so calls are missed. Turn these two on so '
+              'detection keeps working even when the app is closed.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.onSurfaceVariant, height: 1.35),
+            ),
+            const SizedBox(height: AppDimens.md),
+            Row(children: [
+              Icon(
+                exempt ? Icons.check_circle : Icons.error_outline,
+                size: 18,
+                color: exempt ? AppColors.success : AppColors.warning,
+              ),
+              const SizedBox(width: AppDimens.xs),
+              Expanded(
+                child: Text(
+                  exempt
+                      ? 'Battery optimization is already off. Good.'
+                      : 'Step 1: Turn off battery optimization for this app.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+            ]),
+            if (!exempt) ...[
+              const SizedBox(height: AppDimens.sm),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: () async {
+                    await bridge.requestIgnoreBatteryOptimizations();
+                  },
+                  icon: const Icon(Icons.battery_saver),
+                  label: const Text('Turn off battery optimization'),
+                ),
+              ),
+            ],
+            const SizedBox(height: AppDimens.md),
+            Row(children: [
+              Icon(Icons.rocket_launch_outlined,
+                  size: 18, color: AppColors.primary),
+              const SizedBox(width: AppDimens.xs),
+              Expanded(
+                child: Text(
+                  'Step 2: Allow Autostart / auto-launch for this app.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+              ),
+            ]),
+            const SizedBox(height: AppDimens.sm),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () async {
+                  await bridge.openAutoStartSettings();
+                },
+                icon: const Icon(Icons.open_in_new),
+                label: const Text('Open Autostart settings'),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

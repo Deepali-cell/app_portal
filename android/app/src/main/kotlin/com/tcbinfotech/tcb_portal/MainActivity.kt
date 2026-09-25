@@ -8,7 +8,10 @@ import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import com.tcbinfotech.tcb_portal.calldetect.AllFilesAccessHelper
+import com.tcbinfotech.tcb_portal.calldetect.BackgroundReliabilityHelper
 import com.tcbinfotech.tcb_portal.calldetect.CallDetectBridge
+import com.tcbinfotech.tcb_portal.calldetect.CallDetectionService
+import com.tcbinfotech.tcb_portal.calldetect.DetectionPrefs
 import com.tcbinfotech.tcb_portal.calldetect.LocalNotifier
 import com.tcbinfotech.tcb_portal.location.LocationTrackingService
 import io.flutter.embedding.android.FlutterFragmentActivity
@@ -102,6 +105,43 @@ class MainActivity : FlutterFragmentActivity() {
                     Log.i("TcbDeeplink", "consumePendingDeeplink → $d")
                     result.success(d)
                 }
+                // ---- Background reliability (all Android brands) ----------
+                "startPersistentDetection" -> {
+                    DetectionPrefs.setEnabled(this, true)
+                    val i = Intent(this, CallDetectionService::class.java).apply {
+                        action = CallDetectionService.ACTION_START_PERSISTENT
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        startForegroundService(i)
+                    } else {
+                        startService(i)
+                    }
+                    result.success(true)
+                }
+                "stopPersistentDetection" -> {
+                    DetectionPrefs.setEnabled(this, false)
+                    val i = Intent(this, CallDetectionService::class.java).apply {
+                        action = CallDetectionService.ACTION_STOP_PERSISTENT
+                    }
+                    startService(i)
+                    result.success(true)
+                }
+                "isPersistentRunning" ->
+                    result.success(CallDetectionService.isRunning)
+                "isIgnoringBatteryOptimizations" ->
+                    result.success(
+                        BackgroundReliabilityHelper
+                            .isIgnoringBatteryOptimizations(this),
+                    )
+                "requestIgnoreBatteryOptimizations" -> {
+                    BackgroundReliabilityHelper
+                        .requestIgnoreBatteryOptimizations(this)
+                    result.success(true)
+                }
+                "openAutoStartSettings" ->
+                    result.success(
+                        BackgroundReliabilityHelper.openAutoStartSettings(this),
+                    )
                 else -> result.notImplemented()
             }
         }

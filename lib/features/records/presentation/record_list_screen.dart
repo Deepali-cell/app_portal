@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
+import '../../../core/ui/app_message_dialog.dart';
 import '../../auth/application/auth_controller.dart';
 import '../data/records_repository.dart';
 import '../domain/descriptor.dart';
@@ -129,7 +130,8 @@ class _RecordListScreenState extends ConsumerState<RecordListScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('$_error', textAlign: TextAlign.center),
+              Text(friendlyMessageFor(_error!).message,
+                  textAlign: TextAlign.center),
               const SizedBox(height: AppDimens.md),
               FilledButton(onPressed: _load, child: const Text('Retry')),
             ],

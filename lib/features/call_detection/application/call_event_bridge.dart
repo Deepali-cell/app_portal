@@ -154,6 +154,59 @@ class CallEventBridge {
     } catch (_) {/* swallow */}
   }
 
+  // ---- Background reliability (all Android brands) --------------------
+  // These keep detection working when the app is closed/backgrounded by
+  // running a persistent foreground service and taking the app out of the
+  // OEM "stopped" state that otherwise drops the PHONE_STATE broadcast.
+
+  /// Start the persistent foreground service + remember it across reboots.
+  Future<void> startPersistentDetection() async {
+    try {
+      await _channel.invokeMethod('startPersistentDetection');
+    } catch (_) {/* non-Android / not supported */}
+  }
+
+  /// Stop the persistent foreground service + forget it across reboots.
+  Future<void> stopPersistentDetection() async {
+    try {
+      await _channel.invokeMethod('stopPersistentDetection');
+    } catch (_) {/* non-Android / not supported */}
+  }
+
+  /// Whether the persistent foreground service is currently running.
+  Future<bool?> isPersistentRunning() async {
+    try {
+      return await _channel.invokeMethod<bool>('isPersistentRunning');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Whether the app is exempt from Doze battery optimization (AOSP).
+  Future<bool?> isIgnoringBatteryOptimizations() async {
+    try {
+      return await _channel
+          .invokeMethod<bool>('isIgnoringBatteryOptimizations');
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Opens the standard system dialog to exempt us from battery optimization.
+  Future<void> requestIgnoreBatteryOptimizations() async {
+    try {
+      await _channel.invokeMethod('requestIgnoreBatteryOptimizations');
+    } catch (_) {/* swallow */}
+  }
+
+  /// Opens the device's Autostart / auto-launch manager (brand-specific,
+  /// falls back to the app details page on stock Android).
+  Future<void> openAutoStartSettings() async {
+    try {
+      await _channel.invokeMethod('openAutoStartSettings');
+    } catch (_) {/* swallow */}
+  }
+
   /// Pull any deeplink that arrived via notification tap BEFORE the channel
   /// was alive (cold-start case). The native side caches it; this consumes
   /// + clears it. Returns null if nothing was pending.

@@ -441,6 +441,7 @@ class _DateTile extends StatelessWidget {
     if (field.fieldtype == 'Date') {
       state.update(() => state._values[field.fieldname] = ds);
     } else {
+      if (!context.mounted) return;
       final t = await showTimePicker(
           context: context, initialTime: TimeOfDay.now());
       final ts = t == null ? '00:00:00' : '${two(t.hour)}:${two(t.minute)}:00';

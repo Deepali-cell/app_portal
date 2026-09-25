@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/storage/secure_store.dart';
 import '../data/permission_service.dart';
 import '../domain/permission_status.dart';
+import 'call_event_bridge.dart';
 
 final permissionServiceProvider = Provider<CallDetectPermissionService>(
     (ref) => CallDetectPermissionService());
@@ -48,6 +49,11 @@ class CallDetectController extends Notifier<bool> {
       final stored =
           await ref.read(secureStoreProvider).readCallDetectEnabled();
       state = stored;
+      // Restore the persistent background service on app start so detection
+      // keeps working after the app was closed / the phone rebooted.
+      if (stored && !kIsWeb && Platform.isAndroid) {
+        await ref.read(callEventBridgeProvider).startPersistentDetection();
+      }
     });
     return false;
   }
@@ -55,6 +61,16 @@ class CallDetectController extends Notifier<bool> {
   Future<void> setEnabled(bool value) async {
     state = value;
     await ref.read(secureStoreProvider).writeCallDetectEnabled(value);
+    // Start/stop the persistent foreground service so detection survives the
+    // app being closed on aggressive OEMs (Vivo/Xiaomi/Oppo/etc).
+    if (!kIsWeb && Platform.isAndroid) {
+      final bridge = ref.read(callEventBridgeProvider);
+      if (value) {
+        await bridge.startPersistentDetection();
+      } else {
+        await bridge.stopPersistentDetection();
+      }
+    }
     ref.invalidate(callDetectSnapshotProvider);
   }
 

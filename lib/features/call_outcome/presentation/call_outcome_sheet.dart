@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-import '../../../core/network/api_exception.dart';
 import '../../../core/network/api_paths.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
+import '../../../core/ui/app_message_dialog.dart';
 import '../../../shared/widgets/mic_note_button.dart';
 
 /// Modal bottom sheet for capturing a post-call outcome against a CRM Lead
@@ -133,7 +133,7 @@ class _CallOutcomeSheetState extends ConsumerState<_CallOutcomeSheet> {
       if (mounted) {
         setState(() {
           _busy = false;
-          _error = e is ApiException ? e.message : e.toString();
+          _error = friendlyMessageFor(e).message;
         });
       }
     }
