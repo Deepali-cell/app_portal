@@ -194,7 +194,7 @@ class _DeeplinkListenerState extends ConsumerState<DeeplinkListener> {
       if (!ctx.mounted) return;
       if (dt == 'Lead') {
         _safePush(ctx, Routes.leadDetail, dn);
-      } else if (dt == 'CRM Deal') {
+      } else if (dt == 'Opportunity') {
         _safePush(ctx, Routes.dealDetail, dn);
       }
     } catch (_) {

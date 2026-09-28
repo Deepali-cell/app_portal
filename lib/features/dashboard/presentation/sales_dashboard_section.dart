@@ -411,7 +411,7 @@ class _FollowupItemRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final canOpen = item.referenceDocname != null &&
-        (item.referenceDoctype == 'Lead' || item.referenceDoctype == 'CRM Deal');
+        (item.referenceDoctype == 'Lead' || item.referenceDoctype == 'Opportunity');
     return InkWell(
       borderRadius: BorderRadius.circular(AppDimens.radiusMd),
       onTap: !canOpen
@@ -734,7 +734,7 @@ class _SummaryCard extends ConsumerWidget {
         if (summary.referenceDoctype == 'Lead' &&
             summary.referenceDocname != null) {
           context.push(Routes.leadDetail, extra: summary.referenceDocname);
-        } else if (summary.referenceDoctype == 'CRM Deal' &&
+        } else if (summary.referenceDoctype == 'Opportunity' &&
             summary.referenceDocname != null) {
           context.push(Routes.dealDetail, extra: summary.referenceDocname);
         }

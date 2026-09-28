@@ -281,7 +281,7 @@ class ApiException implements Exception {
       final excType = data['exc_type'];
       if (excType is String) {
         if (excType.contains('PermissionError')) {
-          return "You don't have permission to view this record.";
+          return 'You do not have permission to view this record.';
         }
         if (excType.contains('DoesNotExistError')) {
           return 'This record no longer exists.';

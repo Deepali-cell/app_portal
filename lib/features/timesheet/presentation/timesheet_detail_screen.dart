@@ -86,6 +86,23 @@ class _TimesheetDetailScreenState extends ConsumerState<TimesheetDetailScreen> {
     }
   }
 
+  /// Stop the running timer straight from this detail screen. Previously the
+  /// running row was un-tappable and the timer could only be stopped from the
+  /// list screen's timer strip, which left the Submit button permanently
+  /// blocked when the user was on the detail screen.
+  Future<void> _stopRunningTimer() async {
+    final timer = ref.read(activeTimerProvider).value;
+    if (timer == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text('No running timer found. Pull to refresh.')));
+      return;
+    }
+    final stopped = await showStopTimerSheet(context, timer);
+    if (stopped == true && mounted) {
+      ref.invalidate(timesheetDetailProvider(widget.name));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(timesheetDetailProvider(widget.name));
@@ -135,6 +152,7 @@ class _TimesheetDetailScreenState extends ConsumerState<TimesheetDetailScreen> {
               canEdit: d.canEdit,
               onAdd: () => _openEditor(),
               onEdit: (row) => _openEditor(row: row),
+              onStop: _stopRunningTimer,
             ),
             if (d.note != null && d.note!.isNotEmpty) ...[
               const SizedBox(height: AppDimens.lg),
@@ -320,11 +338,13 @@ class _LogsSection extends StatelessWidget {
     required this.canEdit,
     required this.onAdd,
     required this.onEdit,
+    required this.onStop,
   });
   final List<TimesheetLogRow> logs;
   final bool canEdit;
   final VoidCallback onAdd;
   final ValueChanged<TimesheetLogRow> onEdit;
+  final VoidCallback onStop;
 
   /// Hours as the server formatted them, which is how the ERPNext desk shows
   /// the same value. Falls back to the raw number only if an older server
@@ -391,11 +411,14 @@ class _LogsSection extends StatelessWidget {
             _LogRow(
               log: logs[i],
               hours: _h(logs[i]),
-              // A running timer row has no end yet: it is stopped from the
-              // timer strip, not edited here.
-              onTap: (canEdit && !logs[i].isRunning && logs[i].name != null)
-                  ? () => onEdit(logs[i])
-                  : null,
+              // A running timer row has no end yet — tapping it opens the Stop
+              // sheet (it can't be edited until stopped). A completed row opens
+              // the editor. A viewer (no edit rights) gets no tap.
+              onTap: logs[i].isRunning
+                  ? (canEdit ? onStop : null)
+                  : (canEdit && logs[i].name != null
+                      ? () => onEdit(logs[i])
+                      : null),
             ),
           ],
         ],
@@ -468,7 +491,30 @@ class _LogRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: AppDimens.sm),
-            if (!log.isRunning && log.toTime != null) ...[
+            if (log.isRunning) ...[
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                decoration: BoxDecoration(
+                  color: AppColors.error.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.stop_circle_outlined,
+                        color: AppColors.error, size: 14),
+                    const SizedBox(width: 3),
+                    Text('Stop',
+                        style: TextStyle(
+                            color: AppColors.error,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 11)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 4),
+            ] else if (log.toTime != null) ...[
               const Icon(Icons.check_circle, color: Colors.green, size: 18),
               const SizedBox(width: 4),
          ],

@@ -192,18 +192,20 @@ class CallDetectionService : Service() {
                 durationSec = dur,
                 contactName = lastContactName,
             )
-            scanAndDispatch(numberAtCallEnd, retried = false)
-        }, 10_000)
+            scanAndDispatch(numberAtCallEnd, attempt = 0)
+        }, 20_000)
         // In persistent mode we stay alive between calls (so the OEM can't put
         // the app back into the stopped state and drop the next broadcast); we
         // just reset the ongoing notification back to idle. In per-call mode we
-        // tear down ~25s after the call, as before.
+        // tear down ~60s after the call. This must outlast the recording-scan
+        // retry schedule (first scan at 20s, then up to 4 retries 5s apart ≈
+        // 40s) so slow phones that flush the recording file late aren't cut off.
         if (persistent) {
             mainHandler.postDelayed({
                 updateIdleNotification("Listening for calls")
-            }, 25_000)
+            }, 60_000)
         } else {
-            mainHandler.postDelayed({ stopSelf() }, 25_000)
+            mainHandler.postDelayed({ stopSelf() }, 60_000)
         }
         // Reset direction + contact so the next call starts fresh; leave
         // lastNumber alone so scanAndDispatch can still read it.
@@ -343,17 +345,22 @@ class CallDetectionService : Service() {
         return "Completed" to 0
     }
 
-    private fun scanAndDispatch(numberAtCallEnd: String?, retried: Boolean) {
+    private fun scanAndDispatch(numberAtCallEnd: String?, attempt: Int) {
+        // Slow phones (and some OEM recorders) flush the recording file well
+        // after the call ends, so we retry several times with a widening
+        // look-back window instead of giving up after one retry.
+        val maxAttempts = 4
+        val windowSec = 60 + attempt * 60 // 60s, 120s, 180s, 240s
         val hit = RecordingScanner.findLatest(
-            windowSec = if (retried) 120 else 60,
+            windowSec = windowSec,
             hintNumber = numberAtCallEnd,
         )
         if (hit == null) {
-            if (!retried) {
+            if (attempt < maxAttempts) {
                 // Try again after a longer write delay.
-                mainHandler.postDelayed({ scanAndDispatch(numberAtCallEnd, retried = true) }, 5_000)
+                mainHandler.postDelayed({ scanAndDispatch(numberAtCallEnd, attempt + 1) }, 5_000)
             } else {
-                Log.d("TcbCallSvc", "No recording found after retry — phone may not be configured for built-in recording")
+                Log.d("TcbCallSvc", "No recording found after ${maxAttempts + 1} tries — phone may not be configured for built-in recording")
                 updateIdleNotification("Last call: ${numberAtCallEnd ?: "—"} — no recording captured")
             }
             return

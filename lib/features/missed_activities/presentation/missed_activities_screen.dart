@@ -447,7 +447,7 @@ class _CrmTaskTile extends StatelessWidget {
     final dn = task.referenceDocname;
     if (dt == 'Lead' && dn != null) {
       context.push(Routes.leadDetail, extra: dn);
-    } else if (dt == 'CRM Deal' && dn != null) {
+    } else if (dt == 'Opportunity' && dn != null) {
       context.push(Routes.dealDetail, extra: dn);
     }
   }

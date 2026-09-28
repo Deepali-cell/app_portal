@@ -22,7 +22,7 @@ class DealsScreen extends ConsumerWidget {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.surfaceContainerLowest,
-        title: const Text('Deals'),
+        title: const Text('Opportunities'),
         actions: [
           IconButton(
             tooltip: 'Refresh',
@@ -50,7 +50,7 @@ class DealsScreen extends ConsumerWidget {
                   AppDimens.xl),
               children: [
                 _Header(
-                  title: 'Deals',
+                  title: 'Opportunities',
                   subtitle:
                       'Track active opportunities and pipeline value.',
                 ),
@@ -59,7 +59,7 @@ class DealsScreen extends ConsumerWidget {
                   const _EmptyCard(
                     icon: Icons.handshake_outlined,
                     text:
-                        'No deals yet. Convert a lead to start a deal.',
+                        'No opportunities yet. Convert a lead to start one.',
                   )
                 else ...[
                   _PipelineCard(deals: ctx.deals),
@@ -77,7 +77,7 @@ class DealsScreen extends ConsumerWidget {
                           child: Row(
                             children: [
                               Expanded(
-                                child: Text('All Deals',
+                                child: Text('All Opportunities',
                                     style: Theme.of(context)
                                         .textTheme
                                         .titleMedium
@@ -271,7 +271,7 @@ class _DealRow extends StatelessWidget {
             ),
             QuickCallIconButton(
               phoneNumber: deal.mobileNo ?? deal.phone,
-              referenceDoctype: 'CRM Deal',
+              referenceDoctype: 'Opportunity',
               referenceDocname: deal.name,
               parentLabel: deal.title,
             ),

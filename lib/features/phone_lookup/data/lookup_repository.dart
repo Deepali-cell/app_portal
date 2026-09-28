@@ -21,7 +21,7 @@ class PhoneLookupResult {
 
   final bool matched;
   final String normalizedQuery;
-  final String? type; // "Lead" or "CRM Deal"
+  final String? type; // "Lead" or "Opportunity"
   final String? name;
   final String? displayName;
   final String? status;
@@ -31,7 +31,7 @@ class PhoneLookupResult {
   final String? image;
 
   bool get isLead => type == 'Lead';
-  bool get isDeal => type == 'CRM Deal';
+  bool get isDeal => type == 'Opportunity';
 
   factory PhoneLookupResult.fromJson(Map<String, dynamic> j) =>
       PhoneLookupResult(

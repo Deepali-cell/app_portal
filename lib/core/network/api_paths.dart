@@ -227,18 +227,21 @@ class ApiPaths {
       '/api/method/tcb_portal_erp.api.leads.get_detail';
   static const String leadCreate = '/api/method/tcb_portal_erp.api.leads.create';
   static const String leadUpdate = '/api/method/tcb_portal_erp.api.leads.update';
-  // Post-2026-06-29 migration: leads convert to ERPNext Customer (unlocking
-  // Quotation → Sales Order → Sales Invoice). The endpoint name kept as
-  // convert_to_customer; convert_to_deal is a backwards-compat shim.
+  // Sales flow (2026-09-28): Lead → Opportunity → Customer.
+  // Step 1 — a Lead is converted into an ERPNext Opportunity.
   static const String leadConvert =
-      '/api/method/tcb_portal_erp.api.leads.convert_to_customer';
+      '/api/method/tcb_portal_erp.api.leads.convert_to_opportunity';
 
-  // CRM Deals
+  // CRM Deals (ERPNext Opportunity)
   static const String dealsContext =
       '/api/method/tcb_portal_erp.api.deals.get_context';
   static const String dealDetail =
       '/api/method/tcb_portal_erp.api.deals.get_detail';
   static const String dealUpdate = '/api/method/tcb_portal_erp.api.deals.update';
+  // Step 2 — an Opportunity is converted into an ERPNext Customer (unlocking
+  // Quotation → Sales Order → Sales Invoice).
+  static const String dealConvert =
+      '/api/method/tcb_portal_erp.api.deals.convert_to_customer';
 
   // File upload
   static const String uploadFile = '/api/method/upload_file';

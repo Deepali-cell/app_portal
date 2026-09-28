@@ -37,6 +37,18 @@ class DealRepository {
     }
   }
 
+  /// Convert this Opportunity to an ERPNext Customer (step 2 of
+  /// Lead → Opportunity → Customer). Returns the new Customer's name.
+  Future<String> convertToCustomer(String name) async {
+    try {
+      final resp = await _dio.post(ApiPaths.dealConvert, data: {'name': name});
+      final m = resp.data['message'] as Map?;
+      return (m?['customer'] ?? '') as String;
+    } on DioException catch (e) {
+      throw _err(e);
+    }
+  }
+
   ApiException _err(DioException e) =>
       e.error is ApiException ? e.error as ApiException : ApiException.fromDio(e);
 }

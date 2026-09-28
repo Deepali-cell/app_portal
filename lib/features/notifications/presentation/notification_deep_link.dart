@@ -65,7 +65,7 @@ bool openNotificationTarget(
     case 'Lead':
       context.go(Routes.leadDetail, extra: docName);
       return true;
-    case 'CRM Deal':
+    case 'Opportunity':
       context.go(Routes.dealDetail, extra: docName);
       return true;
     case 'Tcb Call Recording':
@@ -116,7 +116,7 @@ Future<void> _openRecordingLinked(
       context.go(Routes.leadDetail, extra: dn);
       return;
     }
-    if (dt == 'CRM Deal' && (dn ?? '').isNotEmpty) {
+    if (dt == 'Opportunity' && (dn ?? '').isNotEmpty) {
       context.go(Routes.dealDetail, extra: dn);
       return;
     }

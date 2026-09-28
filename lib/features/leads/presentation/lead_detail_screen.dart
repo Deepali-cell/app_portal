@@ -110,11 +110,12 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen>
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Convert to Customer?'),
+        title: const Text('Convert to Opportunity?'),
         content: const Text(
-            "An ERPNext Customer will be created from this lead. After conversion "
-            "the regular sales flow opens up: Customer → Quotation → Sales Order "
-            "→ Sales Invoice. The lead will be marked 'Converted'."),
+            "An Opportunity will be created from this lead. That's the first "
+            "step of the sales flow: Lead → Opportunity → Customer. Open the "
+            "Opportunity later to convert it into a Customer. The lead will be "
+            "marked 'Converted'."),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -128,15 +129,15 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen>
     if (ok != true) return;
     setState(() => _converting = true);
     try {
-      final customer = await ref
+      final opportunity = await ref
           .read(leadsControllerProvider.notifier)
-          .convertToCustomer(widget.name);
+          .convertToOpportunity(widget.name);
       if (!mounted) return;
-      _snack(customer.isNotEmpty
-          ? 'Created customer: $customer'
+      _snack(opportunity.isNotEmpty
+          ? 'Created opportunity: $opportunity'
           : 'Lead converted');
-      // Keep the user on the lead screen; the status now shows Converted
-      // and the linked Customer is available in ERPNext desk for quotations.
+      // Keep the user on the lead screen; the status now shows Converted and
+      // the new Opportunity appears on the Opportunities tab.
     } on ApiException catch (e) {
       _snack(e.message);
     } finally {
@@ -186,7 +187,7 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen>
           ],
           if (onDetailsTab && lead != null && !_editing && !lead.converted)
             IconButton(
-              tooltip: 'Convert to Customer',
+              tooltip: 'Convert to Opportunity',
               icon: _converting
                   ? const SizedBox(width: 18, height: 18,
                       child: CircularProgressIndicator(strokeWidth: 2))
@@ -241,7 +242,7 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen>
               padding: const EdgeInsets.fromLTRB(AppDimens.lg, AppDimens.sm,
                   AppDimens.lg, AppDimens.lg),
               child: BrandButton(
-                label: 'Convert to Customer',
+                label: 'Convert to Opportunity',
                 icon: Icons.swap_horiz,
                 loading: _converting,
                 onPressed: _convert,
@@ -442,7 +443,11 @@ class _Header extends StatelessWidget {
                   crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
                     _chip(lead.status, AppColors.navy, filled: true),
-                    if (lead.converted)
+                    // Only show a separate "Converted" chip when the status text
+                    // isn't already "Converted" — otherwise the header showed the
+                    // same badge twice.
+                    if (lead.converted &&
+                        lead.status.trim().toLowerCase() != 'converted')
                       _chip('Converted', AppColors.success, filled: true),
                     if (lead.daysSinceContact != null &&
                         lead.daysSinceContact! >= 1)

@@ -195,12 +195,39 @@ class _CallCard extends StatelessWidget {
               isIn ? Icons.call_received : Icons.call_made,
               color: AppColors.navy, size: 18),
         ),
+        isThreeLine: call.summary != null,
         title: Text(isIn ? call.fromNo : call.to,
             style: const TextStyle(fontWeight: FontWeight.w600)),
-        subtitle: Text(
-          '${call.status} · ${call.startTime != null ? _ts.format(call.startTime!.toLocal()) : _ts.format(call.creation.toLocal())}'
-          '${call.durationSeconds > 0 ? " · ${_dur(call.durationSeconds)}" : ""}',
-          style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w500),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${call.status} · ${call.startTime != null ? _ts.format(call.startTime!.toLocal()) : _ts.format(call.creation.toLocal())}'
+              '${call.durationSeconds > 0 ? " · ${_dur(call.durationSeconds)}" : ""}',
+              style: TextStyle(
+                  color: color, fontSize: 12, fontWeight: FontWeight.w500),
+            ),
+            if (call.summary != null) ...[
+              const SizedBox(height: 4),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.notes,
+                      size: 13, color: AppColors.onSurfaceVariant),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Text(
+                      call.summary!,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                          color: AppColors.onSurfaceVariant, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
         ),
         trailing: Row(mainAxisSize: MainAxisSize.min, children: [
           IconButton(

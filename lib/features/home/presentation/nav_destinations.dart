@@ -40,7 +40,7 @@ const List<NavDest> _allDestinations = [
   NavDest('Expenses', Icons.receipt_long_outlined, Icons.receipt_long, Routes.expenses, 'expense', 'HR'),
   NavDest('Directory', Icons.contacts_outlined, Icons.contacts, Routes.directory, 'hr_employee', 'HR'),
   NavDest('Leads', Icons.person_search_outlined, Icons.person_search, Routes.leads, 'leads', 'CRM'),
-  NavDest('Deals', Icons.handshake_outlined, Icons.handshake, Routes.deals, 'deals', 'CRM'),
+  NavDest('Opportunities', Icons.handshake_outlined, Icons.handshake, Routes.deals, 'deals', 'CRM'),
   NavDest('Sales Pipeline', Icons.insights_outlined, Icons.insights, Routes.salesWorkspace, 'sees_sales', 'CRM'),
   NavDest('Invoices', Icons.receipt_outlined, Icons.receipt, Routes.invoices, 'invoices', 'Finance'),
   NavDest('Payroll', Icons.payments_outlined, Icons.payments, Routes.payroll, 'payslip', 'Finance'),

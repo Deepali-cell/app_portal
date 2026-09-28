@@ -208,6 +208,7 @@ class CrmCall {
     this.recordingUrl,
     this.caller,
     this.receiver,
+    this.summary,
   });
 
   final String name;
@@ -223,6 +224,10 @@ class CrmCall {
   final String? recordingUrl;
   final String? caller;
   final String? receiver;
+
+  /// Outcome summary captured via log_outcome (joined from the linked FCRM
+  /// Note). Null when the call has no summary note.
+  final String? summary;
 
   factory CrmCall.fromJson(Map<String, dynamic> j) => CrmCall(
         name: j['name'] as String,
@@ -242,6 +247,9 @@ class CrmCall {
         recordingUrl: j['recording_url'] as String?,
         caller: j['caller'] as String?,
         receiver: j['receiver'] as String?,
+        summary: (j['summary'] as String?)?.trim().isEmpty ?? true
+            ? null
+            : (j['summary'] as String).trim(),
       );
 }
 

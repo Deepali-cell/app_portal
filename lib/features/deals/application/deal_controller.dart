@@ -25,6 +25,16 @@ class DealsController extends AsyncNotifier<DealsContext> {
     ref.invalidate(dealDetailProvider(name));
     await reload();
   }
+
+  /// Convert this Opportunity to an ERPNext Customer (step 2 of
+  /// Lead → Opportunity → Customer). Returns the new Customer's name.
+  Future<String> convertToCustomer(String name) async {
+    final customer =
+        await ref.read(dealRepositoryProvider).convertToCustomer(name);
+    ref.invalidate(dealDetailProvider(name));
+    await reload();
+    return customer;
+  }
 }
 
 /// Detail for a single deal, fetched on demand by name.

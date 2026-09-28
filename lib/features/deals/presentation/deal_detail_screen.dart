@@ -7,6 +7,7 @@ import '../../../core/format/money.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
+import '../../../shared/widgets/brand_button.dart';
 import '../../call_outcome/presentation/call_outcome_sheet.dart';
 import '../../crm_shared/domain/crm_ref.dart';
 import 'probability_pill.dart';
@@ -37,6 +38,7 @@ class _DealDetailScreenState extends ConsumerState<DealDetailScreen>
 
   bool _editing = false;
   bool _saving = false;
+  bool _converting = false;
 
   final Map<String, TextEditingController> _ctrls = {
     for (final f in [
@@ -48,7 +50,7 @@ class _DealDetailScreenState extends ConsumerState<DealDetailScreen>
   };
   String? _status;
 
-  CrmRef get _ref => CrmRef(doctype: 'CRM Deal', name: widget.name);
+  CrmRef get _ref => CrmRef(doctype: 'Opportunity', name: widget.name);
 
   @override
   void dispose() {
@@ -103,6 +105,43 @@ class _DealDetailScreenState extends ConsumerState<DealDetailScreen>
     }
   }
 
+  Future<void> _convert() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Convert to Customer?'),
+        content: const Text(
+            "A Customer will be created from this opportunity — the final step "
+            "of the sales flow: Lead → Opportunity → Customer. After that the "
+            "regular ERP flow opens up: Customer → Quotation → Sales Order → "
+            "Sales Invoice. The opportunity will be marked 'Converted'."),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Convert')),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    setState(() => _converting = true);
+    try {
+      final customer = await ref
+          .read(dealsControllerProvider.notifier)
+          .convertToCustomer(widget.name);
+      if (!mounted) return;
+      _snack(customer.isNotEmpty
+          ? 'Created customer: $customer'
+          : 'Opportunity converted');
+    } on ApiException catch (e) {
+      _snack(e.message);
+    } finally {
+      if (mounted) setState(() => _converting = false);
+    }
+  }
+
   void _snack(String s) => ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
     ..showSnackBar(SnackBar(content: Text(s)));
@@ -114,10 +153,15 @@ class _DealDetailScreenState extends ConsumerState<DealDetailScreen>
         ref.watch(dealsControllerProvider).value?.statuses ?? const <String>[];
     final onDetailsTab = _tabs.index == 0;
     final deal = async.value;
+    // An Opportunity that's already Converted (became a Customer) or Lost
+    // shouldn't offer the convert action again.
+    final canConvert = deal != null &&
+        deal.status != 'Converted' &&
+        deal.status != 'Lost';
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(deal?.title ?? 'Deal'),
+        title: Text(deal?.title ?? 'Opportunity'),
         actions: [
           IconButton(
             tooltip: 'Refresh',
@@ -143,6 +187,15 @@ class _DealDetailScreenState extends ConsumerState<DealDetailScreen>
               child: Text(_saving ? 'Saving…' : 'Save'),
             ),
           ],
+          if (onDetailsTab && !_editing && canConvert)
+            IconButton(
+              tooltip: 'Convert to Customer',
+              icon: _converting
+                  ? const SizedBox(width: 18, height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2))
+                  : const Icon(Icons.swap_horiz),
+              onPressed: _converting ? null : _convert,
+            ),
         ],
         bottom: TabBar(
           controller: _tabs,
@@ -184,6 +237,18 @@ class _DealDetailScreenState extends ConsumerState<DealDetailScreen>
           ],
         ),
       ),
+      bottomNavigationBar: (onDetailsTab && !_editing && canConvert)
+          ? Padding(
+              padding: const EdgeInsets.fromLTRB(AppDimens.lg, AppDimens.sm,
+                  AppDimens.lg, AppDimens.lg),
+              child: BrandButton(
+                label: 'Convert to Customer',
+                icon: Icons.swap_horiz,
+                loading: _converting,
+                onPressed: _convert,
+              ),
+            )
+          : null,
     );
   }
 
@@ -233,10 +298,10 @@ class _DetailsTab extends StatelessWidget {
         const SizedBox(height: AppDimens.lg),
         _QuickContact(deal: deal),
         const SizedBox(height: AppDimens.xl),
-        _Section(title: 'Deal', children: [
+        _Section(title: 'Opportunity', children: [
           if (editing) _statusEditor(context)
           else _row('Status', deal.status, null, editing: false),
-          _row('Deal value', editing ? null : (deal.dealValue == 0 ? null : money(deal.dealValue, deal.currency)),
+          _row('Opportunity value', editing ? null : (deal.dealValue == 0 ? null : money(deal.dealValue, deal.currency)),
               ctrls['deal_value'], editing: editing, keyboardType: const TextInputType.numberWithOptions(decimal: true), numberOnly: true),
           if (editing)
             _row('Probability %', null, ctrls['probability'],
@@ -413,11 +478,11 @@ class _QuickContact extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final actions = <_Quick>[];
-    if (deal.mobileNo != null && deal.mobileNo!.isNotEmpty) {
-      actions.add(_Quick(Icons.phone, 'Call', () => _launch(Uri(scheme: 'tel', path: deal.mobileNo!), context)));
-    }
-    if (deal.phone != null && deal.phone!.isNotEmpty && deal.phone != deal.mobileNo) {
-      actions.add(_Quick(Icons.call_outlined, 'Phone', () => _launch(Uri(scheme: 'tel', path: deal.phone!), context)));
+    final callNo = (deal.mobileNo != null && deal.mobileNo!.isNotEmpty)
+        ? deal.mobileNo!
+        : (deal.phone != null && deal.phone!.isNotEmpty ? deal.phone! : null);
+    if (callNo != null) {
+      actions.add(_Quick(Icons.phone, 'Call', () => _launch(Uri(scheme: 'tel', path: callNo), context)));
     }
     if (deal.email != null && deal.email!.isNotEmpty) {
       actions.add(_Quick(Icons.mail_outline, 'Email', () => _launch(Uri(scheme: 'mailto', path: deal.email!), context)));
@@ -428,7 +493,7 @@ class _QuickContact extends StatelessWidget {
     actions.add(_Quick(Icons.phone_callback, 'Log call', () async {
       final newId = await showCallOutcomeSheet(
         context,
-        referenceDoctype: 'CRM Deal',
+        referenceDoctype: 'Opportunity',
         referenceDocname: deal.name,
         parentLabel: deal.title,
       );
@@ -438,7 +503,11 @@ class _QuickContact extends StatelessWidget {
       }
     }));
     if (actions.isEmpty) return const SizedBox.shrink();
-    return Row(children: actions.map((a) => Expanded(child: _QuickButton(action: a))).toList());
+    return Wrap(
+      spacing: AppDimens.sm,
+      runSpacing: AppDimens.sm,
+      children: actions.map((a) => _QuickButton(action: a)).toList(),
+    );
   }
 
   String _norm(String u) => (u.startsWith('http://') || u.startsWith('https://')) ? u : 'https://$u';
@@ -451,20 +520,37 @@ class _Quick {
   final VoidCallback onTap;
 }
 
+/// Compact quick-action pill: a tinted rounded button with icon + full label.
+/// Laid out in a Wrap so 4-5 actions flow onto a second line if needed,
+/// keeping every label fully readable (no squeezing or ellipsis).
 class _QuickButton extends StatelessWidget {
   const _QuickButton({required this.action});
   final _Quick action;
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: OutlinedButton.icon(
-        onPressed: action.onTap,
-        icon: Icon(action.icon, size: 18),
-        label: Text(action.label),
-        style: OutlinedButton.styleFrom(
-          minimumSize: const Size.fromHeight(44),
-          padding: const EdgeInsets.symmetric(horizontal: AppDimens.sm),
+    return Material(
+      color: AppColors.navy.withValues(alpha: 0.10),
+      borderRadius: BorderRadius.circular(AppDimens.radiusXl),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: action.onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+              horizontal: AppDimens.md, vertical: AppDimens.sm + 2),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(action.icon, size: 18, color: AppColors.navy),
+              const SizedBox(width: AppDimens.xs + 2),
+              Text(
+                action.label,
+                style: TextStyle(
+                    color: AppColors.navy,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600),
+              ),
+            ],
+          ),
         ),
       ),
     );

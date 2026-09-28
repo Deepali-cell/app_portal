@@ -420,7 +420,7 @@ class _CrmTaskRow extends StatelessWidget {
     final dn = task.referenceDocname;
     if (dt == 'Lead' && dn != null) {
       context.push(Routes.leadDetail, extra: dn);
-    } else if (dt == 'CRM Deal' && dn != null) {
+    } else if (dt == 'Opportunity' && dn != null) {
       context.push(Routes.dealDetail, extra: dn);
     } else {
       context.go(Routes.tasks);
@@ -431,7 +431,7 @@ class _CrmTaskRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isFollowup = task.referenceDoctype == 'Lead' ||
-        task.referenceDoctype == 'CRM Deal';
+        task.referenceDoctype == 'Opportunity';
     return InkWell(
       onTap: () => _openLinked(context),
       borderRadius: BorderRadius.circular(AppDimens.radiusSm),
