@@ -205,6 +205,90 @@ class AppPalette {
     );
   }
 
+  /// A full **dark** palette: near-black graphite surfaces + light inks, with
+  /// the tenant's brand colour brightened into a readable accent. Every screen
+  /// reads [AppColors], so applying this flips the whole app to dark at once.
+  factory AppPalette.darkFromTenant(Tenant t) {
+    final p2 = t.colorP2; // brand (navy)
+    final p3 = t.colorP3; // brand accent (light blue)
+
+    Color lighten(Color c, double amount) =>
+        HSLColor.fromColor(c).withLightness(
+              (HSLColor.fromColor(c).lightness + amount).clamp(0.0, 1.0),
+            ).toColor();
+    Color mix(Color a, Color b, double f) => Color.lerp(a, b, f)!;
+
+    // Brand accent, brightened so it reads on near-black surfaces.
+    final accent = lighten(p2, 0.42);
+
+    // Graphite surface ladder.
+    const bg = Color(0xFF0E1116);
+    const s1 = Color(0xFF161B23); // cards / app bars
+    const s2 = Color(0xFF1A2029);
+    const s3 = Color(0xFF1E2530);
+    const s4 = Color(0xFF232B37);
+    const s5 = Color(0xFF29323F);
+    const ink = Color(0xFFE7ECF3);
+    const inkMuted = Color(0xFFA6B0BF);
+
+    return AppPalette(
+      // Primary cluster -> brightened brand accent
+      primary: accent,
+      onPrimary: const Color(0xFF07101E),
+      primaryContainer: mix(p2, bg, 0.30),
+      onPrimaryContainer: lighten(p3, 0.16),
+      primaryFixed: mix(accent, bg, 0.30),
+      primaryFixedDim: mix(accent, bg, 0.12),
+      onPrimaryFixed: const Color(0xFFEAF1FB),
+      onPrimaryFixedVariant: mix(accent, Colors.white, 0.10),
+
+      // Secondary cluster -> P3
+      secondary: lighten(p3, 0.06),
+      onSecondary: const Color(0xFF07101E),
+      secondaryContainer: mix(p3, bg, 0.58),
+      onSecondaryContainer: lighten(p3, 0.20),
+      secondaryFixed: mix(p3, bg, 0.66),
+      secondaryFixedDim: mix(p3, bg, 0.52),
+      onSecondaryFixed: ink,
+      onSecondaryFixedVariant: inkMuted,
+
+      // Tertiary -> success green, tuned for dark surfaces.
+      tertiary: const Color(0xFF4EDEA3),
+      onTertiary: const Color(0xFF00110A),
+      tertiaryContainer: const Color(0xFF0F3D2A),
+      onTertiaryContainer: const Color(0xFF5FE9B0),
+      tertiaryFixed: const Color(0xFF6FFBBE),
+      tertiaryFixedDim: const Color(0xFF4EDEA3),
+      onTertiaryFixed: const Color(0xFF002113),
+      onTertiaryFixedVariant: const Color(0xFF7FE9BC),
+
+      // Surface stack
+      background: bg,
+      onBackground: ink,
+      surface: s1,
+      surfaceBright: s5,
+      surfaceDim: bg,
+      surfaceVariant: s4,
+      onSurface: ink,
+      onSurfaceVariant: inkMuted,
+      surfaceContainerLowest: s1,
+      surfaceContainerLow: s2,
+      surfaceContainer: s3,
+      surfaceContainerHigh: s4,
+      surfaceContainerHighest: s5,
+      surfaceTint: accent,
+      inverseSurface: const Color(0xFFE7ECF3),
+      inverseOnSurface: const Color(0xFF1A2029),
+      inversePrimary: mix(p2, bg, 0.20),
+
+      // Outline / lines
+      outline: const Color(0xFF3A4453),
+      outlineVariant: const Color(0xFF262E3A),
+
+      cardShadow: const Color(0x66000000),
+    );
+  }
+
   /// Built-in default — TCB Infotech's brand. Used before any tenant resolves
   /// (fresh install, first launch).
   static final tcbDefault = AppPalette.fromTenant(Tenant.tcbDefault);
@@ -287,6 +371,12 @@ class AppColors {
   static const Color errorContainer = Color(0xFFFFDAD6);
   static const Color onErrorContainer = Color(0xFF93000A);
   static const Color warning = Color(0xFFB54708);
+
+  // Professional "graphite" inks — a near-black used as the dark anchor of the
+  // hero / header gradients and the mobile bottom nav, so the UI reads black
+  // and premium while the tenant's navy still carries the brand.
+  static const Color graphite = Color(0xFF11151C);
+  static const Color graphiteHigh = Color(0xFF222C3A);
 
   // Card shadow (tinted by primary)
   static Color cardShadow = AppPalette.tcbDefault.cardShadow;

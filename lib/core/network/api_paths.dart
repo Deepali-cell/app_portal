@@ -30,6 +30,15 @@ class ApiPaths {
   static const String dealPipeline =
       '/api/method/tcb_portal_erp.api.pipeline.get_deal_pipeline';
 
+  // Sales performance scorecard (replaces the funnel screen). Per-person +
+  // team activity for a month / year window.
+  static const String performance =
+      '/api/method/tcb_portal_erp.api.performance.get_performance';
+
+  // Manufacturing dashboard (BOM -> Work Order -> Job Card flow + counters)
+  static const String manufacturingDashboard =
+      '/api/method/tcb_portal_erp.api.manufacturing.get_dashboard';
+
   // Manager-only live team status (Runo R.6)
   static const String teamStatus =
       '/api/method/tcb_portal_erp.api.team_status.get_team_status';
@@ -37,6 +46,12 @@ class ApiPaths {
   // Sales dashboard (Phase L.6)
   static const String salesDashboard =
       '/api/method/tcb_portal_erp.api.dashboard.get_sales_dashboard';
+  // Sales module flow (Customer -> Quotation -> SO -> Delivery -> Invoice)
+  static const String salesCycle =
+      '/api/method/tcb_portal_erp.api.dashboard.get_sales_cycle';
+  // Purchase module flow (Material Request -> RFQ -> SQ -> PO -> Receipt)
+  static const String purchaseCycle =
+      '/api/method/tcb_portal_erp.api.dashboard.get_purchase_cycle';
 
   // Role-specific home sections - one endpoint per role. Each takes a
   // `period` (today | week | month | custom) and optional from_date/to_date.
@@ -150,6 +165,8 @@ class ApiPaths {
       '/api/method/tcb_portal_erp.api.expense.get_context';
   static const String expenseApply =
       '/api/method/tcb_portal_erp.api.expense.apply';
+  static const String expenseAddAttachment =
+      '/api/method/tcb_portal_erp.api.expense.add_claim_attachment';
   static const String expenseClaimDetail =
       '/api/method/tcb_portal_erp.api.expense.get_claim_detail';
   static const String expensePendingApprovals =
@@ -286,6 +303,26 @@ class ApiPaths {
   static const String noteUpdate = '/api/method/tcb_portal_erp.api.notes.update_note';
   static const String noteDelete = '/api/method/tcb_portal_erp.api.notes.delete_note';
 
+  // WhatsApp outreach log (click-to-chat).
+  static const String whatsappList =
+      '/api/method/tcb_portal_erp.api.whatsapp_log.list_messages';
+  static const String whatsappLog =
+      '/api/method/tcb_portal_erp.api.whatsapp_log.log_message';
+  static const String whatsappDelete =
+      '/api/method/tcb_portal_erp.api.whatsapp_log.delete_message';
+
+  // Internal team chat (staff-to-staff DMs + groups).
+  static const String chatChannels =
+      '/api/method/tcb_portal_erp.api.team_chat.list_channels';
+  static const String chatStartDirect =
+      '/api/method/tcb_portal_erp.api.team_chat.start_direct';
+  static const String chatCreateGroup =
+      '/api/method/tcb_portal_erp.api.team_chat.create_group';
+  static const String chatMessages =
+      '/api/method/tcb_portal_erp.api.team_chat.list_messages';
+  static const String chatSend =
+      '/api/method/tcb_portal_erp.api.team_chat.send_message';
+
   static const String crmTasksList =
       '/api/method/tcb_portal_erp.api.crm_tasks.list_tasks';
   static const String crmTaskCreate =
@@ -329,6 +366,14 @@ class ApiPaths {
       '/api/method/tcb_portal_erp.api.emails.list_emails';
   static const String emailSend =
       '/api/method/tcb_portal_erp.api.emails.send_email';
+
+  // Outgoing email (SMTP) setup - portal self-serve (System Manager only)
+  static const String emailSettingsGet =
+      '/api/method/tcb_portal_erp.api.email_settings.get_email_settings';
+  static const String emailSettingsSave =
+      '/api/method/tcb_portal_erp.api.email_settings.save_email_settings';
+  static const String emailSettingsTest =
+      '/api/method/tcb_portal_erp.api.email_settings.send_test_email';
 
   // Events (calendar)
   static const String eventsList =

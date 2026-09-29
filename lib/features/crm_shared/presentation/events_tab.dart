@@ -121,7 +121,7 @@ class _EventCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppDimens.radiusLg),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(AppDimens.lg),
+          padding: const EdgeInsets.all(AppDimens.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

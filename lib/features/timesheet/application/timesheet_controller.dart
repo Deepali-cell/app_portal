@@ -61,6 +61,11 @@ class TimesheetController extends AsyncNotifier<TimesheetContext> {
           task: task,
         );
     ref.invalidate(activeTimerProvider);
+    // Starting the timer opens a running row on the draft; the draft's detail
+    // (which feeds the Time Logs grid) is cached, so drop it or the new row
+    // never surfaces. The controller does not hold the draft name here, so the
+    // whole detail family is invalidated.
+    ref.invalidate(timesheetDetailProvider);
     await reload();
     return timer;
   }
@@ -68,11 +73,16 @@ class TimesheetController extends AsyncNotifier<TimesheetContext> {
   Future<void> stopTimer(String description) async {
     await ref.read(timesheetRepositoryProvider).stopTimer(description);
     ref.invalidate(activeTimerProvider);
+    // Stopping writes the To time + hours onto the running row. Without
+    // invalidating the cached draft detail the grid keeps showing the stale
+    // running row, so the finished entry only appears after a later refresh.
+    ref.invalidate(timesheetDetailProvider);
     await reload();
   }
 
   Future<void> submitTimesheet(String name) async {
     await ref.read(timesheetRepositoryProvider).submitTimesheet(name);
+    ref.invalidate(timesheetDetailProvider);
     await reload();
   }
 
@@ -81,7 +91,7 @@ class TimesheetController extends AsyncNotifier<TimesheetContext> {
   /// The detail view and the list both change (row count, timesheet total,
   /// period summary), so both are refreshed once the write lands.
   Future<void> addLog({
-    required String timesheet,
+    String? timesheet,
     required String activityType,
     required DateTime fromTime,
     required DateTime toTime,
@@ -100,7 +110,11 @@ class TimesheetController extends AsyncNotifier<TimesheetContext> {
           description: description,
           billable: billable,
         );
-    ref.invalidate(timesheetDetailProvider(timesheet));
+    // A null timesheet means the server created/reused the open draft; there is
+    // no detail cache to invalidate for it — reload() surfaces the new draft.
+    if (timesheet != null && timesheet.isNotEmpty) {
+      ref.invalidate(timesheetDetailProvider(timesheet));
+    }
     await reload();
   }
 

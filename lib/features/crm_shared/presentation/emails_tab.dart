@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../../shared/widgets/brand_button.dart';
+import '../../auth/application/auth_controller.dart';
 import '../application/providers.dart';
 import '../domain/crm_ref.dart';
 import '../domain/models.dart';
@@ -20,14 +23,35 @@ class EmailsTab extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(emailsProvider(crmRef));
+    final isAdmin =
+        ref.watch(authControllerProvider).profile?.can('admin') ?? false;
     return Scaffold(
       backgroundColor: Colors.transparent,
-      floatingActionButton: FloatingActionButton.extended(
-        backgroundColor: AppColors.navy,
-        foregroundColor: AppColors.canvas,
-        icon: const Icon(Icons.edit_outlined),
-        label: const Text('Compose'),
-        onPressed: () => _compose(context, ref),
+      floatingActionButton: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: [
+          if (isAdmin) ...[
+            FloatingActionButton.small(
+              heroTag: 'emailSettingsFab',
+              tooltip: 'Email settings',
+              backgroundColor: AppColors.surface,
+              foregroundColor: AppColors.navy,
+              elevation: 1,
+              onPressed: () => context.push(Routes.emailSettings),
+              child: const Icon(Icons.settings_outlined),
+            ),
+            const SizedBox(height: AppDimens.sm),
+          ],
+          FloatingActionButton.extended(
+            heroTag: 'composeEmailFab',
+            backgroundColor: AppColors.navy,
+            foregroundColor: AppColors.canvas,
+            icon: const Icon(Icons.edit_outlined),
+            label: const Text('Compose'),
+            onPressed: () => _compose(context, ref),
+          ),
+        ],
       ),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -89,7 +113,7 @@ class _EmailCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppDimens.radiusLg),
         onTap: () => _open(context),
         child: Padding(
-          padding: const EdgeInsets.all(AppDimens.lg),
+          padding: const EdgeInsets.all(AppDimens.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -140,37 +164,99 @@ class _EmailCard extends StatelessWidget {
   }
 
   void _open(BuildContext context) {
+    final dirColor = email.sent ? AppColors.navy : AppColors.success;
+    final theme = Theme.of(context);
+    final body = _stripHtml(email.content ?? '');
     showDialog<void>(
       context: context,
-      builder: (_) => Dialog(
-        insetPadding: const EdgeInsets.all(AppDimens.md),
-        child: Padding(
-          padding: const EdgeInsets.all(AppDimens.lg),
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(email.subject,
-                    style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: AppDimens.xs),
-                Text(
-                    '${email.sent ? "From" : "From"}: ${email.sender}\n'
-                    'To: ${email.recipients ?? "-"}\n'
-                    '${_ts.format(email.creation.toLocal())}',
-                    style: Theme.of(context).textTheme.bodySmall),
-                const Divider(),
-                Text(_stripHtml(email.content ?? '')),
-                const SizedBox(height: AppDimens.md),
-                Align(
-                  alignment: Alignment.centerRight,
+      builder: (ctx) => Dialog(
+        insetPadding: const EdgeInsets.all(AppDimens.lg),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppDimens.radiusXl),
+        ),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(ctx).size.height * 0.8,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header: direction badge + close.
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    AppDimens.lg, AppDimens.md, AppDimens.sm, 0),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimens.sm, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: dirColor.withValues(alpha: 0.10),
+                        borderRadius:
+                            BorderRadius.circular(AppDimens.radiusSm),
+                      ),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(email.sent ? Icons.send : Icons.inbox,
+                            size: 14, color: dirColor),
+                        const SizedBox(width: AppDimens.xs),
+                        Text(email.sent ? 'Sent' : 'Received',
+                            style: TextStyle(
+                                color: dirColor,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 12)),
+                      ]),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      tooltip: 'Close',
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+              ),
+              // Subject + meta.
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                    AppDimens.lg, AppDimens.xs, AppDimens.lg, AppDimens.md),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(email.subject, style: theme.textTheme.titleLarge),
+                    const SizedBox(height: AppDimens.sm),
+                    _MetaRow(label: 'From', value: email.sender),
+                    _MetaRow(label: 'To', value: email.recipients ?? '-'),
+                    _MetaRow(
+                        label: 'Date',
+                        value: _ts.format(email.creation.toLocal())),
+                  ],
+                ),
+              ),
+              const Divider(height: 1),
+              // Scrollable body.
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(AppDimens.lg),
+                  child: Text(
+                    body.isEmpty ? '(No content)' : body,
+                    style: theme.textTheme.bodyMedium?.copyWith(height: 1.45),
+                  ),
+                ),
+              ),
+              const Divider(height: 1),
+              // Pinned footer button — never scrolls away.
+              Padding(
+                padding: const EdgeInsets.all(AppDimens.md),
+                child: SizedBox(
+                  width: double.infinity,
                   child: TextButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () => Navigator.pop(ctx),
                     child: const Text('Close'),
                   ),
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
         ),
       ),
@@ -184,6 +270,32 @@ class _EmailCard extends StatelessWidget {
       .replaceAll('&nbsp;', ' ')
       .replaceAll(RegExp(r'\n{3,}'), '\n\n')
       .trim();
+}
+
+class _MetaRow extends StatelessWidget {
+  const _MetaRow({required this.label, required this.value});
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = Theme.of(context).textTheme.bodySmall;
+    return Padding(
+      padding: const EdgeInsets.only(top: 2),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 44,
+            child: Text(label,
+                style: style?.copyWith(
+                    color: AppColors.inkFaint, fontWeight: FontWeight.w600)),
+          ),
+          Expanded(child: Text(value, style: style)),
+        ],
+      ),
+    );
+  }
 }
 
 class _ComposeSheet extends ConsumerStatefulWidget {
@@ -327,6 +439,21 @@ class _ComposeSheetState extends ConsumerState<_ComposeSheet> {
               const SizedBox(height: AppDimens.md),
               Text(_error!,
                   style: TextStyle(color: AppColors.danger, fontSize: 13)),
+              if (ref.watch(authControllerProvider).profile?.can('admin') ??
+                  false) ...[
+                const SizedBox(height: AppDimens.xs),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton.icon(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      context.push(Routes.emailSettings);
+                    },
+                    icon: const Icon(Icons.settings_outlined, size: 18),
+                    label: const Text('Set up email'),
+                  ),
+                ),
+              ],
             ],
             const SizedBox(height: AppDimens.xl),
             BrandButton(

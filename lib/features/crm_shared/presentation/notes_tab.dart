@@ -107,7 +107,7 @@ class _NoteCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppDimens.radiusLg),
         onTap: onEdit,
         child: Padding(
-          padding: const EdgeInsets.all(AppDimens.lg),
+          padding: const EdgeInsets.all(AppDimens.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [

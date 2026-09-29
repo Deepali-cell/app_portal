@@ -53,19 +53,23 @@ class _DashboardBody extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Non-CRM users see nothing here; the Home Bento grid handles them.
     if (!snapshot.canLead && !snapshot.canDeal) return const SizedBox.shrink();
+    // Team dashboard hides the "Today" snapshot, the "Sales team today"
+    // per-rep roll-up, and the AI call summaries.
+    final isTeam = snapshot.scope == 'team';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (snapshot.isManagerView) _ScopeToggle(scope: snapshot.scope),
         const SizedBox(height: AppDimens.md),
-        _SectionHeader(
-          title: 'Today',
-          subtitle:
-              "Live snapshot. Refresh anytime.",
-        ),
-        const SizedBox(height: 6),
-        _TodayStrip(today: snapshot.today),
-        const SizedBox(height: AppDimens.lg),
+        if (!isTeam) ...[
+          _SectionHeader(
+            title: 'Today',
+            subtitle: "Live snapshot. Refresh anytime.",
+          ),
+          const SizedBox(height: 6),
+          _TodayStrip(today: snapshot.today),
+          const SizedBox(height: AppDimens.lg),
+        ],
         if (snapshot.canLead) ...[
           _SectionHeader(
             title: 'Follow-ups',
@@ -107,7 +111,7 @@ class _DashboardBody extends ConsumerWidget {
               onTap: (s) => context.go(Routes.deals)),
           const SizedBox(height: AppDimens.lg),
         ],
-        if (snapshot.perRep.isNotEmpty) ...[
+        if (!isTeam && snapshot.perRep.isNotEmpty) ...[
           _SectionHeader(
             title: 'Sales team today',
             subtitle:
@@ -120,7 +124,7 @@ class _DashboardBody extends ConsumerWidget {
           ],
           const SizedBox(height: AppDimens.lg),
         ],
-        if (snapshot.recentSummaries.isNotEmpty) ...[
+        if (!isTeam && snapshot.recentSummaries.isNotEmpty) ...[
           _SectionHeader(
             title: 'AI summaries',
             subtitle: "Latest call analyses. Tap to view.",

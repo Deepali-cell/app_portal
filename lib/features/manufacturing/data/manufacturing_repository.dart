@@ -88,6 +88,16 @@ class ManufacturingRepository {
   Future<Map<String, dynamic>> completeJobCard(String name, {double? qty}) =>
       _post(ApiPaths.jobCardComplete, {'name': name, if (qty != null) 'qty': qty});
 
+  /// Read-only counters + recent Work Orders for the Manufacturing dashboard.
+  Future<Map<String, dynamic>> dashboard() async {
+    try {
+      final resp = await _dio.get(ApiPaths.manufacturingDashboard);
+      return (resp.data['message'] as Map).cast<String, dynamic>();
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
   Future<Map<String, dynamic>> _post(
       String path, Map<String, dynamic> data) async {
     try {

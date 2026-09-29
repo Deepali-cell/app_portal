@@ -161,6 +161,10 @@ class AccountsSummary {
     required this.overdueInvoices,
     required this.receiptsInPeriod,
     required this.paymentsInPeriod,
+    this.incomeInPeriod = 0.0,
+    this.expenseInPeriod = 0.0,
+    this.netProfit = 0.0,
+    this.netCash = 0.0,
     required this.topOverdue,
   });
   final String currency;
@@ -169,6 +173,10 @@ class AccountsSummary {
   final int overdueInvoices;
   final double receiptsInPeriod;
   final double paymentsInPeriod;
+  final double incomeInPeriod;
+  final double expenseInPeriod;
+  final double netProfit;
+  final double netCash;
   final List<AccountsOverdue> topOverdue;
 
   factory AccountsSummary.fromJson(Map<String, dynamic> j) => AccountsSummary(
@@ -180,6 +188,10 @@ class AccountsSummary {
         overdueInvoices: (j['overdue_invoices'] as num?)?.toInt() ?? 0,
         receiptsInPeriod: (j['receipts_in_period'] as num?)?.toDouble() ?? 0.0,
         paymentsInPeriod: (j['payments_in_period'] as num?)?.toDouble() ?? 0.0,
+        incomeInPeriod: (j['income_in_period'] as num?)?.toDouble() ?? 0.0,
+        expenseInPeriod: (j['expense_in_period'] as num?)?.toDouble() ?? 0.0,
+        netProfit: (j['net_profit'] as num?)?.toDouble() ?? 0.0,
+        netCash: (j['net_cash'] as num?)?.toDouble() ?? 0.0,
         topOverdue: ((j['top_overdue'] as List?) ?? const [])
             .whereType<Map>()
             .map((e) => AccountsOverdue.fromJson(e.cast<String, dynamic>()))

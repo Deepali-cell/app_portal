@@ -41,8 +41,19 @@ class ExpenseController extends AsyncNotifier<ExpenseContext> {
     await reload();
   }
 
-  Future<void> apply(List<ExpenseItem> items, {String? remark}) async {
-    await ref.read(expenseRepositoryProvider).apply(items, remark: remark);
+  /// Files a draft claim, then attaches any receipt/proof files to it. The
+  /// claim must exist before its files can be linked, so this creates it first
+  /// and uploads each attachment against the returned name.
+  Future<void> apply(
+    List<ExpenseItem> items, {
+    String? remark,
+    List<String> attachments = const [],
+  }) async {
+    final repo = ref.read(expenseRepositoryProvider);
+    final name = await repo.apply(items, remark: remark);
+    for (final path in attachments) {
+      await repo.addAttachment(name, path);
+    }
     await reload();
   }
 

@@ -17,24 +17,70 @@ import 'new_invoice_sheet.dart';
 
 final _dateFmt = DateFormat('d MMM yyyy');
 
+/// Which slice of billing this screen shows.
+/// - [finance]  : all three tabs (Sales / Purchase / Payments) — the Finance
+///                module's full billing hub.
+/// - [sales]    : the Sales side — sales invoices OR customer receipts.
+/// - [purchase] : the Purchase side — purchase invoices OR supplier payments.
+enum InvoiceScope { finance, sales, purchase }
+
+/// For the scoped (sales/purchase) screens: which single pane to render.
+/// Invoices and Payments are deliberately kept as separate screens (their own
+/// routes and bottom-nav tabs), never two tabs inside one. Ignored by
+/// [InvoiceScope.finance], which always shows all three tabs.
+enum InvoicePane { invoices, payments }
+
 class InvoicesScreen extends ConsumerStatefulWidget {
-  const InvoicesScreen({super.key});
+  const InvoicesScreen({
+    super.key,
+    this.scope = InvoiceScope.finance,
+    this.pane = InvoicePane.invoices,
+  });
+
+  /// Which slice of billing to show; drives the tab set / single pane + title.
+  final InvoiceScope scope;
+
+  /// For sales/purchase scopes, whether this screen is the Invoices list or the
+  /// Payments list. Finance ignores it.
+  final InvoicePane pane;
+
+  bool get isFinance => scope == InvoiceScope.finance;
+
   @override
   ConsumerState<InvoicesScreen> createState() => _InvoicesScreenState();
 }
 
 class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
     with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 3, vsync: this)
-    ..addListener(() {
-      if (mounted) setState(() {});
-    });
+  // Only the Finance hub is tabbed; scoped screens render a single pane.
+  TabController? _tabs;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.isFinance) {
+      _tabs = TabController(length: 3, vsync: this)
+        ..addListener(() {
+          if (mounted) setState(() {});
+        });
+    }
+  }
 
   @override
   void dispose() {
-    _tabs.dispose();
+    _tabs?.dispose();
     super.dispose();
   }
+
+  bool get _isSalesSide => widget.scope != InvoiceScope.purchase;
+
+  String get _title => switch ((widget.scope, widget.pane)) {
+        (InvoiceScope.finance, _) => 'Invoices',
+        (InvoiceScope.sales, InvoicePane.invoices) => 'Sales Invoices',
+        (InvoiceScope.sales, InvoicePane.payments) => 'Sales Payments',
+        (InvoiceScope.purchase, InvoicePane.invoices) => 'Purchase Invoices',
+        (InvoiceScope.purchase, InvoicePane.payments) => 'Purchase Payments',
+      };
 
   Future<void> _newInvoice(InvoiceKind kind) async {
     final result = await showModalBottomSheet<String>(
@@ -62,7 +108,7 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
       backgroundColor: AppColors.background,
       appBar: AppBar(
         backgroundColor: AppColors.surfaceContainerLowest,
-        title: const Text('Invoices'),
+        title: Text(_title),
         actions: [
           IconButton(
             tooltip: 'Refresh',
@@ -71,18 +117,20 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
                 ref.read(invoicesControllerProvider.notifier).reload(),
           ),
         ],
-        bottom: TabBar(
-          controller: _tabs,
-          labelColor: AppColors.primary,
-          unselectedLabelColor: AppColors.onSurfaceVariant,
-          indicatorColor: AppColors.secondaryContainer,
-          indicatorWeight: 3,
-          tabs: const [
-            Tab(text: 'Sales'),
-            Tab(text: 'Purchase'),
-            Tab(text: 'Payments'),
-          ],
-        ),
+        bottom: widget.isFinance
+            ? TabBar(
+                controller: _tabs,
+                labelColor: AppColors.primary,
+                unselectedLabelColor: AppColors.onSurfaceVariant,
+                indicatorColor: AppColors.secondaryContainer,
+                indicatorWeight: 3,
+                tabs: const [
+                  Tab(text: 'Sales'),
+                  Tab(text: 'Purchase'),
+                  Tab(text: 'Payments'),
+                ],
+              )
+            : null,
       ),
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
@@ -91,31 +139,53 @@ class _InvoicesScreenState extends ConsumerState<InvoicesScreen>
           onRetry: () =>
               ref.read(invoicesControllerProvider.notifier).reload(),
         ),
-        data: (ctx) => TabBarView(
-          controller: _tabs,
-          children: [
-            _InvoiceList(
-              invoices: ctx.sales,
-              kind: InvoiceKind.sales,
-              allowed: ctx.canReadSales,
-            ),
-            _InvoiceList(
-              invoices: ctx.purchase,
-              kind: InvoiceKind.purchase,
-              allowed: ctx.canReadPurchase,
-            ),
-            _PaymentsTab(allowed: ctx.canReadPayments),
-          ],
-        ),
+        data: (ctx) {
+          final salesList = _InvoiceList(
+            invoices: ctx.sales,
+            kind: InvoiceKind.sales,
+            allowed: ctx.canReadSales,
+          );
+          final purchaseList = _InvoiceList(
+            invoices: ctx.purchase,
+            kind: InvoiceKind.purchase,
+            allowed: ctx.canReadPurchase,
+          );
+          if (widget.isFinance) {
+            return TabBarView(
+              controller: _tabs,
+              children: [
+                salesList,
+                purchaseList,
+                _PaymentsTab(allowed: ctx.canReadPayments),
+              ],
+            );
+          }
+          // Scoped: a single pane — Invoices OR Payments, never both.
+          if (widget.pane == InvoicePane.payments) {
+            return _PaymentsTab(
+                allowed: ctx.canReadPayments, lockSales: _isSalesSide);
+          }
+          return _isSalesSide ? salesList : purchaseList;
+        },
       ),
       floatingActionButton: async.when(
         loading: () => null,
         error: (_, _) => null,
         data: (ctx) {
-          // No FAB on the Payments tab — payments are recorded against an
-          // invoice from the invoice detail screen, never as standalone here.
-          if (_tabs.index == 2) return null;
-          final onSales = _tabs.index == 0;
+          // No FAB on any Payments view — payments are recorded against an
+          // invoice from its detail screen, never as standalone here.
+          if (!widget.isFinance && widget.pane == InvoicePane.payments) {
+            return null;
+          }
+          // Finance: FAB follows the active tab (2 = Payments → none).
+          final bool onSales;
+          if (widget.isFinance) {
+            final i = _tabs?.index ?? 0;
+            if (i == 2) return null;
+            onSales = i == 0;
+          } else {
+            onSales = _isSalesSide;
+          }
           final allowed =
               onSales ? ctx.canCreateSales : ctx.canCreatePurchase;
           if (!allowed) return null;
@@ -446,13 +516,26 @@ class _Err extends StatelessWidget {
       );
 }
 
-class _PaymentsTab extends ConsumerWidget {
-  const _PaymentsTab({required this.allowed});
+class _PaymentsTab extends ConsumerStatefulWidget {
+  const _PaymentsTab({required this.allowed, this.lockSales});
   final bool allowed;
 
+  /// When non-null the Sales/Purchase toggle is hidden and the list is locked
+  /// to that side (true = sales receipts, false = supplier payments). Used by
+  /// the Sales- and Purchase-scoped screens; null keeps the toggle (Finance).
+  final bool? lockSales;
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (!allowed) {
+  ConsumerState<_PaymentsTab> createState() => _PaymentsTabState();
+}
+
+class _PaymentsTabState extends ConsumerState<_PaymentsTab> {
+  // true  -> Sales payments (money Received from customers)
+  // false -> Purchase payments (money Paid to suppliers)
+  late bool _sales = widget.lockSales ?? true;
+
+  @override
+  Widget build(BuildContext context) {
+    if (!widget.allowed) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(AppDimens.xl),
@@ -472,58 +555,135 @@ class _PaymentsTab extends ConsumerWidget {
         onRetry: () =>
             ref.read(paymentsControllerProvider.notifier).reload(),
       ),
-      data: (ctx) => RefreshIndicator(
-        onRefresh: () =>
-            ref.read(paymentsControllerProvider.notifier).reload(),
-        child: ListView(
-          padding: const EdgeInsets.fromLTRB(AppDimens.screenPadding,
-              AppDimens.md, AppDimens.screenPadding, AppDimens.xl),
-          children: [
-            DateRangeBar(
-              from: ctx.fromDate,
-              to: ctx.toDate,
-              onChanged: (f, t) =>
-                  ref.read(paymentsControllerProvider.notifier).setRange(f, t),
-            ),
-            const SizedBox(height: AppDimens.md),
-            _PaymentsSummary(ctx: ctx),
-            const SizedBox(height: AppDimens.md),
-            if (ctx.payments.isEmpty)
-              const _EmptyCard()
-            else
-              Card(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(AppDimens.md,
-                          AppDimens.md, AppDimens.md, AppDimens.sm),
-                      child: Row(children: [
-                        Expanded(
-                          child: Text('Payment Entries',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
-                                  ?.copyWith(
-                                      color: AppColors.primary,
-                                      fontWeight: FontWeight.w600)),
-                        ),
-                        Text('${ctx.payments.length}',
-                            style: Theme.of(context).textTheme.labelMedium),
-                      ]),
-                    ),
-                    for (var i = 0; i < ctx.payments.length; i++) ...[
-                      if (i > 0)
-                        Divider(
-                            height: 1,
-                            indent: 64,
-                            color: AppColors.outlineVariant),
-                      _PaymentRow(p: ctx.payments[i]),
-                    ],
-                  ],
-                ),
+      data: (ctx) {
+        // Split the mixed entries: Receive = sales, Pay = purchase.
+        final payments = ctx.payments.where((p) {
+          final t = p.paymentType.toLowerCase();
+          return _sales ? t == 'receive' : t == 'pay';
+        }).toList();
+        return RefreshIndicator(
+          onRefresh: () =>
+              ref.read(paymentsControllerProvider.notifier).reload(),
+          child: ListView(
+            padding: const EdgeInsets.fromLTRB(AppDimens.screenPadding,
+                AppDimens.md, AppDimens.screenPadding, AppDimens.xl),
+            children: [
+              DateRangeBar(
+                from: ctx.fromDate,
+                to: ctx.toDate,
+                onChanged: (f, t) => ref
+                    .read(paymentsControllerProvider.notifier)
+                    .setRange(f, t),
               ),
-          ],
+              const SizedBox(height: AppDimens.md),
+              if (widget.lockSales == null) ...[
+                _PaymentsSegmented(
+                  sales: _sales,
+                  onChanged: (v) => setState(() => _sales = v),
+                ),
+                const SizedBox(height: AppDimens.md),
+              ],
+              _PaymentsSummary(
+                  payments: payments,
+                  sales: _sales,
+                  from: ctx.fromDate,
+                  to: ctx.toDate),
+              const SizedBox(height: AppDimens.md),
+              if (payments.isEmpty)
+                const _EmptyCard()
+              else
+                Card(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(AppDimens.md,
+                            AppDimens.md, AppDimens.md, AppDimens.sm),
+                        child: Row(children: [
+                          Expanded(
+                            child: Text(
+                                _sales
+                                    ? 'Sales Payments'
+                                    : 'Purchase Payments',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .titleMedium
+                                    ?.copyWith(
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.w600)),
+                          ),
+                          Text('${payments.length}',
+                              style:
+                                  Theme.of(context).textTheme.labelMedium),
+                        ]),
+                      ),
+                      for (var i = 0; i < payments.length; i++) ...[
+                        if (i > 0)
+                          Divider(
+                              height: 1,
+                              indent: 64,
+                              color: AppColors.outlineVariant),
+                        _PaymentRow(p: payments[i]),
+                      ],
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Sales / Purchase switch for the Payments tab — keeps customer receipts and
+/// supplier payments in separate views instead of one mixed list.
+class _PaymentsSegmented extends StatelessWidget {
+  const _PaymentsSegmented({required this.sales, required this.onChanged});
+  final bool sales;
+  final ValueChanged<bool> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceContainer,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        children: [
+          _seg(context, label: 'Sales', selected: sales, onTap: () => onChanged(true)),
+          _seg(context, label: 'Purchase', selected: !sales, onTap: () => onChanged(false)),
+        ],
+      ),
+    );
+  }
+
+  Widget _seg(BuildContext context,
+      {required String label,
+      required bool selected,
+      required VoidCallback onTap}) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding: const EdgeInsets.symmetric(vertical: 9),
+          decoration: BoxDecoration(
+            color: selected ? AppColors.primary : Colors.transparent,
+            borderRadius: BorderRadius.circular(999),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            label,
+            style: TextStyle(
+              color: selected ? AppColors.onPrimary : AppColors.onSurfaceVariant,
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+            ),
+          ),
         ),
       ),
     );
@@ -531,19 +691,23 @@ class _PaymentsTab extends ConsumerWidget {
 }
 
 class _PaymentsSummary extends StatelessWidget {
-  const _PaymentsSummary({required this.ctx});
-  final PaymentsContext ctx;
+  const _PaymentsSummary({
+    required this.payments,
+    required this.sales,
+    required this.from,
+    required this.to,
+  });
+  final List<Payment> payments;
+  final bool sales;
+  final DateTime from;
+  final DateTime to;
+
   @override
   Widget build(BuildContext context) {
-    double received = 0;
-    double paid = 0;
-    for (final p in ctx.payments) {
+    double total = 0;
+    for (final p in payments) {
       if (p.docstatus != 1) continue;
-      if (p.paymentType.toLowerCase() == 'receive') {
-        received += p.paidAmount;
-      } else if (p.paymentType.toLowerCase() == 'pay') {
-        paid += p.paidAmount;
-      }
+      total += p.paidAmount;
     }
     return Container(
       padding: const EdgeInsets.all(AppDimens.lg),
@@ -555,40 +719,23 @@ class _PaymentsSummary extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-              '${_dateFmt.format(ctx.fromDate)} – ${_dateFmt.format(ctx.toDate)} · ${ctx.payments.length} ${ctx.payments.length == 1 ? 'entry' : 'entries'}',
+              '${_dateFmt.format(from)} – ${_dateFmt.format(to)} · ${payments.length} ${payments.length == 1 ? 'entry' : 'entries'}',
               style: TextStyle(
                   color: AppColors.primaryFixedDim, fontSize: 12)),
           const SizedBox(height: AppDimens.md),
-          Row(children: [
-            Expanded(child: _kv(context, 'Received', money(received, 'INR'))),
-            Container(
-                width: 1,
-                height: 28,
-                color: AppColors.primaryFixedDim.withValues(alpha: 0.25)),
-            Expanded(child: _kv(context, 'Paid', money(paid, 'INR'))),
-          ]),
+          Text(sales ? 'Received from customers' : 'Paid to suppliers',
+              style: TextStyle(
+                  color: AppColors.primaryFixedDim, fontSize: 11)),
+          const SizedBox(height: 2),
+          Text(money(total, 'INR'),
+              style: TextStyle(
+                  color: AppColors.onPrimary,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800)),
         ],
       ),
     );
   }
-
-  Widget _kv(BuildContext context, String k, String v) => Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppDimens.sm),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(k,
-                style: TextStyle(
-                    color: AppColors.primaryFixedDim, fontSize: 11)),
-            const SizedBox(height: 2),
-            Text(v,
-                style: TextStyle(
-                    color: AppColors.onPrimary,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600)),
-          ],
-        ),
-      );
 }
 
 class _PaymentRow extends StatelessWidget {

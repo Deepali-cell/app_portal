@@ -30,6 +30,41 @@ class CrmNote {
       );
 }
 
+/// A single WhatsApp outreach logged against a lead/deal. The portal opens
+/// wa.me for the actual send; this is the team-visible record of it.
+@immutable
+class WhatsAppMessage {
+  const WhatsAppMessage({
+    required this.name,
+    required this.message,
+    required this.owner,
+    required this.ownerName,
+    required this.creation,
+    this.toNumber,
+    this.direction = 'Outgoing',
+  });
+
+  final String name;
+  final String message;
+  final String owner;
+  final String ownerName;
+  final DateTime creation;
+  final String? toNumber;
+  final String direction; // 'Outgoing' | 'Incoming'
+
+  bool get isOutgoing => direction != 'Incoming';
+
+  factory WhatsAppMessage.fromJson(Map<String, dynamic> j) => WhatsAppMessage(
+        name: j['name'] as String,
+        message: (j['message'] ?? '') as String,
+        owner: (j['owner'] ?? '') as String,
+        ownerName: (j['owner_name'] ?? j['owner'] ?? '') as String,
+        creation: DateTime.parse(j['creation'] as String),
+        toNumber: j['to_number'] as String?,
+        direction: (j['direction'] ?? 'Outgoing') as String,
+      );
+}
+
 enum CrmTaskStatus { backlog, todo, inProgress, done, canceled }
 
 extension CrmTaskStatusX on CrmTaskStatus {

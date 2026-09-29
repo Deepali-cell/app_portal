@@ -1,3 +1,4 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -434,8 +435,26 @@ class _NewClaimSheetState extends ConsumerState<_NewClaimSheet> {
     _ItemDraft(widget.ctx.expenseTypes.first)
   ];
   final _remark = TextEditingController();
+  // Receipt / proof files to attach to the claim once it is created. Each is a
+  // local file the user picked; paths go up as multipart uploads after apply.
+  final List<PlatformFile> _attachments = [];
   bool _submitting = false;
   String? _error;
+
+  Future<void> _pickAttachments() async {
+    final picked = await FilePicker.platform.pickFiles(
+      allowMultiple: true,
+      withData: false,
+    );
+    if (picked == null) return;
+    setState(() {
+      for (final f in picked.files) {
+        if (f.path != null && !_attachments.any((a) => a.path == f.path)) {
+          _attachments.add(f);
+        }
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -468,9 +487,14 @@ class _NewClaimSheetState extends ConsumerState<_NewClaimSheet> {
 
     setState(() => _submitting = true);
     try {
-      await ref
-          .read(expenseControllerProvider.notifier)
-          .apply(parsed, remark: _remark.text.trim());
+      await ref.read(expenseControllerProvider.notifier).apply(
+            parsed,
+            remark: _remark.text.trim(),
+            attachments: _attachments
+                .map((a) => a.path)
+                .whereType<String>()
+                .toList(),
+          );
       if (mounted) Navigator.pop(context, true);
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
@@ -528,6 +552,8 @@ class _NewClaimSheetState extends ConsumerState<_NewClaimSheet> {
               controller: _remark,
               decoration: const InputDecoration(labelText: 'Remark (optional)'),
             ),
+            const SizedBox(height: AppDimens.md),
+            _attachmentsSection(),
             if (_error != null) ...[
               const SizedBox(height: AppDimens.md),
               Text(_error!,
@@ -599,6 +625,60 @@ class _NewClaimSheetState extends ConsumerState<_NewClaimSheet> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Receipt / proof files. What is attached here rides up with the claim and
+  /// shows in the ERP's Attachments sidebar for the approver and HR.
+  Widget _attachmentsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text('Receipts / proof (optional)',
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: AppColors.onSurface,
+                      fontWeight: FontWeight.w600)),
+            ),
+            TextButton.icon(
+              onPressed: _submitting ? null : _pickAttachments,
+              icon: const Icon(Icons.attach_file, size: 18),
+              label: const Text('Attach'),
+            ),
+          ],
+        ),
+        if (_attachments.isEmpty)
+          Text('Attach a bill or receipt as proof for this claim.',
+              style: Theme.of(context).textTheme.bodySmall)
+        else
+          for (final f in _attachments)
+            Padding(
+              padding: const EdgeInsets.only(bottom: AppDimens.xs),
+              child: Row(
+                children: [
+                  Icon(Icons.insert_drive_file_outlined,
+                      size: 18, color: AppColors.onSurfaceVariant),
+                  const SizedBox(width: AppDimens.sm),
+                  Expanded(
+                    child: Text(f.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodyMedium),
+                  ),
+                  IconButton(
+                    visualDensity: VisualDensity.compact,
+                    icon: const Icon(Icons.close,
+                        size: 18, color: AppColors.error),
+                    onPressed: _submitting
+                        ? null
+                        : () => setState(() => _attachments.remove(f)),
+                  ),
+                ],
+              ),
+            ),
+      ],
     );
   }
 }

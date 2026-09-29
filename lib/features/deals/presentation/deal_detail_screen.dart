@@ -15,11 +15,10 @@ import '../../crm_shared/presentation/activity_tab.dart';
 import '../../crm_shared/presentation/assignees_tab.dart';
 import '../../crm_shared/presentation/attachments_tab.dart';
 import '../../crm_shared/presentation/calls_tab.dart';
-import '../../crm_shared/presentation/comments_tab.dart';
 import '../../crm_shared/presentation/emails_tab.dart';
 import '../../crm_shared/presentation/events_tab.dart';
-import '../../crm_shared/presentation/notes_tab.dart';
 import '../../crm_shared/presentation/tasks_tab.dart';
+import '../../crm_shared/presentation/whatsapp_tab.dart';
 import '../application/deal_controller.dart';
 import '../domain/models.dart';
 
@@ -33,7 +32,7 @@ class DealDetailScreen extends ConsumerStatefulWidget {
 
 class _DealDetailScreenState extends ConsumerState<DealDetailScreen>
     with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 10, vsync: this)
+  late final TabController _tabs = TabController(length: 9, vsync: this)
     ..addListener(() => setState(() {}));
 
   bool _editing = false;
@@ -206,8 +205,7 @@ class _DealDetailScreenState extends ConsumerState<DealDetailScreen>
           indicatorColor: AppColors.navy,
           tabs: [
             const Tab(text: 'Details'),
-            Tab(text: 'Comments${_count(deal?.counts.comments)}'),
-            Tab(text: 'Notes${_count(deal?.counts.notes)}'),
+            const Tab(text: 'WhatsApp'),
             Tab(text: 'Attachments${_count(deal?.counts.attachments)}'),
             Tab(text: 'Email${_count(deal?.counts.emails)}'),
             Tab(text: 'Assign to${_count(deal?.assignees.length)}'),
@@ -225,8 +223,8 @@ class _DealDetailScreenState extends ConsumerState<DealDetailScreen>
           controller: _tabs,
           children: [
             _DetailsTab(deal: deal, editing: _editing, ctrls: _ctrls, statuses: statuses, status: _status, onStatus: (s) => setState(() => _status = s)),
-            CommentsTab(crmRef: _ref),
-            NotesTab(crmRef: _ref),
+            WhatsAppTab(
+                crmRef: _ref, suggestedPhone: deal.mobileNo ?? deal.phone),
             AttachmentsTab(crmRef: _ref),
             EmailsTab(crmRef: _ref, suggestedTo: deal.email),
             AssigneesTab(crmRef: _ref),

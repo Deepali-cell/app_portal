@@ -93,8 +93,8 @@ class AppTheme {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(AppDimens.radiusXl),
           side: BorderSide(
-            color: AppColors.outlineVariant,
-            width: 0.4,
+            color: AppColors.outline,
+            width: 1,
           ),
         ),
       ),

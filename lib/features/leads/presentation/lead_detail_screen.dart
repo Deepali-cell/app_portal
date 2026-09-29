@@ -13,11 +13,10 @@ import '../../crm_shared/presentation/activity_tab.dart';
 import '../../crm_shared/presentation/assignees_tab.dart';
 import '../../crm_shared/presentation/attachments_tab.dart';
 import '../../crm_shared/presentation/calls_tab.dart';
-import '../../crm_shared/presentation/comments_tab.dart';
 import '../../crm_shared/presentation/emails_tab.dart';
 import '../../crm_shared/presentation/events_tab.dart';
-import '../../crm_shared/presentation/notes_tab.dart';
 import '../../crm_shared/presentation/tasks_tab.dart';
+import '../../crm_shared/presentation/whatsapp_tab.dart';
 import '../application/lead_controller.dart';
 import '../domain/models.dart';
 
@@ -31,7 +30,7 @@ class LeadDetailScreen extends ConsumerStatefulWidget {
 
 class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen>
     with SingleTickerProviderStateMixin {
-  late final TabController _tabs = TabController(length: 10, vsync: this)
+  late final TabController _tabs = TabController(length: 9, vsync: this)
     ..addListener(() => setState(() {}));
 
   bool _editing = false;
@@ -208,9 +207,8 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen>
             // tabs (Activity, Calls, Notes, Tasks) cluster early.
             const Tab(text: 'Activity'),
             Tab(text: 'Calls${_count(lead?.counts.calls)}'),
-            Tab(text: 'Notes${_count(lead?.counts.notes)}'),
+            const Tab(text: 'WhatsApp'),
             Tab(text: 'Tasks${_count(lead?.counts.tasks)}'),
-            Tab(text: 'Comments${_count(lead?.counts.comments)}'),
             Tab(text: 'Attachments${_count(lead?.counts.attachments)}'),
             Tab(text: 'Email${_count(lead?.counts.emails)}'),
             Tab(text: 'Assign to${_count(lead?.assignees.length)}'),
@@ -227,9 +225,9 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen>
             _DetailsTab(lead: lead, editing: _editing, ctrls: _ctrls, statuses: statuses, status: _status, onStatus: (s) => setState(() => _status = s)),
             ActivityTab(crmRef: _ref),
             CallsTab(crmRef: _ref, suggestedPhone: lead.mobileNo ?? lead.phone),
-            NotesTab(crmRef: _ref),
+            WhatsAppTab(
+                crmRef: _ref, suggestedPhone: lead.mobileNo ?? lead.phone),
             CrmTasksTab(crmRef: _ref),
-            CommentsTab(crmRef: _ref),
             AttachmentsTab(crmRef: _ref),
             EmailsTab(crmRef: _ref, suggestedTo: lead.email),
             AssigneesTab(crmRef: _ref),

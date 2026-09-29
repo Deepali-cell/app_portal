@@ -143,7 +143,7 @@ class TimesheetRepository {
       d.toLocal().toIso8601String().split('.').first.replaceFirst('T', ' ');
 
   Future<void> addLog({
-    required String timesheet,
+    String? timesheet,
     required String activityType,
     required DateTime fromTime,
     required DateTime toTime,
@@ -154,7 +154,8 @@ class TimesheetRepository {
   }) async {
     try {
       await _dio.post(ApiPaths.timesheetAddLog, data: {
-        'timesheet': timesheet,
+        // Omitted when null: the server reuses/creates the caller's open draft.
+        if (timesheet != null && timesheet.isNotEmpty) 'timesheet': timesheet,
         'activity_type': activityType,
         'from_time': _dt(fromTime),
         'to_time': _dt(toTime),

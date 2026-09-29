@@ -9,6 +9,9 @@ import '../../features/auth/application/lock_controller.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/splash_screen.dart';
 import '../../features/auth/presentation/unlock_screen.dart';
+import '../../features/dashboard/presentation/crm_dashboard_screen.dart';
+import '../../features/dashboard/presentation/sales_dashboard_screen.dart';
+import '../../features/dashboard/presentation/purchase_dashboard_screen.dart';
 import '../../features/deals/presentation/deal_detail_screen.dart';
 import '../../features/deals/presentation/deals_screen.dart';
 import '../../features/directory/presentation/directory_screen.dart';
@@ -25,7 +28,14 @@ import '../../features/leave/presentation/leave_screen.dart';
 import '../../features/approvals/presentation/approval_requests_screen.dart';
 import '../../features/leaderboard/presentation/leaderboard_screen.dart';
 import '../../features/missed_activities/presentation/missed_activities_screen.dart';
-import '../../features/pipeline/presentation/pipeline_screen.dart';
+import '../../features/performance/presentation/performance_screen.dart';
+import '../../features/manufacturing/presentation/manufacturing_dashboard_screen.dart';
+import '../../features/dashboard/presentation/finance_dashboard_screen.dart';
+import '../../features/dashboard/presentation/projects_dashboard_screen.dart';
+import '../../features/dashboard/presentation/hr_dashboard_screen.dart';
+import '../../features/team_chat/presentation/team_chat_screen.dart';
+import '../../features/team_chat/presentation/chat_thread_screen.dart';
+import '../../features/team_chat/domain/models.dart' show ChatChannel;
 import '../../features/team_status/presentation/team_status_screen.dart';
 import '../../features/call_detection/presentation/call_detection_screen.dart';
 import '../../features/leads_kanban/presentation/kanban_screen.dart';
@@ -49,6 +59,7 @@ import '../../features/payslips/presentation/all_payslips_screen.dart';
 import '../../features/payslips/presentation/payslip_detail_screen.dart';
 import '../../features/payslips/presentation/payslips_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
+import '../../features/email_settings/presentation/email_settings_screen.dart';
 import '../../features/tasks/presentation/tasks_screen.dart';
 import '../../features/timesheet/presentation/all_timesheets_screen.dart';
 import '../../features/timesheet/presentation/timesheet_detail_screen.dart';
@@ -71,13 +82,17 @@ class Routes {
   static const timesheet = '/timesheet';
   static const allTimesheets = '/hr/all-timesheets';
   static const expenses = '/expenses';
+  static const crmDashboard = '/crm/dashboard';
   static const leads = '/leads';
   static const deals = '/deals';
+  static const salesDashboard = '/sales/dashboard';
+  static const financeDashboard = '/finance/dashboard';
   static const directory = '/directory';
   static const invoices = '/invoices';
   static const stock = '/stock';
   static const admin = '/admin';
   // Manufacturing
+  static const mfgDashboard = '/mfg/dashboard';
   static const mfgBom = '/mfg/bom';
   static const mfgWorkOrder = '/mfg/work-order';
   static const mfgJobCard = '/mfg/job-card';
@@ -88,12 +103,18 @@ class Routes {
   static const stockMaterialRequest = '/stock/material-request';
   static const stockEntry = '/stock/entry';
   // Purchase
+  static const purchaseDashboard = '/purchase/dashboard';
   static const purchaseSupplier = '/purchase/supplier';
   static const purchaseRfq = '/purchase/rfq';
   static const purchaseSupplierQuotation = '/purchase/supplier-quotation';
   static const purchaseOrder = '/purchase/order';
   static const purchaseReceipt = '/purchase/receipt';
+  static const purchaseInvoices = '/purchase/invoices';
+  static const purchasePayments = '/purchase/payments';
   static const salesCustomer = '/sales/customer';
+  // Sales-scoped billing (sales invoices + customer receipts)
+  static const salesInvoices = '/sales/invoices';
+  static const salesPayments = '/sales/payments';
   // Reports hubs (curated ERPNext reports, per-report role gated)
   static const accountsReports = '/accounts/reports';
   static const salesReports = '/sales/reports';
@@ -104,12 +125,14 @@ class Routes {
   static const salesOrder = '/sales/order';
   static const salesDelivery = '/sales/delivery';
   // HR
+  static const hrDashboard = '/hr/dashboard';
   static const hrEmployees = '/hr/employees';
   static const allAttendance = '/hr/all-attendance';
   static const allPayslips = '/finance/all-payslips';
   static const hrAttendance = '/hr/attendance-management';
   static const approvals = '/hr/approvals';
   // Projects
+  static const projectsDashboard = '/projects/dashboard';
   static const projectsProject = '/projects/project';
   // Shared generic record detail
   static const recordDetail = '/record-detail';
@@ -126,10 +149,13 @@ class Routes {
   static const leaveDetail = '/leave-detail';
   static const leaveApprovals = '/leave-approvals';
   static const profile = '/profile';
+  static const emailSettings = '/email-settings';
   static const notifications = '/notifications';
   static const missedActivities = '/missed-activities';
   static const leaderboard = '/leaderboard';
   static const pipeline = '/pipeline';
+  static const teamChat = '/team-chat';
+  static const chatThread = '/team-chat/thread';
   static const teamStatus = '/team-status';
   static const callDetection = '/call-detection';
   static const leadKanban = '/lead-kanban';
@@ -257,6 +283,16 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(path: Routes.expenses, builder: (_, _) => const ExpensesScreen()),
           ]),
           StatefulShellBranch(routes: [
+            GoRoute(
+                path: Routes.crmDashboard,
+                builder: (_, _) => const CrmDashboardScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+                path: Routes.salesDashboard,
+                builder: (_, _) => const SalesDashboardScreen()),
+          ]),
+          StatefulShellBranch(routes: [
             GoRoute(path: Routes.leads, builder: (_, _) => const LeadsScreen()),
             GoRoute(
               path: Routes.leadDetail,
@@ -281,13 +317,54 @@ final routerProvider = Provider<GoRouter>((ref) {
             GoRoute(
                 path: Routes.invoices,
                 builder: (_, _) => const InvoicesScreen()),
+          ]),
+          // Sales-scoped billing: sales invoices and customer receipts are
+          // separate screens (own routes / bottom-nav tabs), not tabs in one.
+          StatefulShellBranch(routes: [
             GoRoute(
-              path: Routes.invoiceDetail,
-              builder: (_, state) {
-                final args = state.extra! as InvoiceDetailArgs;
-                return InvoiceDetailScreen(name: args.name, kind: args.kind);
-              },
-            ),
+                path: Routes.salesInvoices,
+                builder: (_, _) => const InvoicesScreen(
+                    scope: InvoiceScope.sales, pane: InvoicePane.invoices)),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+                path: Routes.salesPayments,
+                builder: (_, _) => const InvoicesScreen(
+                    scope: InvoiceScope.sales, pane: InvoicePane.payments)),
+          ]),
+          // Purchase-scoped billing: purchase invoices and supplier payments,
+          // likewise as two separate screens.
+          StatefulShellBranch(routes: [
+            GoRoute(
+                path: Routes.purchaseInvoices,
+                builder: (_, _) => const InvoicesScreen(
+                    scope: InvoiceScope.purchase, pane: InvoicePane.invoices)),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+                path: Routes.purchasePayments,
+                builder: (_, _) => const InvoicesScreen(
+                    scope: InvoiceScope.purchase, pane: InvoicePane.payments)),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+                path: Routes.purchaseDashboard,
+                builder: (_, _) => const PurchaseDashboardScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+                path: Routes.financeDashboard,
+                builder: (_, _) => const FinanceDashboardScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+                path: Routes.projectsDashboard,
+                builder: (_, _) => const ProjectsDashboardScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+                path: Routes.hrDashboard,
+                builder: (_, _) => const HrDashboardScreen()),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: Routes.stock, builder: (_, _) => const ItemsScreen()),
@@ -308,6 +385,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: Routes.admin, builder: (_, _) => const AdminScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+                path: Routes.mfgDashboard,
+                builder: (_, _) => const ManufacturingDashboardScreen()),
           ]),
           _recordBranch(Routes.mfgBom, 'mfg_bom'),
           _recordBranch(Routes.mfgWorkOrder, 'mfg_work_order'),
@@ -348,9 +430,21 @@ final routerProvider = Provider<GoRouter>((ref) {
             ReportViewScreen(args: state.extra! as ReportViewArgs),
       ),
       GoRoute(
+        path: Routes.invoiceDetail,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, state) {
+          final args = state.extra! as InvoiceDetailArgs;
+          return InvoiceDetailScreen(name: args.name, kind: args.kind);
+        },
+      ),
+      GoRoute(
           path: Routes.profile,
           parentNavigatorKey: rootNavigatorKey,
           builder: (_, _) => const ProfileScreen()),
+      GoRoute(
+          path: Routes.emailSettings,
+          parentNavigatorKey: rootNavigatorKey,
+          builder: (_, _) => const EmailSettingsScreen()),
       GoRoute(
           path: Routes.leaveApprovals,
           parentNavigatorKey: rootNavigatorKey,
@@ -370,7 +464,16 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
           path: Routes.pipeline,
           parentNavigatorKey: rootNavigatorKey,
-          builder: (_, _) => const PipelineScreen()),
+          builder: (_, _) => const PerformanceScreen()),
+      GoRoute(
+          path: Routes.teamChat,
+          parentNavigatorKey: rootNavigatorKey,
+          builder: (_, _) => const TeamChatScreen()),
+      GoRoute(
+          path: Routes.chatThread,
+          parentNavigatorKey: rootNavigatorKey,
+          builder: (_, state) =>
+              ChatThreadScreen(channel: state.extra! as ChatChannel)),
       GoRoute(
           path: Routes.teamStatus,
           parentNavigatorKey: rootNavigatorKey,

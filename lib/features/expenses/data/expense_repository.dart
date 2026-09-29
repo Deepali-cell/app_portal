@@ -31,13 +31,30 @@ class ExpenseRepository {
     }
   }
 
-  /// Creates a draft expense claim. Throws [ApiException] on rejection.
-  Future<void> apply(List<ExpenseItem> items, {String? remark}) async {
+  /// Creates a draft expense claim and returns its name (needed to attach
+  /// receipts to it afterwards). Throws [ApiException] on rejection.
+  Future<String> apply(List<ExpenseItem> items, {String? remark}) async {
     try {
-      await _dio.post(ApiPaths.expenseApply, data: {
+      final resp = await _dio.post(ApiPaths.expenseApply, data: {
         'items': jsonEncode(items.map((e) => e.toJson()).toList()),
         if (remark != null && remark.isNotEmpty) 'remark': remark,
       });
+      return (resp.data['message'] as Map)['name'] as String;
+    } on DioException catch (e) {
+      throw _asApiException(e);
+    }
+  }
+
+  /// Attaches one proof/receipt file to a draft claim. The file is stored
+  /// private and linked to the claim, so it shows in the ERP's attachments.
+  Future<void> addAttachment(String claim, String filePath) async {
+    try {
+      final form = FormData.fromMap({
+        'claim': claim,
+        'file': await MultipartFile.fromFile(filePath,
+            filename: filePath.split('/').last),
+      });
+      await _dio.post(ApiPaths.expenseAddAttachment, data: form);
     } on DioException catch (e) {
       throw _asApiException(e);
     }

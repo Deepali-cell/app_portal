@@ -1,22 +1,8 @@
-import 'dart:io' show Platform;
-
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
-import '../../dashboard/data/dashboard_repository.dart' show salesDashboardProvider;
-import '../../dashboard/presentation/sales_dashboard_section.dart';
-import '../../location_tracking/data/location_tracking_repository.dart'
-    show teamLiveProvider;
-import '../../location_tracking/presentation/location_status_banner.dart';
-import '../../role_dashboards/data/role_dashboards_repository.dart'
-    show hrSummaryProvider, projectsSummaryProvider, accountsSummaryProvider;
-import '../../role_dashboards/presentation/role_dashboards_sections.dart';
-import '../../todays_plan/application/todays_plan_controller.dart' show todaysPlanControllerProvider;
-
-import '../../../core/format/money.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
@@ -27,9 +13,14 @@ import '../../auth/domain/profile.dart';
 import '../../leave/application/leave_controller.dart';
 import '../../leave/domain/models.dart';
 import '../../notifications/application/notifications_controller.dart';
-import '../../payslips/application/payslip_controller.dart';
-import '../../todays_plan/presentation/todays_plan_card.dart';
+import 'nav_destinations.dart';
 
+/// Home screen. Three blocks, top to bottom:
+///   1. A greeting hero with quick actions.
+///   2. The module grid — every module the user can see, as a tappable card
+///      that opens that module's area (its dashboard where it has one).
+///   3. Recent activity.
+/// The bottom bar shows only Home here; modules live on this screen as cards.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -52,64 +43,19 @@ class HomeScreen extends ConsumerWidget {
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(
-                AppDimens.screenPadding, AppDimens.md, AppDimens.screenPadding,
-                AppDimens.lg),
+            padding: const EdgeInsets.fromLTRB(AppDimens.screenPadding,
+                AppDimens.md, AppDimens.screenPadding, AppDimens.lg),
             child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _WelcomeHero(profile: profile),
-              if (profile.can('leads')) ...[
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _WelcomeHero(profile: profile),
                 const SizedBox(height: AppDimens.lg),
-                const TodaysPlanCard(),
+                _QuickAccessSection(profile: profile),
+                _ModulesSection(profile: profile),
+                const SizedBox(height: AppDimens.lg),
+                const _RecentActivity(),
               ],
-              // Sales users get ONE compact CTA that opens the Sales
-              // workspace (Overview, Pipeline, Calls, Team). Home used to
-              // dump the whole dashboard + pipeline card + call detection
-              // card + leaderboard + team status + field team here — now
-              // everything is behind one door.
-              if (profile.can('sees_sales')) ...[
-                const SizedBox(height: AppDimens.lg),
-                const _SalesWorkspaceEntry(),
-              ],
-              if (profile.can('sees_hr')) ...[
-                const SizedBox(height: AppDimens.lg),
-                const HrDashboardSection(),
-              ],
-              if (profile.can('sees_projects')) ...[
-                const SizedBox(height: AppDimens.lg),
-                const ProjectsDashboardSection(),
-              ],
-              if (profile.can('sees_accounts')) ...[
-                const SizedBox(height: AppDimens.lg),
-                const AccountsDashboardSection(),
-              ],
-              // Non-sales managers (rare but possible) still see the
-              // leaderboard + team status shortcuts here. Sales managers
-              // reach the same surfaces from inside the Sales workspace.
-              if (profile.can('manager_view') &&
-                  !profile.can('sees_sales')) ...[
-                const SizedBox(height: AppDimens.lg),
-                const _LeaderboardEntry(),
-                const SizedBox(height: AppDimens.lg),
-                const _TeamStatusEntry(),
-                if (!kIsWeb && Platform.isAndroid) ...[
-                  const SizedBox(height: AppDimens.lg),
-                  const _FieldTeamEntry(),
-                ],
-              ],
-              // Sales users only see this: a subtle banner that surfaces when
-              // location sharing is broken (permission revoked, location
-              // service off) so the user knows to fix it. There is NO toggle;
-              // tracking is a policy for the sales team, not a choice.
-              if (!kIsWeb && Platform.isAndroid && profile.can('sees_sales'))
-                const LocationStatusBanner(),
-              const SizedBox(height: AppDimens.lg),
-              const _BentoGrid(),
-              const SizedBox(height: AppDimens.lg),
-              const _RecentActivity(),
-            ],
-          ),
+            ),
           ),
         ),
       ),
@@ -117,18 +63,10 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-/// Re-fetches every data source shown on the Home dashboard. Shared by the
-/// pull-to-refresh gesture and the AppBar refresh button.
+/// Re-fetches the data shown on Home (recent activity + the unread badge).
 void _refreshHome(WidgetRef ref) {
-  ref.invalidate(salesDashboardProvider);
-  ref.invalidate(hrSummaryProvider);
-  ref.invalidate(projectsSummaryProvider);
-  ref.invalidate(accountsSummaryProvider);
-  ref.invalidate(teamLiveProvider);
-  ref.invalidate(todaysPlanControllerProvider);
   ref.invalidate(attendanceControllerProvider);
   ref.invalidate(leaveControllerProvider);
-  ref.invalidate(payslipListProvider);
   ref.invalidate(unreadCountProvider);
 }
 
@@ -165,8 +103,7 @@ class _HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
             ),
           ),
           const SizedBox(width: AppDimens.sm),
-          Text('TCB Portal',
-              style: Theme.of(context).textTheme.titleLarge),
+          Text('TCB Portal', style: Theme.of(context).textTheme.titleLarge),
         ],
       ),
       actions: [
@@ -183,8 +120,7 @@ class _HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
             icon: Stack(
               clipBehavior: Clip.none,
               children: [
-                Icon(Icons.notifications_outlined,
-                    color: AppColors.primary),
+                Icon(Icons.notifications_outlined, color: AppColors.primary),
                 if (unread > 0)
                   Positioned(
                     right: -4,
@@ -192,8 +128,8 @@ class _HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 4, vertical: 1),
-                      constraints: const BoxConstraints(
-                          minWidth: 16, minHeight: 16),
+                      constraints:
+                          const BoxConstraints(minWidth: 16, minHeight: 16),
                       decoration: BoxDecoration(
                         color: AppColors.error,
                         borderRadius: BorderRadius.circular(999),
@@ -232,8 +168,8 @@ class _HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Sign out?'),
-        content: const Text(
-            'You will need to sign in again to access the portal.'),
+        content:
+            const Text('You will need to sign in again to access the portal.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
@@ -250,8 +186,7 @@ class _HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
   }
 }
 
-
-class _WelcomeHero extends ConsumerWidget {
+class _WelcomeHero extends StatelessWidget {
   const _WelcomeHero({required this.profile});
   final Profile profile;
 
@@ -263,26 +198,40 @@ class _WelcomeHero extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final firstName =
-        profile.fullName.split(' ').first;
+  Widget build(BuildContext context) {
+    final firstName = profile.fullName.split(' ').first;
     return Container(
       padding: const EdgeInsets.all(AppDimens.lg),
       decoration: BoxDecoration(
-        color: AppColors.surfaceContainer,
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.graphiteHigh,
+            AppColors.graphite,
+          ],
+        ),
         borderRadius: BorderRadius.circular(AppDimens.radiusXl),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.graphite.withValues(alpha: 0.45),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Stack(
         children: [
           Positioned(
-            right: -36,
-            top: -36,
+            right: -30,
+            top: -30,
             child: Container(
-              width: 160,
-              height: 160,
+              width: 150,
+              height: 150,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.secondaryFixedDim.withValues(alpha: 0.35),
+                color: Colors.white.withValues(alpha: 0.10),
               ),
             ),
           ),
@@ -290,30 +239,39 @@ class _WelcomeHero extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                '${_greeting()}, $firstName!',
-                style: Theme.of(context).textTheme.displaySmall,
+                '${_greeting()},',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.80),
+                    ),
               ),
-              const SizedBox(height: 2),
-              Text("Here's what's happening today.",
-                  style: Theme.of(context).textTheme.bodyLarge),
+              Text(
+                firstName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                    ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Welcome to Your workspace',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Colors.white.withValues(alpha: 0.72),
+                    ),
+              ),
               const SizedBox(height: AppDimens.md),
               Row(
                 children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () => context.go(Routes.time),
-                      icon: const Icon(Icons.timer_outlined, size: 18),
-                      label: const Text('Clock In'),
-                    ),
+                  _HeroInfoChip(
+                    icon: Icons.calendar_today_outlined,
+                    label: DateFormat('EEE, d MMM').format(DateTime.now()),
                   ),
                   const SizedBox(width: AppDimens.sm),
-                  Expanded(
-                    child: FilledButton.icon(
-                      onPressed: () => context.go(Routes.leave),
-                      icon: const Icon(Icons.event_available_outlined,
-                          size: 18),
-                      label: const Text('Apply Leave'),
-                    ),
+                  _HeroInfoChip(
+                    icon: Icons.grid_view_rounded,
+                    label:
+                        '${homeModuleCards(profile).length} modules',
                   ),
                 ],
               ),
@@ -325,169 +283,329 @@ class _WelcomeHero extends ConsumerWidget {
   }
 }
 
-class _BentoGrid extends ConsumerWidget {
-  const _BentoGrid();
+/// A frosted-glass info pill that reads well on the dark hero — used for
+/// at-a-glance portal context (today's date, how many modules you can open).
+class _HeroInfoChip extends StatelessWidget {
+  const _HeroInfoChip({required this.icon, required this.label});
+  final IconData icon;
+  final String label;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 15, color: Colors.white.withValues(alpha: 0.90)),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// "My workspace" — personal self-service shortcuts (attendance, leave,
+/// expenses, timesheet, payslips). These are the [NavDest]s that live at the
+/// top level (module == null) beside Home, surfaced here as quick tiles so
+/// they're one tap away without opening a module.
+class _QuickAccessSection extends StatelessWidget {
+  const _QuickAccessSection({required this.profile});
+  final Profile profile;
+
+  @override
+  Widget build(BuildContext context) {
+    final items = destinationsFor(profile)
+        .where((d) => d.module == null && d.route != Routes.home)
+        .toList();
+    if (items.isEmpty) return const SizedBox.shrink();
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: const [
-        _ShiftCard(),
-        SizedBox(height: AppDimens.md),
-        _LastPayslipCard(),
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 2, bottom: AppDimens.sm),
+          child: Text(
+            'My workspace',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+        ),
+        Wrap(
+          spacing: AppDimens.sm,
+          runSpacing: AppDimens.sm,
+          children: [for (final d in items) _QuickTile(dest: d)],
+        ),
+        const SizedBox(height: AppDimens.lg),
       ],
     );
   }
 }
 
-class _BentoCard extends StatelessWidget {
-  const _BentoCard({
-    required this.title,
-    required this.icon,
-    required this.child,
-  });
-  final String title;
-  final IconData icon;
-  final Widget child;
+class _QuickTile extends StatelessWidget {
+  const _QuickTile({required this.dest});
+  final NavDest dest;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppDimens.md),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600)),
-                ),
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: AppColors.surfaceContainerLow,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(icon, color: AppColors.secondary, size: 18),
-                ),
-              ],
-            ),
-            const SizedBox(height: AppDimens.md),
-            child,
-          ],
+    return Material(
+      color: AppColors.surfaceContainerLowest,
+      borderRadius: BorderRadius.circular(999),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(999),
+        onTap: () => context.go(dest.route),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: AppColors.outlineVariant),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(dest.icon, size: 18, color: AppColors.primary),
+              const SizedBox(width: 8),
+              Text(dest.label,
+                  style: const TextStyle(
+                      fontSize: 13, fontWeight: FontWeight.w700)),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-class _ShiftCard extends ConsumerWidget {
-  const _ShiftCard();
+class _ModulesSection extends StatelessWidget {
+  const _ModulesSection({required this.profile});
+  final Profile profile;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final async = ref.watch(attendanceControllerProvider);
-    return _BentoCard(
-      title: 'Today',
-      icon: Icons.schedule,
-      child: async.when(
-        loading: () => const _SkeletonLine(),
-        error: (_, _) => Text('Open the Time tab to check in.',
-            style: Theme.of(context).textTheme.bodyMedium),
-        data: (s) {
-          final todays = s.context.todaysLogs;
-          if (todays.isEmpty) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text("You haven't checked in yet.",
-                    style: Theme.of(context).textTheme.headlineSmall),
-                const SizedBox(height: 2),
-                Text('Suggested: ${s.context.suggestedLogType.label}',
-                    style: Theme.of(context).textTheme.bodyMedium),
-              ],
-            );
-          }
-          final last = todays.last;
-          final fmt = DateFormat('h:mm a');
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Last ${last.logType.label.toLowerCase()}',
-                  style: Theme.of(context).textTheme.bodyMedium),
-              Text(fmt.format(last.time.toLocal()),
-                  style: Theme.of(context).textTheme.headlineMedium),
-            ],
-          );
-        },
-      ),
+  Widget build(BuildContext context) {
+    final cards = homeModuleCards(profile);
+    if (cards.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 2, bottom: AppDimens.sm),
+          child: Text(
+            'Your modules',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w800,
+                ),
+          ),
+        ),
+        GridView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          padding: EdgeInsets.zero,
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            mainAxisSpacing: AppDimens.md,
+            crossAxisSpacing: AppDimens.md,
+            mainAxisExtent: 152,
+          ),
+          itemCount: cards.length,
+          itemBuilder: (context, i) => _ModuleCard(card: cards[i]),
+        ),
+      ],
     );
   }
 }
 
-class _LastPayslipCard extends ConsumerStatefulWidget {
-  const _LastPayslipCard();
+/// A module tile on Home. Lifts on hover (desktop/web) and dips on press for
+/// a tactile "opening" feel before it navigates into the module.
+class _ModuleCard extends StatefulWidget {
+  const _ModuleCard({required this.card});
+  final HomeModuleCard card;
   @override
-  ConsumerState<_LastPayslipCard> createState() => _LastPayslipCardState();
+  State<_ModuleCard> createState() => _ModuleCardState();
 }
 
-class _LastPayslipCardState extends ConsumerState<_LastPayslipCard> {
-  bool _revealed = false;
+class _ModuleCardState extends State<_ModuleCard> {
+  bool _hover = false;
+  bool _pressed = false;
+
   @override
   Widget build(BuildContext context) {
-    final async = ref.watch(payslipListProvider);
-    return _BentoCard(
-      title: 'Last Payslip',
-      icon: Icons.payments_outlined,
-      child: async.when(
-        loading: () => const _SkeletonLine(),
-        error: (_, _) => Text('Could not load payslips.',
-            style: Theme.of(context).textTheme.bodyMedium),
-        data: (ctx) {
-          if (ctx.slips.isEmpty) {
-            return Text('No payslips yet.',
-                style: Theme.of(context).textTheme.bodyMedium);
-          }
-          final last = ctx.slips.first;
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(DateFormat('d MMM yyyy').format(last.endDate),
-                  style: Theme.of(context).textTheme.headlineMedium),
-              const SizedBox(height: 4),
-              Row(
+    final card = widget.card;
+    final scale = _pressed ? 0.96 : (_hover ? 1.03 : 1.0);
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      onEnter: (_) => setState(() => _hover = true),
+      onExit: (_) => setState(() => _hover = false),
+      child: AnimatedScale(
+        scale: scale,
+        duration: const Duration(milliseconds: 140),
+        curve: Curves.easeOut,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 140),
+          curve: Curves.easeOut,
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [AppColors.graphiteHigh, AppColors.graphite],
+            ),
+            borderRadius: BorderRadius.circular(AppDimens.radiusXl),
+            border: Border.all(
+              color: _hover
+                  ? AppColors.primary.withValues(alpha: 0.85)
+                  : Colors.white.withValues(alpha: 0.08),
+              width: _hover ? 1.5 : 1,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: _hover
+                    ? AppColors.primary.withValues(alpha: 0.35)
+                    : AppColors.graphite.withValues(alpha: 0.25),
+                blurRadius: _hover ? 22 : 10,
+                offset: Offset(0, _hover ? 10 : 4),
+              ),
+            ],
+          ),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(AppDimens.radiusXl),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              borderRadius: BorderRadius.circular(AppDimens.radiusXl),
+              splashColor: Colors.white.withValues(alpha: 0.12),
+              highlightColor: Colors.white.withValues(alpha: 0.06),
+              onTap: () => context.go(card.route),
+              onHighlightChanged: (v) => setState(() => _pressed = v),
+              child: Stack(
                 children: [
-                  Icon(Icons.check_circle,
-                      color: AppColors.tertiaryFixedDim, size: 16),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: Text(
-                        _revealed ? money(last.net, last.currency) : '••••••',
-                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w600)),
+                  // Oversized faint module glyph — gives each card its own
+                  // identity without a bitmap asset.
+                  Positioned(
+                    right: -18,
+                    bottom: -22,
+                    child: Icon(
+                      card.icon,
+                      size: 118,
+                      color: Colors.white.withValues(alpha: 0.05),
+                    ),
                   ),
-                  IconButton(
-                    iconSize: 18,
-                    visualDensity: VisualDensity.compact,
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    tooltip: _revealed ? 'Hide' : 'Show',
-                    icon: Icon(
-                        _revealed
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                        color: AppColors.onSurfaceVariant),
-                    onPressed: () => setState(() => _revealed = !_revealed),
+                  // Soft top-left sheen for depth.
+                  Positioned(
+                    left: -24,
+                    top: -30,
+                    child: Container(
+                      width: 96,
+                      height: 96,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: Colors.white
+                            .withValues(alpha: _hover ? 0.06 : 0.035),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 46,
+                              height: 46,
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [
+                                    Colors.white.withValues(alpha: 0.20),
+                                    Colors.white.withValues(alpha: 0.06),
+                                  ],
+                                ),
+                                borderRadius: BorderRadius.circular(14),
+                                border: Border.all(
+                                    color:
+                                        Colors.white.withValues(alpha: 0.16)),
+                              ),
+                              alignment: Alignment.center,
+                              child:
+                                  Icon(card.icon, color: Colors.white, size: 24),
+                            ),
+                            const Spacer(),
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 140),
+                              width: 28,
+                              height: 28,
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: _hover
+                                    ? Colors.white.withValues(alpha: 0.22)
+                                    : Colors.white.withValues(alpha: 0.10),
+                              ),
+                              alignment: Alignment.center,
+                              child: Icon(Icons.arrow_outward,
+                                  size: 15,
+                                  color:
+                                      Colors.white.withValues(alpha: 0.85)),
+                            ),
+                          ],
+                        ),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              card.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium
+                                  ?.copyWith(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                    letterSpacing: 0.2,
+                                  ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              card.tagline,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall
+                                  ?.copyWith(
+                                    color:
+                                        Colors.white.withValues(alpha: 0.62),
+                                    height: 1.25,
+                                  ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
-            ],
-          );
-        },
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -544,8 +662,7 @@ class _RecentActivity extends ConsumerWidget {
                 AppDimens.md, AppDimens.md, AppDimens.md, AppDimens.sm),
             child: Text('Recent Activity',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppColors.primary,
-                    fontWeight: FontWeight.w600)),
+                    color: AppColors.primary, fontWeight: FontWeight.w700)),
           ),
           if (top.isEmpty)
             Padding(
@@ -599,7 +716,8 @@ class _ActivityRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        border: Border(top: BorderSide(color: AppColors.outlineVariant, width: 0.4)),
+        border: Border(
+            top: BorderSide(color: AppColors.outlineVariant, width: 0.4)),
       ),
       padding: const EdgeInsets.all(AppDimens.md),
       child: Row(
@@ -607,10 +725,7 @@ class _ActivityRow extends StatelessWidget {
           Container(
             width: 40,
             height: 40,
-            decoration: BoxDecoration(
-              color: item.tone,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: item.tone, shape: BoxShape.circle),
             alignment: Alignment.center,
             child: Icon(item.icon, color: item.color, size: 20),
           ),
@@ -643,339 +758,5 @@ class _ActivityRow extends StatelessWidget {
     if (diff.inMinutes < 60) return '${diff.inMinutes}m';
     if (diff.inHours < 24) return '${diff.inHours}h';
     return '${diff.inDays}d';
-  }
-}
-
-class _SkeletonLine extends StatelessWidget {
-  const _SkeletonLine();
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 24,
-      decoration: BoxDecoration(
-        color: AppColors.surfaceContainer,
-        borderRadius: BorderRadius.circular(6),
-      ),
-    );
-  }
-}
-
-/// Compact CTA on the home that opens the CRM Pipeline / Funnel screen.
-/// Gated upstream by `crm_lead OR crm_deal` capability — non-CRM users
-/// never see this card.
-class _PipelineEntry extends StatelessWidget {
-  const _PipelineEntry();
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppDimens.radiusXl),
-        onTap: () => context.push(Routes.pipeline),
-        child: Padding(
-          padding: const EdgeInsets.all(AppDimens.md),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.secondaryFixed,
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Icon(Icons.insights_outlined,
-                    color: AppColors.primary, size: 22),
-              ),
-              const SizedBox(width: AppDimens.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("Pipeline",
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 2),
-                    Text(
-                      "See which leads and deals are stuck at each stage",
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right,
-                  size: 20, color: AppColors.onSurfaceVariant),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// One-stop CTA for the whole Sales suite: Overview, Pipeline, Calls, Team.
-/// Replaces the six-card sprawl (Sales Dashboard + Pipeline card + Call
-/// Detection card + Leaderboard + Team status + Field team) that used to
-/// occupy the middle of every sales rep's home screen.
-class _SalesWorkspaceEntry extends StatelessWidget {
-  const _SalesWorkspaceEntry();
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppDimens.radiusXl),
-        onTap: () => context.push(Routes.salesWorkspace),
-        child: Padding(
-          padding: const EdgeInsets.all(AppDimens.md),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.secondaryFixed,
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Icon(Icons.dashboard_customize_outlined,
-                    color: AppColors.primary, size: 22),
-              ),
-              const SizedBox(width: AppDimens.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("Sales workspace",
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 2),
-                    Text(
-                      "Overview, pipeline, calls, and your team in one place",
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right,
-                  size: 20, color: AppColors.onSurfaceVariant),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Compact CTA that opens the Field Team live-location map. Manager-only,
-/// Android-only. See [TeamLiveMapScreen].
-class _FieldTeamEntry extends StatelessWidget {
-  const _FieldTeamEntry();
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppDimens.radiusXl),
-        onTap: () => context.push(Routes.locationTeam),
-        child: Padding(
-          padding: const EdgeInsets.all(AppDimens.md),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.secondaryFixed,
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Icon(Icons.map_outlined,
-                    color: AppColors.primary, size: 22),
-              ),
-              const SizedBox(width: AppDimens.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("Field team",
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 2),
-                    Text(
-                      "Live location of your team on a map",
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right,
-                  size: 20, color: AppColors.onSurfaceVariant),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Compact CTA that opens the Call Detection + Recording settings screen.
-/// Android-only. iOS users skip this card entirely.
-class _CallDetectionEntry extends StatelessWidget {
-  const _CallDetectionEntry();
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppDimens.radiusXl),
-        onTap: () => context.push(Routes.callDetection),
-        child: Padding(
-          padding: const EdgeInsets.all(AppDimens.md),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.secondaryFixed,
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Icon(Icons.ring_volume_outlined,
-                    color: AppColors.primary, size: 22),
-              ),
-              const SizedBox(width: AppDimens.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("Call detection",
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 2),
-                    Text(
-                      "Caller-ID popup + auto-recording fetch + AI summaries",
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right,
-                  size: 20, color: AppColors.onSurfaceVariant),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Compact CTA on the home that opens the live Team Status dashboard.
-/// Gated upstream by `manager_view` capability.
-class _TeamStatusEntry extends StatelessWidget {
-  const _TeamStatusEntry();
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppDimens.radiusXl),
-        onTap: () => context.push(Routes.teamStatus),
-        child: Padding(
-          padding: const EdgeInsets.all(AppDimens.md),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.secondaryFixed,
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Icon(Icons.groups_2_outlined,
-                    color: AppColors.primary, size: 22),
-              ),
-              const SizedBox(width: AppDimens.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("Team status",
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 2),
-                    Text(
-                      "Live: kaun online hai, kisne kitne calls kiye aaj",
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right,
-                  size: 20, color: AppColors.onSurfaceVariant),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Compact CTA on the home that takes managers into the leaderboard screen.
-class _LeaderboardEntry extends StatelessWidget {
-  const _LeaderboardEntry();
-  @override
-  Widget build(BuildContext context) {
-    return Card(
-      child: InkWell(
-        borderRadius: BorderRadius.circular(AppDimens.radiusXl),
-        onTap: () => context.push(Routes.leaderboard),
-        child: Padding(
-          padding: const EdgeInsets.all(AppDimens.md),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.secondaryFixed,
-                  shape: BoxShape.circle,
-                ),
-                alignment: Alignment.center,
-                child: Icon(Icons.emoji_events_outlined,
-                    color: AppColors.primary, size: 22),
-              ),
-              const SizedBox(width: AppDimens.md),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text("Leaderboard",
-                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 2),
-                    Text(
-                      "Team performance for this month. Tap to drill in.",
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ],
-                ),
-              ),
-              Icon(Icons.chevron_right,
-                  size: 20, color: AppColors.onSurfaceVariant),
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

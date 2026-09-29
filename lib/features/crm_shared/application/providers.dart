@@ -13,6 +13,10 @@ final notesProvider = FutureProvider.family<List<CrmNote>, CrmRef>(
   (ref, key) => ref.read(crmCollabRepositoryProvider).listNotes(key),
 );
 
+final whatsAppProvider = FutureProvider.family<List<WhatsAppMessage>, CrmRef>(
+  (ref, key) => ref.read(crmCollabRepositoryProvider).listWhatsApp(key),
+);
+
 final crmTasksProvider = FutureProvider.family<List<CrmTaskItem>, CrmRef>(
   (ref, key) => ref.read(crmCollabRepositoryProvider).listTasks(key),
 );

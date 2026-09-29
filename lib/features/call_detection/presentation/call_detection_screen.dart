@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
+import '../../home/presentation/app_shell.dart';
 import '../application/call_detect_controller.dart';
 import '../application/call_event_bridge.dart';
 import '../domain/permission_status.dart';
@@ -149,6 +150,7 @@ class _CallDetectionScreenState extends ConsumerState<CallDetectionScreen>
                 data: (s) => _AndroidBody(snapshot: s),
               ),
             ),
+      bottomNavigationBar: const PersistentBottomNav(),
     );
   }
 }

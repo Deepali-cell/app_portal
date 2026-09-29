@@ -94,6 +94,8 @@ List<_NavTile> _buildNavTiles(
   final activeModule = activeModuleFor(dests, currentRoute);
 
   if (activeModule == null) {
+    // Top level: only Home. Every module is reached from a card on the Home
+    // screen, not from the bottom bar. The bar stays a single anchor tile.
     final tiles = <_NavTile>[];
     for (final d in dests.where((d) => d.module == null)) {
       final selected = isInBranch(d.route, currentRoute);
@@ -107,29 +109,16 @@ List<_NavTile> _buildNavTiles(
         },
       ));
     }
-    for (final m in modulesIn(dests)) {
-      final meta = moduleMeta[m];
-      if (meta == null) continue;
-      final first = dests.firstWhere((d) => d.module == m);
-      tiles.add(_NavTile(
-        icon: meta.$1,
-        selectedIcon: meta.$2,
-        label: meta.$3,
-        selected: false,
-        onTap: () {
-          _goFromRoot(context, first.route);
-        },
-      ));
-    }
     return tiles;
   }
 
-  final meta = moduleMeta[activeModule];
+  // Inside a module: Home (back to the module grid) + that module's own tabs,
+  // with its Dashboard first.
   final tiles = <_NavTile>[
     _NavTile(
-      icon: Icons.apps_outlined,
-      selectedIcon: Icons.apps,
-      label: meta?.$3 ?? 'Modules',
+      icon: Icons.home_outlined,
+      selectedIcon: Icons.home,
+      label: 'Home',
       selected: false,
       onTap: () {
         _goFromRoot(context, Routes.home);
@@ -181,13 +170,17 @@ class _ScrollableBottomNav extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
-        color: AppColors.primary,
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [AppColors.graphiteHigh, AppColors.graphite],
+        ),
         borderRadius: BorderRadius.vertical(top: Radius.circular(AppDimens.radiusXl)),
         boxShadow: [
           BoxShadow(
-            color: AppColors.cardShadow,
-            blurRadius: 12,
-            offset: Offset(0, -4),
+            color: AppColors.graphite.withValues(alpha: 0.35),
+            blurRadius: 14,
+            offset: const Offset(0, -4),
           ),
         ],
       ),
@@ -229,8 +222,13 @@ class _BottomNavItem extends StatelessWidget {
           padding: EdgeInsets.symmetric(
               horizontal: selected ? 14 : 10, vertical: 4),
           decoration: BoxDecoration(
-            color: selected ? AppColors.secondaryContainer : Colors.transparent,
+            color: selected
+                ? Colors.white.withValues(alpha: 0.16)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(999),
+            border: selected
+                ? Border.all(color: Colors.white.withValues(alpha: 0.22))
+                : null,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -239,8 +237,8 @@ class _BottomNavItem extends StatelessWidget {
                 selected ? tile.selectedIcon : tile.icon,
                 size: 20,
                 color: selected
-                    ? AppColors.onSecondaryContainer
-                    : AppColors.primaryFixedDim.withValues(alpha: 0.85),
+                    ? Colors.white
+                    : Colors.white.withValues(alpha: 0.62),
               ),
               const SizedBox(height: 1),
               Text(
@@ -250,8 +248,8 @@ class _BottomNavItem extends StatelessWidget {
                   height: 1.1,
                   fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                   color: selected
-                      ? AppColors.onSecondaryContainer
-                      : AppColors.primaryFixedDim.withValues(alpha: 0.85),
+                      ? Colors.white
+                      : Colors.white.withValues(alpha: 0.62),
                   letterSpacing: 0.2,
                 ),
               ),

@@ -38,12 +38,23 @@ Color priorityColor(String p) {
   }
 }
 
-class CrmTasksTab extends ConsumerWidget {
+class CrmTasksTab extends ConsumerStatefulWidget {
   const CrmTasksTab({super.key, required this.crmRef});
   final CrmRef crmRef;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CrmTasksTab> createState() => _CrmTasksTabState();
+}
+
+class _CrmTasksTabState extends ConsumerState<CrmTasksTab> {
+  // null = All; otherwise show only tasks in this status.
+  CrmTaskStatus? _filter;
+
+  CrmRef get crmRef => widget.crmRef;
+
+  @override
+  Widget build(BuildContext context) {
+    final ref = this.ref;
     final async = ref.watch(crmTasksProvider(crmRef));
     return Scaffold(
       backgroundColor: Colors.transparent,
@@ -63,18 +74,44 @@ class CrmTasksTab extends ConsumerWidget {
           if (tasks.isEmpty) {
             return const _Empty(icon: Icons.task_alt_outlined, label: 'No tasks yet');
           }
+          // Count per status so the filter chips can show how many.
+          final counts = <CrmTaskStatus, int>{};
+          for (final t in tasks) {
+            counts[t.status] = (counts[t.status] ?? 0) + 1;
+          }
+          final visible = _filter == null
+              ? tasks
+              : tasks.where((t) => t.status == _filter).toList();
           return RefreshIndicator(
             onRefresh: () async => ref.invalidate(crmTasksProvider(crmRef)),
-            child: ListView.separated(
-              padding: const EdgeInsets.fromLTRB(
-                  AppDimens.screenPadding, AppDimens.screenPadding, AppDimens.screenPadding, 96),
-              itemCount: tasks.length,
-              separatorBuilder: (_, _) => const SizedBox(height: AppDimens.md),
-              itemBuilder: (_, i) => _TaskCard(
-                task: tasks[i],
-                onTap: () => _openSheet(context, ref, tasks[i]),
-                onDelete: () => _confirmDelete(context, ref, tasks[i]),
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _StatusFilterBar(
+                  selected: _filter,
+                  total: tasks.length,
+                  counts: counts,
+                  onChanged: (s) => setState(() => _filter = s),
+                ),
+                Expanded(
+                  child: visible.isEmpty
+                      ? const _Empty(
+                          icon: Icons.filter_alt_off_outlined,
+                          label: 'No tasks in this status')
+                      : ListView.separated(
+                          padding: const EdgeInsets.fromLTRB(AppDimens.screenPadding,
+                              AppDimens.sm, AppDimens.screenPadding, 96),
+                          itemCount: visible.length,
+                          separatorBuilder: (_, _) =>
+                              const SizedBox(height: AppDimens.md),
+                          itemBuilder: (_, i) => _TaskCard(
+                            task: visible[i],
+                            onTap: () => _openSheet(context, ref, visible[i]),
+                            onDelete: () => _confirmDelete(context, ref, visible[i]),
+                          ),
+                        ),
+                ),
+              ],
             ),
           );
         },
@@ -120,6 +157,84 @@ class CrmTasksTab extends ConsumerWidget {
   }
 }
 
+/// Horizontal status filter for the CRM tasks list. "All" plus one chip per
+/// status, each showing its live count; the selected chip is filled.
+class _StatusFilterBar extends StatelessWidget {
+  const _StatusFilterBar({
+    required this.selected,
+    required this.total,
+    required this.counts,
+    required this.onChanged,
+  });
+  final CrmTaskStatus? selected;
+  final int total;
+  final Map<CrmTaskStatus, int> counts;
+  final ValueChanged<CrmTaskStatus?> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 48,
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppDimens.screenPadding, vertical: AppDimens.sm),
+        children: [
+          _chip(context,
+              label: 'All',
+              count: total,
+              color: AppColors.navy,
+              active: selected == null,
+              onTap: () => onChanged(null)),
+          for (final s in CrmTaskStatus.values)
+            if ((counts[s] ?? 0) > 0)
+              _chip(context,
+                  label: s.api,
+                  count: counts[s] ?? 0,
+                  color: statusColor(s),
+                  active: selected == s,
+                  onTap: () => onChanged(s)),
+        ],
+      ),
+    );
+  }
+
+  Widget _chip(BuildContext context,
+      {required String label,
+      required int count,
+      required Color color,
+      required bool active,
+      required VoidCallback onTap}) {
+    return Padding(
+      padding: const EdgeInsets.only(right: AppDimens.sm),
+      child: GestureDetector(
+        onTap: onTap,
+        behavior: HitTestBehavior.opaque,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 150),
+          padding:
+              const EdgeInsets.symmetric(horizontal: AppDimens.md, vertical: 6),
+          decoration: BoxDecoration(
+            color: active ? color : color.withValues(alpha: 0.10),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(
+                color: active ? color : color.withValues(alpha: 0.25)),
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            '$label · $count',
+            style: TextStyle(
+              color: active ? AppColors.canvas : color,
+              fontWeight: FontWeight.w700,
+              fontSize: 12.5,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _TaskCard extends StatelessWidget {
   const _TaskCard(
       {required this.task, required this.onTap, required this.onDelete});
@@ -133,23 +248,33 @@ class _TaskCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppDimens.radiusLg),
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.all(AppDimens.lg),
+          padding: const EdgeInsets.fromLTRB(
+              AppDimens.md, AppDimens.md, AppDimens.sm, AppDimens.md),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Text(task.title,
-                        style: Theme.of(context).textTheme.titleMedium),
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Text(task.title,
+                          style: Theme.of(context).textTheme.titleMedium),
+                    ),
                   ),
                   IconButton(
-                    icon: Icon(Icons.delete_outline, color: AppColors.danger),
+                    icon: Icon(Icons.delete_outline,
+                        color: AppColors.danger, size: 20),
+                    visualDensity: VisualDensity.compact,
+                    constraints:
+                        const BoxConstraints(minWidth: 32, minHeight: 32),
+                    padding: EdgeInsets.zero,
                     onPressed: onDelete,
                   ),
                 ],
               ),
-              const SizedBox(height: AppDimens.xs),
+              const SizedBox(height: AppDimens.sm),
               Wrap(spacing: AppDimens.sm, runSpacing: AppDimens.xs, children: [
                 _chip(task.status.api, statusColor(task.status), filled: true),
                 _chip(task.priority, priorityColor(task.priority)),

@@ -30,6 +30,21 @@ class CrmCollabRepository {
   Future<void> deleteNote(String name) =>
       _post(ApiPaths.noteDelete, {'name': name});
 
+  // ---- WhatsApp outreach log (click-to-chat) ----
+  Future<List<WhatsAppMessage>> listWhatsApp(CrmRef ref) async =>
+      _getList(ApiPaths.whatsappList, ref, WhatsAppMessage.fromJson);
+
+  Future<void> logWhatsApp(CrmRef ref,
+          {required String message, String? toNumber}) =>
+      _post(ApiPaths.whatsappLog, {
+        ...ref.bodyFields,
+        'message': message,
+        if (toNumber != null && toNumber.isNotEmpty) 'to_number': toNumber,
+      });
+
+  Future<void> deleteWhatsApp(String name) =>
+      _post(ApiPaths.whatsappDelete, {'name': name});
+
   // ---- CRM Tasks (per lead/deal) ----
   Future<List<CrmTaskItem>> listTasks(CrmRef ref) async =>
       _getList(ApiPaths.crmTasksList, ref, CrmTaskItem.fromJson);
