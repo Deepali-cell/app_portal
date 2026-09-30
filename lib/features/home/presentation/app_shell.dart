@@ -7,7 +7,6 @@ import '../../../core/router/nav_history.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../auth/application/auth_controller.dart';
-import '../../timesheet/presentation/running_timer.dart';
 import 'nav_destinations.dart';
 
 /// One resolved nav tile: either a top-level destination (Home) or a module
@@ -148,13 +147,7 @@ class PersistentBottomNav extends ConsumerWidget {
     final dests = destinationsFor(profile);
     final currentRoute = _currentRoute(context);
     final tiles = _buildNavTiles(context, dests, currentRoute);
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        const RunningTimerStrip(),
-        _ScrollableBottomNav(tiles: tiles),
-      ],
-    );
+    return _ScrollableBottomNav(tiles: tiles);
   }
 }
 

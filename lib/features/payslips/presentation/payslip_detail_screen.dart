@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:share_plus/share_plus.dart';
 
 import '../../../core/format/money.dart';
 import '../../../core/network/api_exception.dart';
@@ -36,32 +35,6 @@ class PayslipDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _PayslipDetailScreenState extends ConsumerState<PayslipDetailScreen> {
-  bool _downloading = false;
-
-  Future<void> _downloadAndShare() async {
-    final messenger = ScaffoldMessenger.of(context);
-    setState(() => _downloading = true);
-    try {
-      final path = await ref
-          .read(payslipRepositoryProvider)
-          .downloadPdf(widget.name);
-      await SharePlus.instance.share(
-        ShareParams(
-          files: [XFile(path, mimeType: 'application/pdf')],
-          subject: 'Payslip ${widget.name}',
-        ),
-      );
-    } on ApiException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
-    } catch (e) {
-      messenger.showSnackBar(const SnackBar(
-          content: Text(
-              "Couldn't download the payslip. Please try again in a moment.")));
-    } finally {
-      if (mounted) setState(() => _downloading = false);
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(payslipDetailProvider(widget.name));
@@ -82,16 +55,6 @@ class _PayslipDetailScreenState extends ConsumerState<PayslipDetailScreen> {
                 ? Icons.visibility_outlined
                 : Icons.visibility_off_outlined),
             onPressed: () => ref.read(_revealedProvider.notifier).toggle(),
-          ),
-          IconButton(
-            tooltip: 'Download PDF',
-            icon: _downloading
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2))
-                : const Icon(Icons.download_outlined),
-            onPressed: _downloading ? null : _downloadAndShare,
           ),
         ],
       ),

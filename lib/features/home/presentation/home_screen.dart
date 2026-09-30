@@ -51,7 +51,6 @@ class HomeScreen extends ConsumerWidget {
               children: [
                 _WelcomeHero(profile: profile),
                 const SizedBox(height: AppDimens.lg),
-                _QuickAccessSection(profile: profile),
                 _ModulesSection(profile: profile),
                 const SizedBox(height: AppDimens.lg),
                 const _RecentActivity(),
@@ -318,78 +317,6 @@ class _HeroInfoChip extends StatelessWidget {
   }
 }
 
-/// "My workspace" — personal self-service shortcuts (attendance, leave,
-/// expenses, timesheet, payslips). These are the [NavDest]s that live at the
-/// top level (module == null) beside Home, surfaced here as quick tiles so
-/// they're one tap away without opening a module.
-class _QuickAccessSection extends StatelessWidget {
-  const _QuickAccessSection({required this.profile});
-  final Profile profile;
-
-  @override
-  Widget build(BuildContext context) {
-    final items = destinationsFor(profile)
-        .where((d) => d.module == null && d.route != Routes.home)
-        .toList();
-    if (items.isEmpty) return const SizedBox.shrink();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 2, bottom: AppDimens.sm),
-          child: Text(
-            'My workspace',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w800,
-                ),
-          ),
-        ),
-        Wrap(
-          spacing: AppDimens.sm,
-          runSpacing: AppDimens.sm,
-          children: [for (final d in items) _QuickTile(dest: d)],
-        ),
-        const SizedBox(height: AppDimens.lg),
-      ],
-    );
-  }
-}
-
-class _QuickTile extends StatelessWidget {
-  const _QuickTile({required this.dest});
-  final NavDest dest;
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: AppColors.surfaceContainerLowest,
-      borderRadius: BorderRadius.circular(999),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(999),
-        onTap: () => AppNav.go(context, dest.route),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(999),
-            border: Border.all(color: AppColors.outlineVariant),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(dest.icon, size: 18, color: AppColors.primary),
-              const SizedBox(width: 8),
-              Text(dest.label,
-                  style: const TextStyle(
-                      fontSize: 13, fontWeight: FontWeight.w700)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class _ModulesSection extends StatelessWidget {
   const _ModulesSection({required this.profile});
   final Profile profile;
@@ -419,7 +346,7 @@ class _ModulesSection extends StatelessWidget {
             crossAxisCount: 2,
             mainAxisSpacing: AppDimens.md,
             crossAxisSpacing: AppDimens.md,
-            mainAxisExtent: 152,
+            mainAxisExtent: 164,
           ),
           itemCount: cards.length,
           itemBuilder: (context, i) => _ModuleCard(card: cards[i]),
@@ -572,7 +499,7 @@ class _ModuleCardState extends State<_ModuleCard> {
                           children: [
                             Text(
                               card.label,
-                              maxLines: 1,
+                              maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                               style: Theme.of(context)
                                   .textTheme

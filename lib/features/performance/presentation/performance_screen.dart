@@ -246,9 +246,13 @@ class _Scorecard extends StatelessWidget {
                         ? AppColors.onPrimary.withValues(alpha: 0.85)
                         : AppColors.onSurfaceVariant)),
             const SizedBox(height: AppDimens.md),
-            Wrap(
-              spacing: AppDimens.sm,
-              runSpacing: AppDimens.sm,
+            GridView.count(
+              crossAxisCount: 3,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              crossAxisSpacing: AppDimens.sm,
+              mainAxisSpacing: AppDimens.sm,
+              childAspectRatio: 1.15,
               children: [
                 _Metric(
                     label: 'Deals won',
@@ -303,7 +307,6 @@ class _Metric extends StatelessWidget {
         ? AppColors.onPrimary.withValues(alpha: 0.12)
         : AppColors.surfaceContainer;
     return Container(
-      width: 104,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: bg,
@@ -311,6 +314,7 @@ class _Metric extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(icon, size: 18, color: fg),
           const SizedBox(height: 6),
@@ -320,6 +324,8 @@ class _Metric extends StatelessWidget {
               style: TextStyle(
                   fontSize: 18, fontWeight: FontWeight.w800, color: fg)),
           Text(label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                   fontSize: 11,
                   color: onDark
