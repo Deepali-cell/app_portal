@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/router/app_router.dart';
+import '../../../core/router/nav_history.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../home/presentation/app_shell.dart';
@@ -93,6 +94,7 @@ class _TeamLiveListScreenState extends ConsumerState<TeamLiveListScreen>
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        leading: const AppBackButton(),
         backgroundColor: AppColors.surfaceContainerLowest,
         title: const Text('Field team'),
         actions: [

@@ -47,11 +47,19 @@ class HrSummary {
     required this.absentToday,
     required this.birthdays,
     required this.upcomingExits,
+    required this.expenseClaims,
+    required this.activeHeadcount,
+    required this.onLeave,
+    required this.pendingAttendance,
   });
   final int pendingLeaveApps;
   final int absentToday;
   final List<HrBirthday> birthdays;
   final int upcomingExits;
+  final int expenseClaims;
+  final int activeHeadcount;
+  final int onLeave;
+  final int pendingAttendance;
 
   factory HrSummary.fromJson(Map<String, dynamic> j) => HrSummary(
         pendingLeaveApps: (j['pending_leave_apps'] as num?)?.toInt() ?? 0,
@@ -61,6 +69,10 @@ class HrSummary {
             .map((e) => HrBirthday.fromJson(e.cast<String, dynamic>()))
             .toList(),
         upcomingExits: (j['upcoming_exits'] as num?)?.toInt() ?? 0,
+        expenseClaims: (j['expense_claims'] as num?)?.toInt() ?? 0,
+        activeHeadcount: (j['active_headcount'] as num?)?.toInt() ?? 0,
+        onLeave: (j['on_leave'] as num?)?.toInt() ?? 0,
+        pendingAttendance: (j['pending_attendance'] as num?)?.toInt() ?? 0,
       );
 }
 

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/format/money.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/router/nav_history.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../deals/presentation/deal_detail_screen.dart';
@@ -95,7 +96,7 @@ class _DashboardBody extends ConsumerWidget {
                 ref
                     .read(pendingLeadStatusFilterProvider.notifier)
                     .set(s.status);
-                context.go(Routes.leads);
+                AppNav.go(context, Routes.leads);
               }),
           const SizedBox(height: AppDimens.lg),
         ],
@@ -108,7 +109,7 @@ class _DashboardBody extends ConsumerWidget {
           const SizedBox(height: 6),
           _StatusGrid(
               buckets: snapshot.dealStatuses,
-              onTap: (s) => context.go(Routes.deals)),
+              onTap: (s) => AppNav.go(context, Routes.deals)),
           const SizedBox(height: AppDimens.lg),
         ],
         if (!isTeam && snapshot.perRep.isNotEmpty) ...[

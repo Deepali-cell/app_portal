@@ -55,8 +55,10 @@ final roleDashboardsRepositoryProvider = Provider<RoleDashboardsRepository>(
 // "month" on Accounts at the same time).
 
 class HrPeriodController extends Notifier<RolePeriod> {
+  // HR dashboard shows today's snapshot only (the period chips were removed),
+  // so pending-leave counts reflect today rather than the whole week.
   @override
-  RolePeriod build() => RolePeriod.week;
+  RolePeriod build() => RolePeriod.today;
   void set(RolePeriod p) => state = p;
 }
 

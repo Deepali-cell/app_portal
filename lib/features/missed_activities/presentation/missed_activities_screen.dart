@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/router/nav_history.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../todays_plan/application/todays_plan_controller.dart';
@@ -395,7 +396,7 @@ class _TaskTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return InkWell(
-      onTap: () => context.go(Routes.tasks),
+      onTap: () => AppNav.go(context, Routes.tasks),
       child: Padding(
         padding: const EdgeInsets.symmetric(
             horizontal: AppDimens.md, vertical: AppDimens.sm),

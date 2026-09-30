@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../../core/router/nav_history.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -119,6 +120,7 @@ class _TimesheetScreenState extends ConsumerState<TimesheetScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        leading: const AppBackButton(),
         backgroundColor: AppColors.surfaceContainerLowest,
         title: const Text('My Timesheet'),
         actions: [
@@ -615,102 +617,124 @@ class _LogTileState extends State<_LogTile> {
     ].whereType<String>().join(' · ');
     final body = Padding(
       padding: const EdgeInsets.all(AppDimens.md),
-      child: Row(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.surfaceContainer,
-              borderRadius: BorderRadius.circular(AppDimens.radiusLg),
-            ),
-            alignment: Alignment.center,
-            child: Icon(Icons.access_time_outlined,
-                color: AppColors.onSurfaceVariant, size: 20),
-          ),
-          const SizedBox(width: AppDimens.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceContainer,
+                  borderRadius: BorderRadius.circular(AppDimens.radiusLg),
+                ),
+                alignment: Alignment.center,
+                child: Icon(Icons.access_time_outlined,
+                    color: AppColors.onSurfaceVariant, size: 20),
+              ),
+              const SizedBox(width: AppDimens.md),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      child: Text(title,
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .labelLarge
+                                  ?.copyWith(
+                                      color: AppColors.onSurface,
+                                      fontWeight: FontWeight.w600)),
+                        ),
+                        if (log.billable) ...[
+                          const SizedBox(width: 6),
+                          _Chip(
+                              text: 'Billable',
+                              color: AppColors.primary),
+                        ],
+                      ],
+                    ),
+                    if (meta.isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(meta,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context)
-                              .textTheme
-                              .labelLarge
-                              ?.copyWith(
-                                  color: AppColors.onSurface,
-                                  fontWeight: FontWeight.w600)),
-                    ),
-                    if (log.billable) ...[
-                      const SizedBox(width: 6),
-                      _Chip(
-                          text: 'Billable',
-                          color: AppColors.primary),
+                          style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                    if (log.fromTime != null) ...[
+                      const SizedBox(height: 2),
+                      Text(
+                          '${_dtFmt.format(log.fromTime!.toLocal())}'
+                          '${log.toTime != null ? " → ${_dtFmt.format(log.toTime!.toLocal())}" : ""}',
+                          style: Theme.of(context).textTheme.labelSmall),
+                    ],
+                    if (log.description != null &&
+                        log.description!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Text(log.description!,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.bodySmall),
                     ],
                   ],
                 ),
-                if (meta.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(meta,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall),
-                ],
-                if (log.fromTime != null) ...[
-                  const SizedBox(height: 2),
-                  Text(
-                      '${_dtFmt.format(log.fromTime!.toLocal())}'
-                      '${log.toTime != null ? " → ${_dtFmt.format(log.toTime!.toLocal())}" : ""}',
-                      style: Theme.of(context).textTheme.labelSmall),
-                ],
-                if (log.description != null &&
-                    log.description!.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(log.description!,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.bodySmall),
-                ],
+              ),
+              const SizedBox(width: AppDimens.sm),
+              if (!log.isRunning && log.toTime != null) ...[
+                const Icon(Icons.check_circle, color: Colors.green, size: 18),
+                const SizedBox(width: 4),
               ],
-            ),
+              Text(trailingHours,
+                  style: TextStyle(
+                      color:
+                          log.isRunning ? AppColors.error : AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                      fontFeatures: log.isRunning
+                          ? const [FontFeature.tabularFigures()]
+                          : null)),
+            ],
           ),
-          const SizedBox(width: AppDimens.sm),
-          if (log.isRunning)
-            _Chip(
-                text: 'Stop',
-                color: AppColors.error,
-                icon: Icons.stop_circle_outlined)
-          else if (log.toTime != null) ...[
-            const Icon(Icons.check_circle, color: Colors.green, size: 18),
-            const SizedBox(width: 4),
+          // Running entry: an explicit Stop button, right on the entry.
+          if (log.isRunning && onTap != null) ...[
+            const SizedBox(height: AppDimens.sm),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: onTap,
+                icon: const Icon(Icons.stop_circle_outlined, size: 18),
+                label: const Text('Stop timer'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.error,
+                  side: BorderSide(color: AppColors.error),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(AppDimens.radiusLg),
+                  ),
+                ),
+              ),
+            ),
           ],
-          Text(trailingHours,
-              style: TextStyle(
-                  color: log.isRunning ? AppColors.error : AppColors.primary,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 14,
-                  fontFeatures: log.isRunning
-                      ? const [FontFeature.tabularFigures()]
-                      : null)),
         ],
       ),
     );
-    if (onTap == null) return body;
+    // A running row's tap is handled by its explicit Stop button, so only wrap
+    // completed rows (which open the editor) in an InkWell.
+    if (onTap == null || log.isRunning) return body;
     return InkWell(onTap: onTap, child: body);
   }
 }
 
 class _Chip extends StatelessWidget {
-  const _Chip({required this.text, required this.color, this.icon});
+  const _Chip({required this.text, required this.color});
   final String text;
   final Color color;
-  final IconData? icon;
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -719,18 +743,9 @@ class _Chip extends StatelessWidget {
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (icon != null) ...[
-            Icon(icon, color: color, size: 14),
-            const SizedBox(width: 3),
-          ],
-          Text(text,
-              style: TextStyle(
-                  color: color, fontWeight: FontWeight.w700, fontSize: 11)),
-        ],
-      ),
+      child: Text(text,
+          style: TextStyle(
+              color: color, fontWeight: FontWeight.w700, fontSize: 11)),
     );
   }
 }

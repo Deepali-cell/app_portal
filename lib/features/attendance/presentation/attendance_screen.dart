@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
+import '../../../core/router/nav_history.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -142,6 +143,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       return Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
+        leading: const AppBackButton(),
           backgroundColor: AppColors.surfaceContainerLowest,
           title: const Text('Time'),
         ),
@@ -155,6 +157,7 @@ class _AttendanceScreenState extends ConsumerState<AttendanceScreen> {
       child: Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        leading: const AppBackButton(),
         backgroundColor: AppColors.surfaceContainerLowest,
         title: const Text('Time'),
         actions: [

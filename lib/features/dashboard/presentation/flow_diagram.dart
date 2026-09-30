@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/format/money.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
+import '../../../core/router/nav_history.dart';
 import '../domain/module_flow.dart';
 
 /// An interactive, vertical flow diagram for a module dashboard.
@@ -48,7 +48,7 @@ class _FlowNode extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         borderRadius: BorderRadius.circular(AppDimens.radiusXl),
-        onTap: tappable ? () => context.go(stage.route!) : null,
+        onTap: tappable ? () => AppNav.go(context, stage.route!) : null,
         child: Ink(
           decoration: BoxDecoration(
             color: AppColors.surfaceContainerLowest,

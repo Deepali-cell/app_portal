@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
+import '../../../core/router/nav_history.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../auth/application/auth_controller.dart';
@@ -42,22 +43,38 @@ class AppShell extends ConsumerWidget {
     final tiles = _buildNavTiles(context, dests, currentRoute);
     final wide = MediaQuery.sizeOf(context).width >= 840;
 
-    if (wide) {
-      return Scaffold(
-        backgroundColor: AppColors.background,
-        body: Row(
-          children: [
-            _SideRail(tiles: tiles),
-            VerticalDivider(width: 1, color: AppColors.outlineVariant),
-            Expanded(child: shell),
-          ],
-        ),
-      );
-    }
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: shell,
-      bottomNavigationBar: const PersistentBottomNav(),
+    // Global hardware-back handling for the whole portal. When GoRouter can pop
+    // a genuinely pushed page (a detail screen, a root-level screen) we let
+    // Flutter do it. Otherwise, if we have branch history to retrace we consume
+    // the back and step to the previous screen; only at Home with no history
+    // does the OS get to background the app.
+    ref.watch(navHistoryProvider);
+    final canRouterPop = GoRouter.of(context).canPop();
+    final hasHistory = ref.read(navHistoryProvider).isNotEmpty;
+    final scaffold = wide
+        ? Scaffold(
+            backgroundColor: AppColors.background,
+            body: Row(
+              children: [
+                _SideRail(tiles: tiles),
+                VerticalDivider(width: 1, color: AppColors.outlineVariant),
+                Expanded(child: shell),
+              ],
+            ),
+          )
+        : Scaffold(
+            backgroundColor: AppColors.background,
+            body: shell,
+            bottomNavigationBar: const PersistentBottomNav(),
+          );
+
+    return PopScope(
+      canPop: canRouterPop || !hasHistory,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        AppNav.back(context);
+      },
+      child: scaffold,
     );
   }
 }
@@ -65,32 +82,11 @@ class AppShell extends ConsumerWidget {
 String _currentRoute(BuildContext context) =>
     GoRouterState.of(context).matchedLocation;
 
-/// Navigates to a shell destination, first popping any screens that were
-/// pushed on the ROOT navigator (e.g. Sales Workspace, Pipeline, Leaderboard
-/// - screens registered with `parentNavigatorKey: rootNavigatorKey`, so they
-/// sit above the shell rather than inside one of its branches). Going
-/// straight to `context.go(route)` while such a screen is still on top can
-/// hit Flutter's `!keyReservation.contains(key)` GlobalKey assertion, since
-/// the shell branch switch and the root-stack pop would otherwise happen at
-/// once. `GoRouter.of(context)` is captured up front (the tile's own screen
-/// may itself be one of the popped ones, deactivating `context`), and each
-/// pop is awaited via `maybePop()` so GoRouter's internal page list settles
-/// before the next step runs - firing them all in the same frame is what
-/// produced a duplicate-Navigator-GlobalKey crash.
-Future<void> _goFromRoot(BuildContext context, String route) async {
-  final goRouter = GoRouter.of(context);
-  final root = rootNavigatorKey.currentState;
-  while (root != null && root.canPop()) {
-    await root.maybePop();
-  }
-  goRouter.go(route);
-}
-
 /// Level 1 (no module active): Home + one tile per module that has at
 /// least one visible destination. Level 2 (inside a module): a "Modules"
 /// tile to go back to Home, followed by that module's own destinations.
-List<_NavTile> _buildNavTiles(
-    BuildContext context, List<NavDest> dests, String currentRoute) {
+List<_NavTile> _buildNavTiles(BuildContext context,
+    List<NavDest> dests, String currentRoute) {
   final activeModule = activeModuleFor(dests, currentRoute);
 
   if (activeModule == null) {
@@ -105,7 +101,7 @@ List<_NavTile> _buildNavTiles(
         label: d.label,
         selected: selected,
         onTap: () {
-          if (!selected) _goFromRoot(context, d.route);
+          if (!selected) AppNav.go(context, d.route);
         },
       ));
     }
@@ -121,7 +117,7 @@ List<_NavTile> _buildNavTiles(
       label: 'Home',
       selected: false,
       onTap: () {
-        _goFromRoot(context, Routes.home);
+        AppNav.go(context, Routes.home);
       },
     ),
   ];
@@ -133,7 +129,7 @@ List<_NavTile> _buildNavTiles(
       label: d.label,
       selected: selected,
       onTap: () {
-        if (!selected) _goFromRoot(context, d.route);
+        if (!selected) AppNav.go(context, d.route);
       },
     ));
   }
@@ -243,6 +239,10 @@ class _BottomNavItem extends StatelessWidget {
               const SizedBox(height: 1),
               Text(
                 tile.label,
+                maxLines: 1,
+                softWrap: false,
+                overflow: TextOverflow.ellipsis,
+                textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 10.5,
                   height: 1.1,
@@ -337,14 +337,19 @@ class _SideTile extends StatelessWidget {
                     : AppColors.onSurfaceVariant,
               ),
               const SizedBox(width: AppDimens.sm),
-              Text(
-                tile.label,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: selected
-                          ? AppColors.onSecondaryFixed
-                          : AppColors.onSurfaceVariant,
-                      fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                    ),
+              Flexible(
+                child: Text(
+                  tile.label,
+                  maxLines: 1,
+                  softWrap: false,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: selected
+                            ? AppColors.onSecondaryFixed
+                            : AppColors.onSurfaceVariant,
+                        fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                      ),
+                ),
               ),
             ],
           ),

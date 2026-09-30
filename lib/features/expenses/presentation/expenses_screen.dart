@@ -1,5 +1,6 @@
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import '../../../core/router/nav_history.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -30,8 +31,9 @@ class ExpensesScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        leading: const AppBackButton(),
         backgroundColor: AppColors.surfaceContainerLowest,
-        title: const Text('Expenses'),
+        title: const Text('My Expenses'),
         actions: [
           if (!noEmployee)
             IconButton(
@@ -61,7 +63,7 @@ class ExpensesScreen extends ConsumerWidget {
                 AppDimens.xl),
             children: [
               _Header(
-                title: 'Expenses',
+                title: 'My Expenses',
                 subtitle: 'Submit claims and track approvals.',
                 cta: 'New Claim',
                 onPressed: () => _openSheet(context, ctx),

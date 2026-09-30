@@ -184,6 +184,75 @@ class AttendanceEmployeeRow {
       );
 }
 
+/// One employee whose attendance for a day still needs a human decision, as
+/// returned by tcb_portal_erp.api.attendance_report.get_pending_attendance.
+@immutable
+class PendingAttendanceRow {
+  const PendingAttendanceRow({
+    required this.employee,
+    required this.employeeName,
+    required this.reason,
+    this.department,
+    this.designation,
+    this.image,
+    this.firstIn,
+    this.lastOut,
+    this.hours = 0,
+    this.checkinCount = 0,
+  });
+
+  final String employee;
+  final String employeeName;
+
+  /// 'No check-out' (checked in, never out) or 'No check-in' (never came,
+  /// not on leave).
+  final String reason;
+
+  final String? department;
+  final String? designation;
+  final String? image;
+  final DateTime? firstIn;
+  final DateTime? lastOut;
+  final double hours;
+  final int checkinCount;
+
+  static DateTime? _dt(dynamic v) {
+    if (v == null) return null;
+    final s = v.toString();
+    if (s.isEmpty) return null;
+    return DateTime.tryParse(s);
+  }
+
+  factory PendingAttendanceRow.fromJson(Map<String, dynamic> j) =>
+      PendingAttendanceRow(
+        employee: (j['employee'] ?? '') as String,
+        employeeName: (j['employee_name'] ?? '') as String,
+        reason: (j['reason'] ?? '') as String,
+        department: j['department'] as String?,
+        designation: j['designation'] as String?,
+        image: j['image'] as String?,
+        firstIn: _dt(j['first_in']),
+        lastOut: _dt(j['last_out']),
+        hours: (j['hours'] as num?)?.toDouble() ?? 0,
+        checkinCount: (j['checkin_count'] as num?)?.toInt() ?? 0,
+      );
+}
+
+@immutable
+class PendingAttendance {
+  const PendingAttendance({required this.date, required this.rows});
+
+  final DateTime date;
+  final List<PendingAttendanceRow> rows;
+
+  factory PendingAttendance.fromJson(Map<String, dynamic> j) => PendingAttendance(
+        date: DateTime.parse(j['date'] as String),
+        rows: ((j['pending'] as List?) ?? const [])
+            .map((e) => PendingAttendanceRow.fromJson(e as Map<String, dynamic>))
+            .toList(),
+      );
+}
+
 @immutable
 class AttendanceRoster {
   const AttendanceRoster({

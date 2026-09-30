@@ -57,6 +57,9 @@ class ApiPaths {
   // `period` (today | week | month | custom) and optional from_date/to_date.
   static const String hrDashboard =
       '/api/method/tcb_portal_erp.api.hr_dashboard.get_summary';
+  // Employees on approved leave on a given date (default today).
+  static const String hrOnLeaveList =
+      '/api/method/tcb_portal_erp.api.hr_dashboard.on_leave_list';
   static const String projectsDashboard =
       '/api/method/tcb_portal_erp.api.projects_dashboard.get_summary';
   static const String accountsDashboard =
@@ -152,6 +155,8 @@ class ApiPaths {
       '/api/method/tcb_portal_erp.api.attendance_report.list_attendance';
   static const String attendanceMarkStatus =
       '/api/method/tcb_portal_erp.api.attendance_report.mark_attendance';
+  static const String attendancePending =
+      '/api/method/tcb_portal_erp.api.attendance_report.get_pending_attendance';
 
   // Leave
   static const String leaveContext =
@@ -173,6 +178,8 @@ class ApiPaths {
       '/api/method/tcb_portal_erp.api.expense.get_pending_approvals';
   static const String expenseActOnClaim =
       '/api/method/tcb_portal_erp.api.expense.act_on_claim';
+  static const String expenseAllClaims =
+      '/api/method/tcb_portal_erp.api.expense.get_all_claims';
 
   // Comp-Off (Compensatory Leave Request) approvals
   static const String compOffDetail =
@@ -181,6 +188,26 @@ class ApiPaths {
       '/api/method/tcb_portal_erp.api.leave.get_comp_off_pending_approvals';
   static const String compOffActOnRequest =
       '/api/method/tcb_portal_erp.api.leave.act_on_comp_off';
+
+  // Leave notice-period policy (HR-configurable rules)
+  static const String leaveNoticeRulesList =
+      '/api/method/tcb_portal_erp.api.leave_policy.list_notice_rules';
+  static const String leaveNoticeRuleSave =
+      '/api/method/tcb_portal_erp.api.leave_policy.save_notice_rule';
+  static const String leaveNoticeRuleDelete =
+      '/api/method/tcb_portal_erp.api.leave_policy.delete_notice_rule';
+
+  // Work From Home (Attendance Request, reason "Work From Home")
+  static const String wfhApply =
+      '/api/method/tcb_portal_erp.api.wfh.apply_wfh';
+  static const String wfhMyRequests =
+      '/api/method/tcb_portal_erp.api.wfh.get_my_wfh';
+  static const String wfhDetail =
+      '/api/method/tcb_portal_erp.api.wfh.get_wfh_detail';
+  static const String wfhPendingApprovals =
+      '/api/method/tcb_portal_erp.api.wfh.get_wfh_pending_approvals';
+  static const String wfhActOnRequest =
+      '/api/method/tcb_portal_erp.api.wfh.act_on_wfh';
 
   // Payslips
   static const String payslipList =
@@ -286,6 +313,9 @@ class ApiPaths {
       '/api/method/tcb_portal_erp.api.leave.get_pending_approvals';
   static const String leaveActOnApplication =
       '/api/method/tcb_portal_erp.api.leave.act_on_application';
+  // Every leave application in a window (HR/admin see all; others their own).
+  static const String leaveAllApplications =
+      '/api/method/tcb_portal_erp.api.leave.get_all_applications';
 
   // Task detail + update
   static const String taskDetail =

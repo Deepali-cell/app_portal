@@ -1,12 +1,16 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../../core/router/nav_history.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
+import '../../records/domain/descriptor.dart';
 import '../application/directory_controller.dart';
 import '../domain/models.dart';
 
@@ -41,6 +45,7 @@ class _DirectoryScreenState extends ConsumerState<DirectoryScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        leading: const AppBackButton(),
         backgroundColor: AppColors.surfaceContainerLowest,
         title: const Text('Directory'),
         actions: [
@@ -172,11 +177,19 @@ class _Row extends StatelessWidget {
     }
   }
 
+  void _openDetail(BuildContext context) {
+    final desc = recordRegistry['hr_employee'];
+    if (desc == null) return;
+    context.push(Routes.recordDetail, extra: RecordArgs(desc, entry.name));
+  }
+
   @override
   Widget build(BuildContext context) {
     final subtitle =
         [entry.designation, entry.department].where((s) => s != null && s.isNotEmpty).join(' · ');
-    return Padding(
+    return InkWell(
+      onTap: () => _openDetail(context),
+      child: Padding(
       padding: const EdgeInsets.fromLTRB(
           AppDimens.md, AppDimens.md, AppDimens.sm, AppDimens.md),
       child: Row(
@@ -255,6 +268,7 @@ class _Row extends StatelessWidget {
               ),
             ),
         ],
+      ),
       ),
     );
   }

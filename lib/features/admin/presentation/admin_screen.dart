@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/router/nav_history.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/theme/app_colors.dart';
@@ -26,6 +27,7 @@ class AdminScreen extends StatelessWidget {
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
+        leading: const AppBackButton(),
           title: const Text('Administrator'),
           bottom: const TabBar(
             tabs: [

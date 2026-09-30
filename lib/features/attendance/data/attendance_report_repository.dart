@@ -39,6 +39,19 @@ class AttendanceReportRepository {
     return AttendanceRoster.fromJson(data);
   }
 
+  Future<PendingAttendance> pending(DateTime date) async {
+    final data = await _get(ApiPaths.attendancePending, {'date': _ymd(date)});
+    return PendingAttendance.fromJson(data);
+  }
+
+  /// Employees on approved leave on [date]. Raw rows: employee_name,
+  /// leave_type, from_date, to_date, half_day, description.
+  Future<List<Map<String, dynamic>>> onLeave(DateTime date) async {
+    final data = await _get(ApiPaths.hrOnLeaveList, {'date': _ymd(date)});
+    final rows = (data['leaves'] as List?) ?? const [];
+    return rows.map((e) => (e as Map).cast<String, dynamic>()).toList();
+  }
+
   Future<String> markStatus({
     required String employee,
     required DateTime date,
@@ -97,4 +110,21 @@ final attendanceRosterProvider =
   return ref
       .read(attendanceReportRepositoryProvider)
       .roster(key.year, key.month, search: key.search);
+});
+
+/// Employees whose attendance for [date] still needs HR to decide (no check-out
+/// or no check-in and not on leave). Keyed by the date so switching days refetches.
+final pendingAttendanceProvider =
+    FutureProvider.autoDispose.family<PendingAttendance, DateTime>((ref, date) {
+  return ref
+      .read(attendanceReportRepositoryProvider)
+      .pending(DateTime(date.year, date.month, date.day));
+});
+
+/// Employees on approved leave on [date] (HR dashboard "On Leave" screen).
+final onLeaveListProvider = FutureProvider.autoDispose
+    .family<List<Map<String, dynamic>>, DateTime>((ref, date) {
+  return ref
+      .read(attendanceReportRepositoryProvider)
+      .onLeave(DateTime(date.year, date.month, date.day));
 });

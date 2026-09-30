@@ -22,6 +22,31 @@ class LeaveRepository {
     }
   }
 
+  /// Every leave application overlapping [from]..[to] — all employees' for
+  /// HR/admin, the caller's own otherwise. Powers the HR Leaves management
+  /// screen. Separate from [getContext] so it never changes self-service.
+  Future<List<LeaveApplication>> getAllApplications({
+    DateTime? from,
+    DateTime? to,
+  }) async {
+    try {
+      final resp = await _dio.get(
+        ApiPaths.leaveAllApplications,
+        queryParameters: {
+          if (from != null) 'from_date': _ymd(from),
+          if (to != null) 'to_date': _ymd(to),
+        },
+      );
+      final msg = (resp.data['message'] as Map).cast<String, dynamic>();
+      return ((msg['applications'] as List?) ?? [])
+          .map((e) =>
+              LeaveApplication.fromJson((e as Map).cast<String, dynamic>()))
+          .toList();
+    } on DioException catch (e) {
+      throw _asApiException(e);
+    }
+  }
+
   Future<LeaveContext> getContext() async {
     try {
       final resp = await _dio.get(ApiPaths.leaveContext);
@@ -130,6 +155,128 @@ class LeaveRepository {
   }) async {
     try {
       await _dio.post(ApiPaths.compOffActOnRequest, data: {
+        'name': name,
+        'action': action,
+        if (reason != null && reason.isNotEmpty) 'reason': reason,
+      });
+    } on DioException catch (e) {
+      throw _asApiException(e);
+    }
+  }
+
+  /// Lists the HR-configurable leave notice-period rules, plus the available
+  /// leave types for the picker. HR/admin only (server-enforced).
+  Future<({List<LeaveNoticeRule> rules, List<String> leaveTypes})>
+      listNoticeRules() async {
+    try {
+      final resp = await _dio.get(ApiPaths.leaveNoticeRulesList);
+      final msg = (resp.data['message'] as Map).cast<String, dynamic>();
+      final rules = ((msg['rules'] as List?) ?? [])
+          .map((e) =>
+              LeaveNoticeRule.fromJson((e as Map).cast<String, dynamic>()))
+          .toList();
+      final types = ((msg['leave_types'] as List?) ?? [])
+          .map((e) => e.toString())
+          .toList();
+      return (rules: rules, leaveTypes: types);
+    } on DioException catch (e) {
+      throw _asApiException(e);
+    }
+  }
+
+  /// Creates ([name] null) or updates one leave notice rule. HR/admin only.
+  Future<void> saveNoticeRule({
+    String? name,
+    required String ruleName,
+    required double maxLeaveDays,
+    required int minNoticeDays,
+    bool isActive = true,
+    String? leaveType,
+    String? company,
+    String? description,
+  }) async {
+    try {
+      await _dio.post(ApiPaths.leaveNoticeRuleSave, data: {
+        if (name != null && name.isNotEmpty) 'name': name,
+        'rule_name': ruleName,
+        'max_leave_days': maxLeaveDays,
+        'min_notice_days': minNoticeDays,
+        'is_active': isActive ? 1 : 0,
+        if (leaveType != null && leaveType.isNotEmpty) 'leave_type': leaveType,
+        if (company != null && company.isNotEmpty) 'company': company,
+        if (description != null && description.isNotEmpty)
+          'description': description,
+      });
+    } on DioException catch (e) {
+      throw _asApiException(e);
+    }
+  }
+
+  /// Deletes one leave notice rule. HR/admin only.
+  Future<void> deleteNoticeRule(String name) async {
+    try {
+      await _dio.post(ApiPaths.leaveNoticeRuleDelete, data: {'name': name});
+    } on DioException catch (e) {
+      throw _asApiException(e);
+    }
+  }
+
+  /// Submits a Work From Home request (Attendance Request, reason
+  /// "Work From Home"). Throws [ApiException] for the UI to surface.
+  Future<void> applyWfh(WfhRequest req) async {
+    final payload = <String, dynamic>{
+      'from_date': _ymd(req.fromDate),
+      'half_day': req.halfDay ? 1 : 0,
+    };
+    if (req.toDate != null) payload['to_date'] = _ymd(req.toDate!);
+    if (req.halfDay && req.halfDayDate != null) {
+      payload['half_day_date'] = _ymd(req.halfDayDate!);
+    }
+    if (req.explanation != null && req.explanation!.isNotEmpty) {
+      payload['explanation'] = req.explanation;
+    }
+    try {
+      await _dio.post(ApiPaths.wfhApply, data: payload);
+    } on DioException catch (e) {
+      throw _asApiException(e);
+    }
+  }
+
+  /// The signed-in user's own WFH requests, most recent first.
+  Future<List<WfhSummary>> getMyWfh() async {
+    try {
+      final resp = await _dio.get(ApiPaths.wfhMyRequests);
+      final msg = (resp.data['message'] as Map).cast<String, dynamic>();
+      return ((msg['requests'] as List?) ?? [])
+          .map((e) => WfhSummary.fromJson((e as Map).cast<String, dynamic>()))
+          .toList();
+    } on DioException catch (e) {
+      throw _asApiException(e);
+    }
+  }
+
+  /// WFH requests waiting on the signed in user, as manager or as HR.
+  Future<List<PendingWfhApproval>> getWfhPendingApprovals() async {
+    try {
+      final resp = await _dio.get(ApiPaths.wfhPendingApprovals);
+      final msg = (resp.data['message'] as Map).cast<String, dynamic>();
+      return ((msg['requests'] as List?) ?? [])
+          .map((e) =>
+              PendingWfhApproval.fromJson((e as Map).cast<String, dynamic>()))
+          .toList();
+    } on DioException catch (e) {
+      throw _asApiException(e);
+    }
+  }
+
+  /// Approve or reject one WFH request. A rejection needs a reason.
+  Future<void> actOnWfh({
+    required String name,
+    required String action,
+    String? reason,
+  }) async {
+    try {
+      await _dio.post(ApiPaths.wfhActOnRequest, data: {
         'name': name,
         'action': action,
         if (reason != null && reason.isNotEmpty) 'reason': reason,

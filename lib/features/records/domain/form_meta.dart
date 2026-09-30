@@ -53,15 +53,21 @@ class FormMeta {
     required this.doctype,
     required this.isSubmittable,
     required this.fields,
+    this.autonamePrompt = false,
   });
 
   final String doctype;
   final bool isSubmittable;
   final List<FieldMeta> fields;
 
+  /// True when the doctype is named by prompt (e.g. Shift Type): the create
+  /// form must collect the document name (sent as `__newname`).
+  final bool autonamePrompt;
+
   factory FormMeta.fromJson(Map<String, dynamic> j) => FormMeta(
         doctype: j['doctype'] as String,
         isSubmittable: (j['is_submittable'] ?? 0) == 1,
+        autonamePrompt: (j['autoname_prompt'] ?? false) == true,
         fields: ((j['fields'] as List?) ?? const [])
             .map((e) => FieldMeta.fromJson((e as Map).cast<String, dynamic>()))
             .toList(),

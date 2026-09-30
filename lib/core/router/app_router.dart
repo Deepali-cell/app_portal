@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/attendance/presentation/attendance_screen.dart';
 import '../../features/attendance/presentation/attendance_roster_screen.dart';
+import '../../features/attendance/presentation/on_leave_screen.dart';
+import '../../features/attendance/presentation/pending_attendance_screen.dart';
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/application/lock_controller.dart';
 import '../../features/auth/presentation/login_screen.dart';
@@ -16,6 +18,7 @@ import '../../features/deals/presentation/deal_detail_screen.dart';
 import '../../features/deals/presentation/deals_screen.dart';
 import '../../features/directory/presentation/directory_screen.dart';
 import '../../features/expenses/presentation/expenses_screen.dart';
+import '../../features/expenses/presentation/expense_claims_screen.dart';
 import '../../features/invoices/presentation/invoice_detail_screen.dart';
 import '../../features/invoices/presentation/invoices_screen.dart';
 import '../../features/home/presentation/app_shell.dart';
@@ -25,7 +28,8 @@ import '../../features/leads/presentation/leads_screen.dart';
 import '../../features/leave/presentation/leave_detail_screen.dart';
 import '../../features/leave/presentation/leave_approvals_screen.dart';
 import '../../features/leave/presentation/leave_screen.dart';
-import '../../features/approvals/presentation/approval_requests_screen.dart';
+import '../../features/leave/presentation/leave_management_screen.dart';
+import '../../features/leave/presentation/leave_policy_screen.dart';
 import '../../features/leaderboard/presentation/leaderboard_screen.dart';
 import '../../features/missed_activities/presentation/missed_activities_screen.dart';
 import '../../features/performance/presentation/performance_screen.dart';
@@ -82,6 +86,7 @@ class Routes {
   static const timesheet = '/timesheet';
   static const allTimesheets = '/hr/all-timesheets';
   static const expenses = '/expenses';
+  static const expenseClaims = '/hr/expense-claims';
   static const crmDashboard = '/crm/dashboard';
   static const leads = '/leads';
   static const deals = '/deals';
@@ -128,9 +133,25 @@ class Routes {
   static const hrDashboard = '/hr/dashboard';
   static const hrEmployees = '/hr/employees';
   static const allAttendance = '/hr/all-attendance';
+  static const onLeave = '/hr/on-leave';
   static const allPayslips = '/finance/all-payslips';
   static const hrAttendance = '/hr/attendance-management';
-  static const approvals = '/hr/approvals';
+  // HR: employees whose attendance still needs a manual decision (no check-out
+  // or no check-in and not on leave).
+  static const pendingAttendance = '/hr/pending-attendance';
+  // HR masters managed from the portal (generic record screens).
+  static const hrShiftTypes = '/hr/shift-types';
+  static const hrShiftAssignments = '/hr/shift-assignments';
+  static const hrHolidayLists = '/hr/holiday-lists';
+  static const hrLeavePolicies = '/hr/leave-policies';
+  static const hrLeavePolicyAssignments = '/hr/leave-policy-assignments';
+  static const hrLeaveAllocations = '/hr/leave-allocations';
+  static const hrHolidayAssignments = '/hr/holiday-assignments';
+  // HR Leaves management (Applications + Leave Requests + Comp-Off + WFH).
+  // Replaces the old standalone Approval Requests screen.
+  static const leaveManagement = '/hr/leaves';
+  // HR-configurable leave notice-period rules (opened from the Leaves screen).
+  static const leaveNoticeRules = '/hr/leave-policy';
   // Projects
   static const projectsDashboard = '/projects/dashboard';
   static const projectsProject = '/projects/project';
@@ -220,6 +241,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                 canManage: false,
               ),
             ),
+            GoRoute(
+              path: Routes.onLeave,
+              builder: (_, _) => const OnLeaveScreen(),
+            ),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(
@@ -228,6 +253,12 @@ final routerProvider = Provider<GoRouter>((ref) {
                 title: 'Attendance Management',
                 canManage: true,
               ),
+            ),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: Routes.pendingAttendance,
+              builder: (_, _) => const PendingAttendanceScreen(),
             ),
           ]),
           StatefulShellBranch(routes: [
@@ -240,12 +271,19 @@ final routerProvider = Provider<GoRouter>((ref) {
           ]),
           StatefulShellBranch(routes: [
             GoRoute(
-              path: Routes.approvals,
-              // `?tab=` deep-links to a section: 0 Leave, 1 Comp-Off, 2 Expense.
-              builder: (_, state) => ApprovalRequestsScreen(
+              path: Routes.leaveManagement,
+              // `?tab=` deep-links to a section: 0 Applications, 1 Requests,
+              // 2 Comp-Off, 3 WFH. `?status=` pre-sets the Applications filter
+              // (e.g. pending) for the dashboard "Pending Leaves" card.
+              builder: (_, state) => LeaveManagementScreen(
                 initialTab:
                     int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0,
+                initialStatus: state.uri.queryParameters['status'],
               ),
+            ),
+            GoRoute(
+              path: Routes.leaveNoticeRules,
+              builder: (_, _) => const LeavePolicyScreen(),
             ),
           ]),
           StatefulShellBranch(routes: [
@@ -281,6 +319,18 @@ final routerProvider = Provider<GoRouter>((ref) {
           ]),
           StatefulShellBranch(routes: [
             GoRoute(path: Routes.expenses, builder: (_, _) => const ExpensesScreen()),
+          ]),
+          StatefulShellBranch(routes: [
+            GoRoute(
+              path: Routes.expenseClaims,
+              // `?tab=` deep-links to a section: 0 Claims, 1 Requests.
+              // `?filter=` pre-selects the Claims status chip, e.g. 'pending'.
+              builder: (_, state) => ExpenseClaimsScreen(
+                initialTab:
+                    int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0,
+                initialFilter: state.uri.queryParameters['filter'],
+              ),
+            ),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(
@@ -397,6 +447,14 @@ final routerProvider = Provider<GoRouter>((ref) {
           _recordBranch(Routes.mfgProductionPlan, 'mfg_production_plan'),
           _recordBranch(Routes.mfgWorkstation, 'mfg_workstation'),
           _recordBranch(Routes.hrEmployees, 'hr_employee'),
+          _recordBranch(Routes.hrShiftTypes, 'hr_shift_type'),
+          _recordBranch(Routes.hrShiftAssignments, 'hr_shift_assignment'),
+          _recordBranch(Routes.hrHolidayLists, 'hr_holiday_list'),
+          _recordBranch(Routes.hrLeavePolicies, 'hr_leave_policy'),
+          _recordBranch(
+              Routes.hrLeavePolicyAssignments, 'hr_leave_policy_assignment'),
+          _recordBranch(Routes.hrLeaveAllocations, 'hr_leave_allocation'),
+          _recordBranch(Routes.hrHolidayAssignments, 'hr_holiday_assignment'),
           _recordBranch(Routes.projectsProject, 'projects_project'),
           _recordBranch(Routes.stockWarehouse, 'stock_warehouse'),
           _recordBranch(Routes.stockMaterialRequest, 'stock_material_request'),

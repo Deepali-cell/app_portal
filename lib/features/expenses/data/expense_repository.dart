@@ -74,6 +74,30 @@ class ExpenseRepository {
     }
   }
 
+  /// All expense claims in a window for HR/admin (own claims for others).
+  /// Powers the HR module's Expense Claims screen; distinct from [getContext].
+  Future<List<ExpenseClaim>> getAllClaims({DateTime? from, DateTime? to}) async {
+    String fmt(DateTime d) =>
+        '${d.year.toString().padLeft(4, '0')}-'
+        '${d.month.toString().padLeft(2, '0')}-'
+        '${d.day.toString().padLeft(2, '0')}';
+    try {
+      final resp = await _dio.get(
+        ApiPaths.expenseAllClaims,
+        queryParameters: {
+          if (from != null) 'from_date': fmt(from),
+          if (to != null) 'to_date': fmt(to),
+        },
+      );
+      final msg = (resp.data['message'] as Map).cast<String, dynamic>();
+      return ((msg['claims'] as List?) ?? [])
+          .map((e) => ExpenseClaim.fromJson((e as Map).cast<String, dynamic>()))
+          .toList();
+    } on DioException catch (e) {
+      throw _asApiException(e);
+    }
+  }
+
   /// Full detail of one claim (with line items), for the owner or an approver.
   Future<ExpenseClaimDetail> getClaimDetail(String name) async {
     try {

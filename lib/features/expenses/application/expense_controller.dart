@@ -79,6 +79,18 @@ final pendingExpenseApprovalsProvider =
     FutureProvider<List<PendingExpenseApproval>>(
         (ref) => ref.read(expenseRepositoryProvider).getPendingApprovals());
 
+/// Date window for the HR "all claims" listing. Equality on the record lets it
+/// key a family provider so changing the range refetches.
+typedef ExpenseClaimsRange = ({DateTime from, DateTime to});
+
+/// All expense claims in a window (HR/admin see everyone's, others their own).
+/// Drives the HR module's Expense Claims screen; separate from
+/// [expenseControllerProvider] so the employee self-service screen is untouched.
+final allExpenseClaimsProvider = FutureProvider.autoDispose
+    .family<List<ExpenseClaim>, ExpenseClaimsRange>((ref, r) => ref
+        .read(expenseRepositoryProvider)
+        .getAllClaims(from: r.from, to: r.to));
+
 /// On-demand detail (with line items) for a single Expense Claim.
 final expenseClaimDetailProvider =
     FutureProvider.family<ExpenseClaimDetail, String>((ref, name) =>

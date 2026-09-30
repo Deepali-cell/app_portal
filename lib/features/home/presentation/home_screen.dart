@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/router/app_router.dart';
+import '../../../core/router/nav_history.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../attendance/application/attendance_controller.dart';
@@ -366,7 +367,7 @@ class _QuickTile extends StatelessWidget {
       borderRadius: BorderRadius.circular(999),
       child: InkWell(
         borderRadius: BorderRadius.circular(999),
-        onTap: () => context.go(dest.route),
+        onTap: () => AppNav.go(context, dest.route),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
           decoration: BoxDecoration(
@@ -487,7 +488,7 @@ class _ModuleCardState extends State<_ModuleCard> {
               borderRadius: BorderRadius.circular(AppDimens.radiusXl),
               splashColor: Colors.white.withValues(alpha: 0.12),
               highlightColor: Colors.white.withValues(alpha: 0.06),
-              onTap: () => context.go(card.route),
+              onTap: () => AppNav.go(context, card.route),
               onHighlightChanged: (v) => setState(() => _pressed = v),
               child: Stack(
                 children: [

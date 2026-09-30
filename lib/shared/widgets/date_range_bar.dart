@@ -16,6 +16,7 @@ class DateRangeBar extends StatelessWidget {
     required this.onChanged,
     this.firstDate,
     this.lastDate,
+    this.showAll = false,
   });
 
   final DateTime from;
@@ -24,8 +25,23 @@ class DateRangeBar extends StatelessWidget {
   final DateTime? firstDate;
   final DateTime? lastDate;
 
+  /// When true, an "All" preset is shown first — a window wide enough to cover
+  /// every record (matches the custom picker's floor). Used by the HR
+  /// management screens so a KPI card's all-time count matches the list.
+  final bool showAll;
+
   static bool _isSameDay(DateTime a, DateTime b) =>
       a.year == b.year && a.month == b.month && a.day == b.day;
+
+  /// A window that covers every record — the full span the custom picker
+  /// allows, floor to ceiling. The ceiling reaches into next year so a
+  /// future-dated application (e.g. a leave booked for next month) is included,
+  /// matching the dashboard's all-time counts. Kept in sync with [_custom]'s
+  /// `firstDate` / `lastDate`.
+  static ({DateTime from, DateTime to}) allTime() {
+    final n = DateTime.now();
+    return (from: DateTime(n.year - 5), to: DateTime(n.year + 1, 12, 31));
+  }
 
   static ({DateTime from, DateTime to}) thisMonth() {
     final n = DateTime.now();
@@ -51,6 +67,10 @@ class DateRangeBar extends StatelessWidget {
     final m = thisMonth();
     final lm = lastMonth();
     final l7 = last7();
+    if (showAll) {
+      final a = allTime();
+      if (_isSameDay(from, a.from) && _isSameDay(to, a.to)) return 'all';
+    }
     if (_isSameDay(from, m.from) && _isSameDay(to, m.to)) return 'this_month';
     if (_isSameDay(from, lm.from) && _isSameDay(to, lm.to)) return 'last_month';
     if (_isSameDay(from, l7.from) && _isSameDay(to, l7.to)) return 'last_7';
@@ -75,6 +95,17 @@ class DateRangeBar extends StatelessWidget {
       scrollDirection: Axis.horizontal,
       child: Row(
         children: [
+          if (showAll) ...[
+            _Chip(
+              label: 'All',
+              selected: active == 'all',
+              onTap: () {
+                final r = allTime();
+                onChanged(r.from, r.to);
+              },
+            ),
+            const SizedBox(width: 8),
+          ],
           _Chip(
             label: 'This month',
             selected: active == 'this_month',

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/format/money.dart';
 import '../../../core/network/api_exception.dart';
+import '../../../core/router/nav_history.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../auth/application/auth_controller.dart';
@@ -27,6 +28,7 @@ class PerformanceScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        leading: const AppBackButton(),
         backgroundColor: AppColors.surfaceContainerLowest,
         title: const Text('Performance'),
         actions: [

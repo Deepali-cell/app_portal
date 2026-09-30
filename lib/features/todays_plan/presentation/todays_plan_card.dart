@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/router/nav_history.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../application/todays_plan_controller.dart';
@@ -361,7 +362,7 @@ class _TaskRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return InkWell(
-      onTap: () => context.go(Routes.tasks),
+      onTap: () => AppNav.go(context, Routes.tasks),
       borderRadius: BorderRadius.circular(AppDimens.radiusSm),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: AppDimens.xs),
@@ -423,7 +424,7 @@ class _CrmTaskRow extends StatelessWidget {
     } else if (dt == 'Opportunity' && dn != null) {
       context.push(Routes.dealDetail, extra: dn);
     } else {
-      context.go(Routes.tasks);
+      AppNav.go(context, Routes.tasks);
     }
   }
 

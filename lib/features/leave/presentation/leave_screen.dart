@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/router/nav_history.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -27,6 +28,7 @@ class LeaveScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        leading: const AppBackButton(),
         backgroundColor: AppColors.surfaceContainerLowest,
         title: const Text('Leave'),
         actions: [
@@ -34,8 +36,10 @@ class LeaveScreen extends ConsumerWidget {
             IconButton(
               tooltip: 'Refresh',
               icon: Icon(Icons.refresh, color: AppColors.primary),
-              onPressed: () =>
-                  ref.read(leaveControllerProvider.notifier).reload(),
+              onPressed: () {
+                ref.invalidate(myWfhProvider);
+                ref.read(leaveControllerProvider.notifier).reload();
+              },
             ),
         ],
       ),
@@ -48,7 +52,10 @@ class LeaveScreen extends ConsumerWidget {
           onRetry: () => ref.read(leaveControllerProvider.notifier).reload(),
         ),
         data: (ctx) => RefreshIndicator(
-          onRefresh: () => ref.read(leaveControllerProvider.notifier).reload(),
+          onRefresh: () {
+            ref.invalidate(myWfhProvider);
+            return ref.read(leaveControllerProvider.notifier).reload();
+          },
           child: ListView(
             padding: const EdgeInsets.fromLTRB(
                 AppDimens.screenPadding,
@@ -68,9 +75,104 @@ class LeaveScreen extends ConsumerWidget {
                 const SizedBox(height: AppDimens.lg),
                 _MyCompOffSection(requests: ctx.compOffRequests),
               ],
+              const _MyWfhList(),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// The signed-in user's own Work From Home requests. Watches its own provider
+/// so it refreshes after applying, and hides itself when there are none.
+class _MyWfhList extends ConsumerWidget {
+  const _MyWfhList();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(myWfhProvider);
+    return async.maybeWhen(
+      data: (requests) {
+        if (requests.isEmpty) return const SizedBox.shrink();
+        return Padding(
+          padding: const EdgeInsets.only(top: AppDimens.lg),
+          child: Card(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                      AppDimens.md, AppDimens.md, AppDimens.md, AppDimens.sm),
+                  child: Text('My WFH Requests',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w600)),
+                ),
+                for (var i = 0; i < requests.length; i++) ...[
+                  if (i > 0)
+                    Divider(
+                        height: 1,
+                        indent: 64,
+                        color: AppColors.outlineVariant),
+                  _WfhRow(req: requests[i]),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+      orElse: () => const SizedBox.shrink(),
+    );
+  }
+}
+
+class _WfhRow extends StatelessWidget {
+  const _WfhRow({required this.req});
+  final WfhSummary req;
+
+  @override
+  Widget build(BuildContext context) {
+    final range = req.fromDate == req.toDate
+        ? _dateFmt.format(req.fromDate)
+        : '${_dateShort.format(req.fromDate)} – ${_dateFmt.format(req.toDate)}';
+    return Padding(
+      padding: const EdgeInsets.all(AppDimens.md),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: AppColors.surfaceContainerHigh,
+              shape: BoxShape.circle,
+            ),
+            alignment: Alignment.center,
+            child: Icon(Icons.home_work_outlined,
+                color: AppColors.onSurface, size: 20),
+          ),
+          const SizedBox(width: AppDimens.md),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('WFH · $range${req.halfDay ? " · half day" : ""}',
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                        color: AppColors.onSurface,
+                        fontWeight: FontWeight.w600),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis),
+                if (req.stageLabel.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(req.stageLabel,
+                      style: Theme.of(context).textTheme.labelSmall,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -117,14 +219,47 @@ class _HeaderSection extends ConsumerWidget {
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
                   icon: const Icon(Icons.event_repeat, size: 18),
-                  label: const Text('Apply for Comp-Off'),
+                  label: const Text('Compensatory Off'),
                 ),
               ),
             ],
           ],
         ),
+        const SizedBox(height: AppDimens.md),
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () => _openWfhSheet(context, ref),
+            style: OutlinedButton.styleFrom(
+              side: BorderSide(color: AppColors.primary),
+              foregroundColor: AppColors.primary,
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            icon: const Icon(Icons.home_work_outlined, size: 18),
+            label: const Text('Apply for Work From Home'),
+          ),
+        ),
       ],
     );
+  }
+
+  Future<void> _openWfhSheet(BuildContext context, WidgetRef ref) async {
+    final ok = await showModalBottomSheet<bool>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: AppColors.surfaceContainerLowest,
+      shape: const RoundedRectangleBorder(
+        borderRadius:
+            BorderRadius.vertical(top: Radius.circular(AppDimens.radius3xl)),
+      ),
+      builder: (_) => const _ApplyWfhSheet(),
+    );
+    if (ok == true && context.mounted) {
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(const SnackBar(
+            content: Text('WFH request submitted for approval.')));
+    }
   }
 
   Future<void> _openApplySheet(
@@ -165,7 +300,7 @@ class _HeaderSection extends ConsumerWidget {
         ..hideCurrentSnackBar()
         ..showSnackBar(const SnackBar(
             content: Text(
-                'Comp-Off request submitted. HR will review on the desk.')));
+                'Compensatory Off request submitted. HR will review on the desk.')));
     }
   }
 }
@@ -404,7 +539,7 @@ class _MyCompOffSection extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(
                 AppDimens.md, AppDimens.md, AppDimens.md, AppDimens.sm),
-            child: Text('My Comp-Off Requests',
+            child: Text('My Compensatory Off Requests',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     color: AppColors.primary, fontWeight: FontWeight.w600)),
           ),
@@ -946,7 +1081,7 @@ class _ApplyCompOffSheetState extends ConsumerState<_ApplyCompOffSheet> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Center(
-                child: Text('Apply for Comp-Off',
+                child: Text('Apply for Compensatory Off',
                     style: Theme.of(context).textTheme.titleLarge)),
             const SizedBox(height: AppDimens.sm),
             Text(
@@ -1037,7 +1172,7 @@ class _ApplyCompOffSheetState extends ConsumerState<_ApplyCompOffSheet> {
             ],
             const SizedBox(height: AppDimens.xl),
             BrandButton(
-              label: 'Submit Comp-Off',
+              label: 'Submit Compensatory Off',
               loading: _submitting,
               onPressed: _submit,
             ),
@@ -1048,6 +1183,174 @@ class _ApplyCompOffSheetState extends ConsumerState<_ApplyCompOffSheet> {
   }
 }
 
+
+/// Apply for Work From Home — creates an Attendance Request (reason
+/// "Work From Home"). The reporting manager approves, then HR; on final approval
+/// the WFH attendance is marked for the chosen dates.
+class _ApplyWfhSheet extends ConsumerStatefulWidget {
+  const _ApplyWfhSheet();
+  @override
+  ConsumerState<_ApplyWfhSheet> createState() => _ApplyWfhSheetState();
+}
+
+class _ApplyWfhSheetState extends ConsumerState<_ApplyWfhSheet> {
+  DateTime? _from;
+  DateTime? _to;
+  bool _halfDay = false;
+  final _reason = TextEditingController();
+  bool _submitting = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _reason.dispose();
+    super.dispose();
+  }
+
+  bool get _singleDay => _from != null && _to != null && _from == _to;
+
+  Future<void> _pickFrom() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _from ?? now,
+      firstDate: DateTime(now.year, now.month, now.day),
+      lastDate: DateTime(now.year + 1, 12, 31),
+    );
+    if (picked == null) return;
+    setState(() {
+      _from = picked;
+      if (_to == null || _to!.isBefore(picked)) _to = picked;
+      if (!_singleDay) _halfDay = false;
+    });
+  }
+
+  Future<void> _pickTo() async {
+    final base = _from ?? DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _to ?? base,
+      firstDate: base,
+      lastDate: DateTime(base.year + 1, 12, 31),
+    );
+    if (picked == null) return;
+    setState(() {
+      _to = picked;
+      if (!_singleDay) _halfDay = false;
+    });
+  }
+
+  Future<void> _submit() async {
+    setState(() => _error = null);
+    if (_from == null || _to == null) {
+      setState(() => _error = 'Select the dates.');
+      return;
+    }
+    if (_to!.isBefore(_from!)) {
+      setState(() => _error = 'End date cannot be before start date.');
+      return;
+    }
+    setState(() => _submitting = true);
+    try {
+      await ref.read(leaveControllerProvider.notifier).applyWfh(
+            WfhRequest(
+              fromDate: _from!,
+              toDate: _to!,
+              halfDay: _halfDay && _singleDay,
+              halfDayDate: _halfDay && _singleDay ? _from : null,
+              explanation: _reason.text.trim(),
+            ),
+          );
+      if (mounted) Navigator.pop(context, true);
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = 'Could not submit. Please try again.');
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottom = MediaQuery.of(context).viewInsets.bottom;
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          AppDimens.xl, AppDimens.xl, AppDimens.xl, AppDimens.xl + bottom),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+                child: Text('Apply for Work From Home',
+                    style: Theme.of(context).textTheme.titleLarge)),
+            const SizedBox(height: AppDimens.sm),
+            Text(
+              'Request to work from home for a day or a range. Your manager and '
+              'HR will approve; the days are then marked as WFH.',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            const SizedBox(height: AppDimens.xl),
+            Row(
+              children: [
+                Expanded(
+                  child: _DateField(
+                    label: 'From',
+                    value: _from,
+                    onTap: _pickFrom,
+                  ),
+                ),
+                const SizedBox(width: AppDimens.md),
+                Expanded(
+                  child: _DateField(
+                    label: 'To',
+                    value: _to,
+                    onTap: _pickTo,
+                  ),
+                ),
+              ],
+            ),
+            if (_singleDay) ...[
+              const SizedBox(height: AppDimens.sm),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Half day'),
+                value: _halfDay,
+                activeThumbColor: AppColors.secondary,
+                onChanged: (v) => setState(() => _halfDay = v),
+              ),
+            ],
+            const SizedBox(height: AppDimens.lg),
+            TextField(
+              controller: _reason,
+              minLines: 2,
+              maxLines: 4,
+              decoration: const InputDecoration(
+                labelText: 'Reason (optional)',
+                alignLabelWithHint: true,
+              ),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: AppDimens.md),
+              Text(_error!,
+                  style:
+                      const TextStyle(color: AppColors.error, fontSize: 13)),
+            ],
+            const SizedBox(height: AppDimens.xl),
+            BrandButton(
+              label: 'Submit request',
+              loading: _submitting,
+              onPressed: _submit,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 /// The selected leave type's balance, shown under the picker so the employee
 /// can see what they are spending before choosing dates.

@@ -38,6 +38,10 @@ class _DynamicFormScreenState extends ConsumerState<DynamicFormScreen> {
   final Map<String, dynamic> _values = {};
   final Map<String, TextEditingController> _controllers = {};
 
+  /// For prompt-named doctypes (e.g. Shift Type) on create: the document name
+  /// the user types, sent to the backend as `__newname`.
+  TextEditingController? _newNameCtrl;
+
   @override
   void initState() {
     super.initState();
@@ -49,6 +53,7 @@ class _DynamicFormScreenState extends ConsumerState<DynamicFormScreen> {
     for (final c in _controllers.values) {
       c.dispose();
     }
+    _newNameCtrl?.dispose();
     super.dispose();
   }
 
@@ -87,6 +92,9 @@ class _DynamicFormScreenState extends ConsumerState<DynamicFormScreen> {
               TextEditingController(text: init?.toString() ?? '');
         }
       }
+      if (meta.autonamePrompt && widget.name == null) {
+        _newNameCtrl = TextEditingController();
+      }
       if (mounted) setState(() => _meta = meta);
     } catch (e) {
       if (mounted) setState(() => _error = e);
@@ -116,6 +124,15 @@ class _DynamicFormScreenState extends ConsumerState<DynamicFormScreen> {
   Future<void> _save({required bool submit}) async {
     final meta = _meta;
     if (meta == null) return;
+    // Prompt-named create: the document name is required up front.
+    String? newName;
+    if (_newNameCtrl != null) {
+      newName = _newNameCtrl!.text.trim();
+      if (newName.isEmpty) {
+        _snack('Required: Name');
+        return;
+      }
+    }
     // Pull text controllers into values.
     for (final f in meta.fields) {
       if (_isTextType(f.fieldtype)) {
@@ -141,6 +158,7 @@ class _DynamicFormScreenState extends ConsumerState<DynamicFormScreen> {
       if (f.isTable && v is List && v.isEmpty) continue;
       payload[f.fieldname] = v;
     }
+    if (newName != null) payload['__newname'] = newName;
 
     setState(() => _saving = true);
     try {
@@ -180,6 +198,18 @@ class _DynamicFormScreenState extends ConsumerState<DynamicFormScreen> {
 
   /// Public rebuild hook for the child field widgets below.
   void update(VoidCallback fn) => setState(fn);
+
+  /// Clear any Dynamic Link field that points at [changedField] (its target
+  /// doctype just changed, so the previously-picked value is no longer valid).
+  void _clearDependentDynamicLinks(String changedField) {
+    final meta = _meta;
+    if (meta == null) return;
+    for (final df in meta.fields) {
+      if (df.fieldtype == 'Dynamic Link' && df.options == changedField) {
+        _values[df.fieldname] = null;
+      }
+    }
+  }
 
   /// When [linkField] is picked, fetch source-doc values for any field whose
   /// `fetch_from` starts with `linkField.fieldname.` and fill them in.
@@ -274,6 +304,19 @@ class _DynamicFormScreenState extends ConsumerState<DynamicFormScreen> {
     return ListView(
       padding: const EdgeInsets.all(AppDimens.md),
       children: [
+        if (_newNameCtrl != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppDimens.md),
+            child: TextFormField(
+              controller: _newNameCtrl,
+              decoration: const InputDecoration(
+                labelText: 'Name *',
+                helperText: 'A unique name for this record',
+                border: OutlineInputBorder(),
+                isDense: true,
+              ),
+            ),
+          ),
         for (final f in meta.fields) _field(f),
         const SizedBox(height: 80),
       ],
@@ -314,11 +357,16 @@ class _DynamicFormScreenState extends ConsumerState<DynamicFormScreen> {
                 .toList(),
             onChanged: f.readOnly
                 ? null
-                : (v) => setState(() => _values[f.fieldname] = v),
+                : (v) => setState(() {
+                      _values[f.fieldname] = v;
+                      _clearDependentDynamicLinks(f.fieldname);
+                    }),
           ),
         );
       case 'Link':
         return Padding(padding: pad, child: _LinkTile(field: f, state: this));
+      case 'Dynamic Link':
+        return Padding(padding: pad, child: _DynLinkTile(field: f, state: this));
       case 'Date':
       case 'Datetime':
       case 'Time':
@@ -379,7 +427,10 @@ class _LinkTile extends StatelessWidget {
                 builder: (_) => _LinkSearchSheetRow(doctype: field.options ?? ''),
               );
               if (picked != null) {
-                state.update(() => state._values[field.fieldname] = picked);
+                state.update(() {
+                  state._values[field.fieldname] = picked;
+                  state._clearDependentDynamicLinks(field.fieldname);
+                });
                 state.applyFetch(field, picked);
               }
             },
@@ -393,6 +444,60 @@ class _LinkTile extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+/// Dynamic Link picker: its target doctype comes from another field's current
+/// value (e.g. Holiday List Assignment.assigned_to follows `applicable_for`,
+/// which is "Employee" or "Company"). Until that field is set, the picker is
+/// disabled and prompts for it.
+class _DynLinkTile extends StatelessWidget {
+  const _DynLinkTile({required this.field, required this.state});
+  final FieldMeta field;
+  final _DynamicFormScreenState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = state._values[field.fieldname] as String?;
+    // `options` on a Dynamic Link is the fieldname whose value is the doctype.
+    final refField = field.options ?? '';
+    final targetDoctype = state._values[refField] as String?;
+    final ready = targetDoctype != null && targetDoctype.isNotEmpty;
+    final refLabel = _refLabel(refField);
+    return InkWell(
+      onTap: (field.readOnly || !ready)
+          ? null
+          : () async {
+              final picked = await showModalBottomSheet<String>(
+                context: context,
+                isScrollControlled: true,
+                builder: (_) => _LinkSearchSheetRow(doctype: targetDoctype),
+              );
+              if (picked != null) {
+                state.update(() => state._values[field.fieldname] = picked);
+              }
+            },
+      child: InputDecorator(
+        decoration: state._dec(field),
+        child: Text(
+          value?.isNotEmpty == true
+              ? value!
+              : (ready ? 'Tap to select' : 'Select $refLabel first'),
+          style: value?.isNotEmpty == true
+              ? null
+              : TextStyle(color: AppColors.onSurfaceVariant),
+        ),
+      ),
+    );
+  }
+
+  String _refLabel(String refField) {
+    final meta = state._meta;
+    if (meta == null) return refField;
+    for (final f in meta.fields) {
+      if (f.fieldname == refField) return f.label;
+    }
+    return refField;
   }
 }
 

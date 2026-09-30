@@ -174,6 +174,7 @@ class LeaveApplication {
     required this.toDate,
     required this.totalLeaveDays,
     required this.status,
+    this.employeeName,
     this.description,
     this.halfDay = false,
     this.stageLabel,
@@ -185,6 +186,10 @@ class LeaveApplication {
   final DateTime toDate;
   final double totalLeaveDays;
   final LeaveStatus status;
+
+  /// Whose application this is. Present on the HR management listing (all
+  /// employees' applications); null on the employee's own self-service list.
+  final String? employeeName;
   final String? description;
   final bool halfDay;
 
@@ -200,9 +205,37 @@ class LeaveApplication {
         toDate: DateTime.parse(j['to_date'] as String),
         totalLeaveDays: (j['total_leave_days'] as num?)?.toDouble() ?? 0,
         status: leaveStatusFrom(j['status'] as String?),
+        employeeName: j['employee_name'] as String?,
         description: j['description'] as String?,
         halfDay: (j['half_day'] as num?)?.toInt() == 1,
         stageLabel: j['stage_label'] as String?,
+      );
+}
+
+/// A file attached to a leave application (e.g. a medical certificate for sick
+/// leave). [absoluteUrl] is host-prefixed so it opens in an external viewer.
+@immutable
+class LeaveAttachment {
+  const LeaveAttachment({
+    required this.name,
+    required this.fileName,
+    required this.absoluteUrl,
+    this.fileSize = 0,
+    this.isPrivate = false,
+  });
+
+  final String name;
+  final String fileName;
+  final String absoluteUrl;
+  final int fileSize;
+  final bool isPrivate;
+
+  factory LeaveAttachment.fromJson(Map<String, dynamic> j) => LeaveAttachment(
+        name: (j['name'] ?? '') as String,
+        fileName: (j['file_name'] ?? j['file_url'] ?? '') as String,
+        absoluteUrl: (j['absolute_url'] ?? j['file_url'] ?? '') as String,
+        fileSize: (j['file_size'] as num?)?.toInt() ?? 0,
+        isPrivate: (j['is_private'] as num?)?.toInt() == 1,
       );
 }
 
@@ -217,11 +250,14 @@ class LeaveApplicationDetail {
     required this.status,
     required this.docstatus,
     required this.halfDay,
+    this.employeeName,
+    this.stageLabel,
     this.description,
     this.halfDayDate,
     this.leaveApprover,
     this.leaveApproverName,
     this.postingDate,
+    this.attachments = const [],
   });
   final String name;
   final String leaveType;
@@ -231,11 +267,21 @@ class LeaveApplicationDetail {
   final LeaveStatus status;
   final int docstatus;
   final bool halfDay;
+
+  /// Whose application this is — shown in the detail header when an approver or
+  /// HR opens a request that belongs to another employee.
+  final String? employeeName;
+
+  /// Human-readable approval stage (e.g. "Approved by manager, waiting for HR").
+  final String? stageLabel;
   final DateTime? halfDayDate;
   final String? description;
   final String? leaveApprover;
   final String? leaveApproverName;
   final DateTime? postingDate;
+
+  /// Proof files (e.g. a medical certificate). Empty when none are attached.
+  final List<LeaveAttachment> attachments;
 
   factory LeaveApplicationDetail.fromJson(Map<String, dynamic> j) =>
       LeaveApplicationDetail(
@@ -247,6 +293,8 @@ class LeaveApplicationDetail {
         status: leaveStatusFrom(j['status'] as String?),
         docstatus: (j['docstatus'] as num?)?.toInt() ?? 0,
         halfDay: (j['half_day'] as num?)?.toInt() == 1,
+        employeeName: j['employee_name'] as String?,
+        stageLabel: j['stage_label'] as String?,
         halfDayDate: j['half_day_date'] != null
             ? DateTime.tryParse(j['half_day_date'].toString())
             : null,
@@ -256,6 +304,9 @@ class LeaveApplicationDetail {
         postingDate: j['posting_date'] != null
             ? DateTime.tryParse(j['posting_date'].toString())
             : null,
+        attachments: ((j['attachments'] as List?) ?? [])
+            .map((e) => LeaveAttachment.fromJson((e as Map).cast<String, dynamic>()))
+            .toList(),
       );
 }
 
@@ -362,6 +413,130 @@ class CompOffRequest {
   final DateTime? workEndDate;
   final String reason;
   final String? leaveType;
+}
+
+/// One HR-configurable leave notice-period rule: a leave of up to
+/// [maxLeaveDays] must be applied at least [minNoticeDays] before it starts.
+/// [leaveType] null = applies to every type; [company] null = every company.
+@immutable
+class LeaveNoticeRule {
+  const LeaveNoticeRule({
+    required this.name,
+    required this.ruleName,
+    required this.maxLeaveDays,
+    required this.minNoticeDays,
+    this.isActive = true,
+    this.leaveType,
+    this.company,
+    this.description,
+  });
+
+  final String name;
+  final String ruleName;
+  final double maxLeaveDays;
+  final int minNoticeDays;
+  final bool isActive;
+  final String? leaveType;
+  final String? company;
+  final String? description;
+
+  factory LeaveNoticeRule.fromJson(Map<String, dynamic> j) => LeaveNoticeRule(
+        name: (j['name'] ?? '') as String,
+        ruleName: (j['rule_name'] ?? '') as String,
+        maxLeaveDays: (j['max_leave_days'] as num?)?.toDouble() ?? 0,
+        minNoticeDays: (j['min_notice_days'] as num?)?.toInt() ?? 0,
+        isActive: (j['is_active'] as num?)?.toInt() != 0,
+        leaveType: (j['leave_type'] as String?)?.isEmpty ?? true
+            ? null
+            : j['leave_type'] as String?,
+        company: (j['company'] as String?)?.isEmpty ?? true
+            ? null
+            : j['company'] as String?,
+        description: j['description'] as String?,
+      );
+}
+
+/// One of the signed-in user's own Work From Home requests, with its stage.
+@immutable
+class WfhSummary {
+  const WfhSummary({
+    required this.name,
+    required this.fromDate,
+    required this.toDate,
+    required this.stageLabel,
+    this.halfDay = false,
+    this.explanation,
+  });
+
+  final String name;
+  final DateTime fromDate;
+  final DateTime toDate;
+  final String stageLabel;
+  final bool halfDay;
+  final String? explanation;
+
+  factory WfhSummary.fromJson(Map<String, dynamic> j) => WfhSummary(
+        name: j['name'] as String,
+        fromDate: DateTime.parse(j['from_date'] as String),
+        toDate: DateTime.parse((j['to_date'] ?? j['from_date']) as String),
+        stageLabel: (j['stage_label'] ?? '') as String,
+        halfDay: (j['half_day'] as num?)?.toInt() == 1,
+        explanation: j['explanation'] as String?,
+      );
+}
+
+/// One WFH request waiting on the signed in user, at either approval hop.
+@immutable
+class PendingWfhApproval {
+  const PendingWfhApproval({
+    required this.name,
+    required this.employeeName,
+    required this.fromDate,
+    required this.toDate,
+    required this.stageLabel,
+    required this.asHr,
+    this.halfDay = false,
+    this.explanation,
+  });
+
+  final String name;
+  final String employeeName;
+  final DateTime fromDate;
+  final DateTime toDate;
+  final String stageLabel;
+  final bool asHr;
+  final bool halfDay;
+  final String? explanation;
+
+  factory PendingWfhApproval.fromJson(Map<String, dynamic> j) =>
+      PendingWfhApproval(
+        name: j['name'] as String,
+        employeeName: (j['employee_name'] ?? j['employee'] ?? '') as String,
+        fromDate: DateTime.parse(j['from_date'] as String),
+        toDate: DateTime.parse((j['to_date'] ?? j['from_date']) as String),
+        stageLabel: (j['stage_label'] ?? '') as String,
+        asHr: (j['as_hr'] ?? false) as bool,
+        halfDay: (j['half_day'] as num?)?.toInt() == 1,
+        explanation: j['explanation'] as String?,
+      );
+}
+
+/// Form payload for a new Work From Home request.
+@immutable
+class WfhRequest {
+  const WfhRequest({
+    required this.fromDate,
+    this.toDate,
+    this.halfDay = false,
+    this.halfDayDate,
+    this.explanation,
+  });
+
+  final DateTime fromDate;
+  final DateTime? toDate;
+  final bool halfDay;
+  final DateTime? halfDayDate;
+  final String? explanation;
 }
 
 /// Form payload for a new leave request.

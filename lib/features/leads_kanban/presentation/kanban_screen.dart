@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/format/money.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/router/app_router.dart';
+import '../../../core/router/nav_history.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../home/presentation/app_shell.dart';
@@ -32,6 +33,7 @@ class _LeadKanbanScreenState extends ConsumerState<LeadKanbanScreen> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        leading: const AppBackButton(),
         backgroundColor: AppColors.surfaceContainerLowest,
         title: const Text('Lead board'),
         actions: [

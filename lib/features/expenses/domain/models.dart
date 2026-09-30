@@ -29,6 +29,7 @@ class ExpenseClaim {
     required this.totalSanctioned,
     required this.status,
     this.stageLabel,
+    this.employeeName,
   });
 
   final String name;
@@ -36,6 +37,10 @@ class ExpenseClaim {
   final double totalClaimed;
   final double totalSanctioned;
   final ClaimStatus status;
+
+  /// Only populated in the HR/admin "all claims" view, where each row belongs
+  /// to a different employee. Null on the employee's own list.
+  final String? employeeName;
 
   /// Where the claim has actually reached in the two-hop approval. `status`
   /// stays Draft across both waiting hops, so this tells the employee whether
@@ -50,6 +55,33 @@ class ExpenseClaim {
         status: claimStatusFrom(
             j['approval_status'] as String?, j['status'] as String?),
         stageLabel: j['stage_label'] as String?,
+        employeeName: j['employee_name'] as String?,
+      );
+}
+
+/// One receipt/proof file attached to an expense claim.
+@immutable
+class ExpenseAttachment {
+  const ExpenseAttachment({
+    required this.name,
+    required this.fileName,
+    required this.absoluteUrl,
+    this.fileSize = 0,
+    this.isPrivate = false,
+  });
+
+  final String name;
+  final String fileName;
+  final String absoluteUrl;
+  final int fileSize;
+  final bool isPrivate;
+
+  factory ExpenseAttachment.fromJson(Map<String, dynamic> j) => ExpenseAttachment(
+        name: (j['name'] ?? '') as String,
+        fileName: (j['file_name'] ?? j['file_url'] ?? '') as String,
+        absoluteUrl: (j['absolute_url'] ?? j['file_url'] ?? '') as String,
+        fileSize: (j['file_size'] as num?)?.toInt() ?? 0,
+        isPrivate: (j['is_private'] as num?)?.toInt() == 1,
       );
 }
 
@@ -95,18 +127,21 @@ class ExpenseLine {
   const ExpenseLine({
     required this.expenseType,
     required this.amount,
+    this.sanctionedAmount = 0,
     this.expenseDate,
     this.description,
   });
 
   final String expenseType;
   final double amount;
+  final double sanctionedAmount;
   final DateTime? expenseDate;
   final String? description;
 
   factory ExpenseLine.fromJson(Map<String, dynamic> j) => ExpenseLine(
         expenseType: (j['expense_type'] ?? '') as String,
         amount: (j['amount'] as num?)?.toDouble() ?? 0,
+        sanctionedAmount: (j['sanctioned_amount'] as num?)?.toDouble() ?? 0,
         expenseDate: j['expense_date'] != null
             ? DateTime.tryParse(j['expense_date'].toString())
             : null,
@@ -123,8 +158,13 @@ class ExpenseClaimDetail {
     required this.postingDate,
     required this.currency,
     required this.totalClaimed,
+    required this.totalSanctioned,
+    required this.status,
     required this.stageLabel,
     required this.lines,
+    required this.attachments,
+    this.docstatus = 0,
+    this.expenseApprover,
     this.remark,
   });
 
@@ -133,8 +173,13 @@ class ExpenseClaimDetail {
   final DateTime? postingDate;
   final String currency;
   final double totalClaimed;
+  final double totalSanctioned;
+  final ClaimStatus status;
   final String stageLabel;
   final List<ExpenseLine> lines;
+  final List<ExpenseAttachment> attachments;
+  final int docstatus;
+  final String? expenseApprover;
   final String? remark;
 
   factory ExpenseClaimDetail.fromJson(Map<String, dynamic> j) =>
@@ -146,10 +191,20 @@ class ExpenseClaimDetail {
             : null,
         currency: (j['currency'] ?? 'INR') as String,
         totalClaimed: (j['total_claimed_amount'] as num?)?.toDouble() ?? 0,
+        totalSanctioned:
+            (j['total_sanctioned_amount'] as num?)?.toDouble() ?? 0,
+        status: claimStatusFrom(
+            j['approval_status'] as String?, j['status'] as String?),
         stageLabel: (j['stage_label'] ?? '') as String,
         lines: ((j['expenses'] as List?) ?? [])
             .map((e) => ExpenseLine.fromJson(e as Map<String, dynamic>))
             .toList(),
+        attachments: ((j['attachments'] as List?) ?? [])
+            .map((e) =>
+                ExpenseAttachment.fromJson((e as Map).cast<String, dynamic>()))
+            .toList(),
+        docstatus: (j['docstatus'] as num?)?.toInt() ?? 0,
+        expenseApprover: j['expense_approver'] as String?,
         remark: j['remark'] as String?,
       );
 }

@@ -18,6 +18,7 @@ import '../../tasks/application/task_controller.dart';
 import '../../tasks/domain/models.dart';
 import '../data/records_repository.dart';
 import '../domain/descriptor.dart';
+import '../domain/form_meta.dart';
 import 'dynamic_form_screen.dart';
 
 final _dateFmt = DateFormat('d MMM');
@@ -34,6 +35,10 @@ class RecordDetailScreen extends ConsumerStatefulWidget {
 class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
   Map<String, dynamic>? _doc;
   Map<String, dynamic> _created = const {};
+  // Full field metadata + saved values, so the detail can render every
+  // populated field (and child tables) read-only without opening Edit.
+  FormMeta? _meta;
+  Map<String, dynamic>? _values;
   Object? _error;
   bool _loading = true;
 
@@ -71,10 +76,23 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
           widget.args.name,
         );
       } catch (_) {}
+      // Best-effort: full field meta + saved values, so every populated field
+      // (and child table) shows read-only here instead of only inside Edit.
+      FormMeta? meta;
+      Map<String, dynamic>? values;
+      try {
+        meta = await repo.getFormMeta(widget.args.descriptor.doctype);
+        values = await repo.getFormValues(
+          widget.args.descriptor.doctype,
+          widget.args.name,
+        );
+      } catch (_) {}
       if (mounted) {
         setState(() {
           _doc = doc;
           _created = created;
+          _meta = meta;
+          _values = values;
         });
       }
     } catch (e) {
@@ -148,7 +166,7 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
                 .bodyMedium
                 ?.copyWith(color: AppColors.onSurfaceVariant)),
         const SizedBox(height: AppDimens.lg),
-        for (final f in d.detailFields) _row(f, doc[f.key]),
+        ..._detailBody(d),
         // Work Order / Job Card carry their own bespoke submit/lifecycle
         // sections below, so skip the generic one to avoid duplicate buttons.
         if (d.doctype != 'Work Order' && d.doctype != 'Job Card') ...[
@@ -345,6 +363,219 @@ class _RecordDetailScreenState extends ConsumerState<RecordDetailScreen> {
     );
   }
 
+  // Layout / non-data field types that carry no value to display.
+  static const Set<String> _skipFieldTypes = {
+    'Section Break', 'Column Break', 'Tab Break', 'HTML', 'Button',
+    'Fold', 'Heading', 'Image', 'Signature', 'Barcode',
+  };
+
+  /// Every populated field of the record, read-only. Prefers the full form
+  /// meta + saved values (so all filled fields and child tables show without
+  /// opening Edit); falls back to the descriptor's curated detailFields when
+  /// meta/values could not be loaded (e.g. offline or a permission gap).
+  List<Widget> _detailBody(RecordDescriptor d) {
+    final meta = _meta;
+    final values = _values;
+    if (meta == null || values == null) {
+      final doc = _doc ?? const {};
+      return [for (final f in d.detailFields) _row(f, doc[f.key])];
+    }
+    final rows = <Widget>[];
+    final shown = <String>{};
+    for (final f in meta.fields) {
+      if (_skipFieldTypes.contains(f.fieldtype)) continue;
+      // name + the title are already shown in the header above.
+      if (f.fieldname == 'name' || f.fieldname == d.titleField) continue;
+      final v = values[f.fieldname];
+      if (f.isTable) {
+        final child = _childTable(f, v);
+        if (child != null) {
+          rows.add(child);
+          shown.add(f.fieldname);
+        }
+        continue;
+      }
+      final text = _formatValue(f.fieldtype, v);
+      if (text.isEmpty) continue;
+      rows.add(_kv(f.label, text));
+      shown.add(f.fieldname);
+    }
+    // Add any curated detail field the editable meta didn't cover (e.g. a
+    // read-only status), so this never shows less than before.
+    final doc = _doc ?? const {};
+    for (final f in d.detailFields) {
+      if (shown.contains(f.key) || f.key == d.titleField || f.key == 'name') {
+        continue;
+      }
+      rows.add(_row(f, doc[f.key]));
+    }
+    // Never leave the screen blank if everything resolved empty.
+    if (rows.isEmpty) {
+      return [for (final f in d.detailFields) _row(f, doc[f.key])];
+    }
+    return rows;
+  }
+
+  String _formatValue(String fieldtype, dynamic v) {
+    if (v == null) return '';
+    if (fieldtype == 'Check') return (v == 1 || v == true) ? 'Yes' : 'No';
+    return v.toString().trim();
+  }
+
+  Widget _kv(String label, String text) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppDimens.xs),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 140,
+            child: Text(label,
+                style: TextStyle(color: AppColors.onSurfaceVariant)),
+          ),
+          Expanded(child: Text(text)),
+        ],
+      ),
+    );
+  }
+
+  /// Relative width weight for a child-table column, so free-text columns get
+  /// more room than short codes/dates/numbers.
+  int _colFlex(String fieldtype) => switch (fieldtype) {
+        'Small Text' ||
+        'Text' ||
+        'Long Text' ||
+        'Text Editor' ||
+        'Data' =>
+          3,
+        _ => 2,
+      };
+
+  /// A child table rendered as a real grid: a shaded header row of column
+  /// labels, then one striped row per entry. Empty columns (no value in any
+  /// row) are dropped so the grid stays tight. Returns null when the table has
+  /// no usable rows.
+  Widget? _childTable(FieldMeta f, dynamic v) {
+    if (v is! List || v.isEmpty) return null;
+    final allCols = f.childFields
+        .where((c) => !_skipFieldTypes.contains(c.fieldtype))
+        .toList();
+    if (allCols.isEmpty) return null;
+
+    // Materialise the rows once, then keep only columns that carry a value in
+    // at least one row (so a table never shows an all-blank column).
+    final maps = <Map>[for (final row in v) if (row is Map) row];
+    final cols = allCols
+        .where((c) => maps.any(
+            (row) => _formatValue(c.fieldtype, row[c.fieldname]).isNotEmpty))
+        .toList();
+    if (cols.isEmpty) return null;
+
+    final dataRows = <List<String>>[];
+    for (final row in maps) {
+      final cells = [
+        for (final c in cols) _formatValue(c.fieldtype, row[c.fieldname])
+      ];
+      if (cells.every((t) => t.isEmpty)) continue;
+      dataRows.add(cells);
+    }
+    if (dataRows.isEmpty) return null;
+
+    Widget cell(String text, int flex, {required bool header, required bool numeric}) =>
+        Expanded(
+          flex: flex,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(
+                horizontal: AppDimens.sm, vertical: AppDimens.xs),
+            child: Text(
+              text,
+              textAlign: numeric ? TextAlign.right : TextAlign.left,
+              style: TextStyle(
+                fontSize: 13,
+                height: 1.3,
+                fontWeight: header ? FontWeight.w700 : FontWeight.w500,
+                color: header
+                    ? AppColors.onSurfaceVariant
+                    : AppColors.onSurface,
+              ),
+            ),
+          ),
+        );
+
+    bool isNumeric(String t) => switch (t) {
+          'Int' || 'Float' || 'Currency' || 'Percent' => true,
+          _ => false,
+        };
+
+    final headerRow = Container(
+      color: AppColors.surfaceContainer,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final c in cols)
+            cell(c.label, _colFlex(c.fieldtype),
+                header: true, numeric: isNumeric(c.fieldtype)),
+        ],
+      ),
+    );
+
+    final body = <Widget>[];
+    for (var i = 0; i < dataRows.length; i++) {
+      final cells = dataRows[i];
+      body.add(Container(
+        color: i.isOdd
+            ? AppColors.surfaceContainerLowest
+            : Colors.transparent,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            for (var j = 0; j < cols.length; j++)
+              cell(cells[j], _colFlex(cols[j].fieldtype),
+                  header: false, numeric: isNumeric(cols[j].fieldtype)),
+          ],
+        ),
+      ));
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppDimens.sm),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(f.label,
+                  style: const TextStyle(fontWeight: FontWeight.w700)),
+              const SizedBox(width: AppDimens.xs),
+              Text('(${dataRows.length})',
+                  style: TextStyle(
+                      color: AppColors.onSurfaceVariant, fontSize: 12)),
+            ],
+          ),
+          const SizedBox(height: AppDimens.xs),
+          Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+              border: Border.all(color: AppColors.outlineVariant),
+            ),
+            child: Column(
+              children: [
+                headerRow,
+                Divider(height: 1, color: AppColors.outlineVariant),
+                for (var i = 0; i < body.length; i++) ...[
+                  if (i > 0)
+                    Divider(height: 1, color: AppColors.outlineVariant),
+                  body[i],
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _row(FieldSpec f, dynamic value) {
     final text = f.isBool
         ? ((value == 1 || value == true) ? 'Yes' : 'No')
@@ -412,6 +643,11 @@ class _LifecycleSection extends ConsumerStatefulWidget {
     'Job Card',
     'BOM',
     'Payment Entry',
+    'Shift Assignment',
+    'Leave Policy',
+    'Leave Policy Assignment',
+    'Leave Allocation',
+    'Holiday List Assignment',
   };
 
   @override

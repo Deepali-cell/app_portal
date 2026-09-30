@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../core/router/app_router.dart';
+import '../../../core/router/nav_history.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../dashboard/domain/module_flow.dart';
@@ -29,6 +29,7 @@ class ManufacturingDashboardScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        leading: const AppBackButton(),
         title: const Text('Manufacturing'),
         backgroundColor: AppColors.surfaceContainerLowest,
       ),
@@ -226,7 +227,7 @@ class _RecentRow extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: AppDimens.sm),
       child: InkWell(
         borderRadius: BorderRadius.circular(AppDimens.radiusMd),
-        onTap: () => context.go(Routes.mfgWorkOrder),
+        onTap: () => AppNav.go(context, Routes.mfgWorkOrder),
         child: Padding(
           padding: const EdgeInsets.all(AppDimens.md),
           child: Column(
