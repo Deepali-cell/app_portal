@@ -7,6 +7,11 @@ import '../domain/models.dart';
 final adminRepositoryProvider = Provider<AdminRepository>(
     (ref) => AdminRepository(ref.watch(dioProvider)));
 
+/// Site set-up health check. autoDispose so reopening the tab re-runs it and
+/// shows the result of whatever the admin just fixed.
+final setupCheckProvider = FutureProvider.autoDispose<SetupCheck>(
+    (ref) => ref.read(adminRepositoryProvider).getSetupCheck());
+
 final adminMetaProvider = FutureProvider<AdminMeta>(
     (ref) => ref.read(adminRepositoryProvider).getMeta());
 

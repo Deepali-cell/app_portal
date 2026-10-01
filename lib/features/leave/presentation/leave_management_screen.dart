@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/router/app_router.dart';
@@ -60,7 +60,7 @@ class LeaveManagementScreen extends StatelessWidget {
                 onPressed: () {
                   ref.invalidate(allLeaveApplicationsProvider);
                   ref.invalidate(pendingLeaveApprovalsProvider);
-                  ref.invalidate(pendingCompOffApprovalsProvider);
+                  ref.invalidate(allCompOffProvider);
                   ref.invalidate(pendingWfhApprovalsProvider);
                 },
               ),
@@ -264,6 +264,18 @@ class _ApplicationCard extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppColors.onSurfaceVariant)),
+                    // While pending, spell out which hop it is sitting at
+                    // (manager vs HR) so oversight sees more than just "Pending".
+                    if (app.status == LeaveStatus.open &&
+                        app.stageLabel != null &&
+                        app.stageLabel!.trim().isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(app.stageLabel!.trim(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: AppColors.onSurfaceVariant)),
+                    ],
                   ],
                 ),
               ),
@@ -416,7 +428,9 @@ class _RequestCard extends StatelessWidget {
 }
 
 // ---------------------------------------------------------------------------
-// Comp-Off tab - compensatory-leave requests waiting on this user
+// Comp-Off tab - management list of every comp-off request (HR/admin see all,
+// others their own), filtered by date range + status. Tapping one opens the
+// detail sheet, which still offers approve/reject while the request is pending.
 // ---------------------------------------------------------------------------
 class _CompOffTab extends ConsumerStatefulWidget {
   const _CompOffTab();
@@ -427,54 +441,97 @@ class _CompOffTab extends ConsumerStatefulWidget {
 
 class _CompOffTabState extends ConsumerState<_CompOffTab>
     with AutomaticKeepAliveClientMixin {
+  late DateTime _from;
+  late DateTime _to;
+  _StatusFilter _filter = _StatusFilter.all;
+
   @override
   bool get wantKeepAlive => true;
 
   @override
+  void initState() {
+    super.initState();
+    final all = DateRangeBar.allTime();
+    _from = all.from;
+    _to = all.to;
+  }
+
+  LeaveApplicationsRange get _range => (from: _from, to: _to);
+
+  @override
   Widget build(BuildContext context) {
     super.build(context);
-    final async = ref.watch(pendingCompOffApprovalsProvider);
+    final async = ref.watch(allCompOffProvider(_range));
     return RefreshIndicator(
       color: AppColors.primary,
       onRefresh: () async {
-        ref.invalidate(pendingCompOffApprovalsProvider);
+        ref.invalidate(allCompOffProvider(_range));
         await Future<void>.delayed(const Duration(milliseconds: 400));
       },
-      child: async.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          children: [
-            Padding(
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.fromLTRB(AppDimens.screenPadding, AppDimens.md,
+            AppDimens.screenPadding, AppDimens.xl),
+        children: [
+          DateRangeBar(
+            from: _from,
+            to: _to,
+            showAll: true,
+            onChanged: (f, t) => setState(() {
+              _from = f;
+              _to = t;
+            }),
+          ),
+          const SizedBox(height: AppDimens.sm),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                for (final f in _StatusFilter.values) ...[
+                  ChoiceChip(
+                    label: Text(f.label),
+                    selected: _filter == f,
+                    onSelected: (_) => setState(() => _filter = f),
+                  ),
+                  const SizedBox(width: AppDimens.sm),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: AppDimens.sm),
+          async.when(
+            loading: () => const Padding(
+              padding: EdgeInsets.all(AppDimens.xxxl),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+            error: (e, _) => Padding(
               padding: const EdgeInsets.all(AppDimens.xl),
               child: Text(
                 e is ApiException ? e.message : 'Could not load requests.',
                 textAlign: TextAlign.center,
               ),
             ),
-          ],
-        ),
-        data: (items) {
-          if (items.isEmpty) {
-            return ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              children: const [
-                _EmptyState(
-                  icon: Icons.inbox_outlined,
-                  text: 'No comp-off requests waiting on you.',
-                ),
-              ],
-            );
-          }
-          return ListView.separated(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(AppDimens.screenPadding,
-                AppDimens.md, AppDimens.screenPadding, AppDimens.xl),
-            itemCount: items.length,
-            separatorBuilder: (_, _) => const SizedBox(height: AppDimens.md),
-            itemBuilder: (_, i) => _CompOffCard(item: items[i]),
-          );
-        },
+            data: (all) {
+              final items =
+                  all.where((r) => _filter.matches(r.status)).toList();
+              if (items.isEmpty) {
+                return const _EmptyState(
+                  icon: Icons.event_available_outlined,
+                  text: 'No comp-off requests in this range.',
+                );
+              }
+              return Column(
+                children: [
+                  for (final r in items)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: AppDimens.md),
+                      child: _CompOffCard(item: r),
+                    ),
+                ],
+              );
+            },
+          ),
+        ],
       ),
     );
   }
@@ -482,10 +539,12 @@ class _CompOffTabState extends ConsumerState<_CompOffTab>
 
 class _CompOffCard extends StatelessWidget {
   const _CompOffCard({required this.item});
-  final PendingCompOffApproval item;
+  final CompOffApplication item;
 
   @override
   Widget build(BuildContext context) {
+    final title =
+        item.employeeName.trim().isNotEmpty ? item.employeeName : item.name;
     return Card(
       margin: EdgeInsets.zero,
       child: InkWell(
@@ -493,43 +552,41 @@ class _CompOffCard extends StatelessWidget {
         onTap: () => _showCompOffDetail(context, item),
         child: Padding(
           padding: const EdgeInsets.all(AppDimens.md),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
+          child: Row(
             children: [
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Text(item.employeeName,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                         style: Theme.of(context)
                             .textTheme
                             .titleMedium
-                            ?.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w700)),
-                  ),
-                  _HatBadge(asHr: item.asHr),
-                ],
-              ),
-              const SizedBox(height: 2),
-              Text(
-                  'Worked · ${_range(item.workFromDate, item.workEndDate)}',
-                  style: Theme.of(context).textTheme.bodySmall),
-              if (item.stageLabel.trim().isNotEmpty) ...[
-                const SizedBox(height: 2),
-                Text(item.stageLabel,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppColors.onSurfaceVariant)),
-              ],
-              const SizedBox(height: AppDimens.sm),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: TextButton.icon(
-                  onPressed: () => _showCompOffDetail(context, item),
-                  icon: const Icon(Icons.event_available_outlined, size: 18),
-                  label: const Text('View & action'),
+                            ?.copyWith(fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 2),
+                    Text('Worked · ${_range(item.workFromDate, item.workEndDate)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: AppColors.onSurfaceVariant)),
+                    if (item.status == LeaveStatus.open &&
+                        item.stageLabel.trim().isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(item.stageLabel.trim(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: AppColors.onSurfaceVariant)),
+                    ],
+                  ],
                 ),
               ),
+              const SizedBox(width: AppDimens.sm),
+              _LeaveStatusChip(status: item.status),
+              const SizedBox(width: 4),
+              Icon(Icons.chevron_right, color: AppColors.onSurfaceVariant),
             ],
           ),
         ),
@@ -580,14 +637,28 @@ class _LeaveDetailSheetState extends ConsumerState<_LeaveDetailSheet> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
   }
 
+  bool _opening = false;
+
+  /// Proof files are stored private, which a plain URL can't open from an
+  /// external browser (no auth token → 403). So we download the bytes through
+  /// the authenticated API and hand the saved copy to the OS share/preview sheet.
   Future<void> _open(LeaveAttachment a) async {
-    final uri = Uri.tryParse(a.absoluteUrl);
-    if (uri == null) {
+    if (_opening) return;
+    setState(() => _opening = true);
+    _toast('Opening ${a.fileName}…');
+    try {
+      final path =
+          await ref.read(leaveRepositoryProvider).downloadAttachment(a.name);
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(path)], fileNameOverrides: [a.fileName]),
+      );
+    } on ApiException catch (e) {
+      _toast(e.message);
+    } catch (_) {
       _toast('Could not open the file.');
-      return;
+    } finally {
+      if (mounted) setState(() => _opening = false);
     }
-    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!ok) _toast('Could not open the file.');
   }
 
   Future<void> _act(String action) async {
@@ -761,11 +832,13 @@ class _LeaveDetailSheetState extends ConsumerState<_LeaveDetailSheet> {
 }
 
 // ---------------------------------------------------------------------------
-// Comp-off detail sheet (built from the pending request; approve/reject)
+// Comp-off detail sheet. Read-only oversight for any request; approve/reject
+// is offered only while the request is still pending (the server also enforces
+// that only HR/admin may act, and never on their own request).
 // ---------------------------------------------------------------------------
 Future<void> _showCompOffDetail(
   BuildContext context,
-  PendingCompOffApproval item,
+  CompOffApplication item,
 ) {
   return showModalBottomSheet<void>(
     context: context,
@@ -781,7 +854,7 @@ Future<void> _showCompOffDetail(
 
 class _CompOffDetailSheet extends ConsumerStatefulWidget {
   const _CompOffDetailSheet({required this.item});
-  final PendingCompOffApproval item;
+  final CompOffApplication item;
 
   @override
   ConsumerState<_CompOffDetailSheet> createState() =>
@@ -818,11 +891,10 @@ class _CompOffDetailSheetState extends ConsumerState<_CompOffDetailSheet> {
             action: action,
             reason: reason,
           );
+      ref.invalidate(allCompOffProvider);
       if (!mounted) return;
       Navigator.of(context).pop();
-      _toast(action == 'Approve'
-          ? 'Approved. ${item.asHr ? "Comp-off granted." : "Sent to HR."}'
-          : 'Rejected.');
+      _toast(action == 'Approve' ? 'Approved. Comp-off granted.' : 'Rejected.');
     } on ApiException catch (e) {
       _toast(e.message);
     } catch (_) {
@@ -836,6 +908,9 @@ class _CompOffDetailSheetState extends ConsumerState<_CompOffDetailSheet> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final item = widget.item;
+    // Approve/reject only matters while the request is still open; closed ones
+    // are view-only. The server re-checks the acting user's rights regardless.
+    final canAct = item.status == LeaveStatus.open;
     return SafeArea(
       child: ConstrainedBox(
         constraints: BoxConstraints(
@@ -864,7 +939,7 @@ class _CompOffDetailSheetState extends ConsumerState<_CompOffDetailSheet> {
                     ),
                   ),
                   const SizedBox(width: AppDimens.sm),
-                  _HatBadge(asHr: item.asHr),
+                  _LeaveStatusChip(status: item.status),
                   IconButton(
                     tooltip: 'Close',
                     icon: const Icon(Icons.close),
@@ -906,7 +981,7 @@ class _CompOffDetailSheetState extends ConsumerState<_CompOffDetailSheet> {
                 ),
               ),
             ),
-            _ActionBar(busy: _busy, onAct: _act),
+            if (canAct) _ActionBar(busy: _busy, onAct: _act),
           ],
         ),
       ),

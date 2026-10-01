@@ -15,6 +15,8 @@ import '../domain/models.dart';
 ///    Permission Manager edits).
 ///  * Reports: pick a curated report, toggle which roles may run it (writes to
 ///    the report's own Frappe roles list).
+///  * Setup check: read-only health check of what this ERP is missing (apps,
+///    approval workflows, employee links, defaults) with a fix hint for each.
 ///
 /// Visible only to System Manager (nav gated by the `admin` capability).
 class AdminScreen extends StatelessWidget {
@@ -23,7 +25,7 @@ class AdminScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 3,
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
@@ -33,6 +35,7 @@ class AdminScreen extends StatelessWidget {
             tabs: [
               Tab(text: 'Doctypes'),
               Tab(text: 'Reports'),
+              Tab(text: 'Setup check'),
             ],
           ),
         ),
@@ -40,6 +43,7 @@ class AdminScreen extends StatelessWidget {
           children: [
             _DoctypePermTab(),
             _ReportPermTab(),
+            _SetupCheckTab(),
           ],
         ),
       ),
@@ -457,6 +461,154 @@ class _ReportRoleEditor extends ConsumerWidget {
           ],
         );
       },
+    );
+  }
+}
+
+/// Tab 3: read-only health check. Tells the admin what this ERP is missing so
+/// a fresh install fails with a to-do list instead of confusing errors.
+class _SetupCheckTab extends ConsumerWidget {
+  const _SetupCheckTab();
+
+  static const _green = Color(0xFF15803D);
+  static const _amber = Color(0xFFB54708);
+  static const _red = Color(0xFFB42318);
+  static const _grey = Color(0xFF6B7280);
+
+  (IconData, Color) _look(SetupStatus s) => switch (s) {
+        SetupStatus.ok => (Icons.check_circle, _green),
+        SetupStatus.warn => (Icons.warning_amber_rounded, _amber),
+        SetupStatus.error => (Icons.error, _red),
+        SetupStatus.info => (Icons.info_outline, _grey),
+      };
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final async = ref.watch(setupCheckProvider);
+    return RefreshIndicator(
+      color: AppColors.primary,
+      onRefresh: () async {
+        ref.invalidate(setupCheckProvider);
+        await Future<void>.delayed(const Duration(milliseconds: 400));
+      },
+      child: async.when(
+        loading: () => const Center(child: CircularProgressIndicator()),
+        error: (e, _) => ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(AppDimens.lg),
+              child: Text(friendlyMessageFor(e).message,
+                  textAlign: TextAlign.center),
+            ),
+          ],
+        ),
+        data: (r) => ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(AppDimens.md),
+          children: [
+            _summary(context, r),
+            const SizedBox(height: AppDimens.md),
+            for (final g in r.groups) ...[
+              Padding(
+                padding: const EdgeInsets.only(
+                    top: AppDimens.sm, bottom: AppDimens.xs),
+                child: Text(g.title,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w800, fontSize: 14)),
+              ),
+              Card(
+                margin: EdgeInsets.zero,
+                child: Column(
+                  children: [
+                    for (var i = 0; i < g.checks.length; i++) ...[
+                      if (i > 0) const Divider(height: 1),
+                      _row(context, g.checks[i]),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _summary(BuildContext context, SetupCheck r) {
+    final allGood = r.error == 0 && r.warn == 0;
+    final (icon, color) = r.error > 0
+        ? (Icons.error, _red)
+        : r.warn > 0
+            ? (Icons.warning_amber_rounded, _amber)
+            : (Icons.check_circle, _green);
+    final text = allGood
+        ? 'Everything the portal needs is set up.'
+        : [
+            if (r.error > 0) '${r.error} to fix',
+            if (r.warn > 0) '${r.warn} to review',
+          ].join(' · ');
+    return Container(
+      padding: const EdgeInsets.all(AppDimens.md),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(AppDimens.radiusMd),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color),
+          const SizedBox(width: AppDimens.sm),
+          Expanded(
+            child: Text(text,
+                style: TextStyle(fontWeight: FontWeight.w700, color: color)),
+          ),
+          Text('${r.ok} OK',
+              style: TextStyle(
+                  fontSize: 12, color: AppColors.onSurfaceVariant)),
+        ],
+      ),
+    );
+  }
+
+  Widget _row(BuildContext context, SetupCheckItem c) {
+    final (icon, color) = _look(c.status);
+    return Padding(
+      padding: const EdgeInsets.all(AppDimens.md),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: color),
+          const SizedBox(width: AppDimens.sm),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(c.label,
+                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                if (c.detail.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(c.detail,
+                        style: TextStyle(
+                            fontSize: 12, color: AppColors.onSurfaceVariant)),
+                  ),
+                if (c.fix.isNotEmpty &&
+                    (c.status == SetupStatus.error ||
+                        c.status == SetupStatus.warn ||
+                        c.status == SetupStatus.info))
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text('How to fix: ${c.fix}',
+                        style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.primary)),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

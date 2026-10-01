@@ -1,4 +1,8 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/api_paths.dart';
@@ -42,6 +46,53 @@ class LeaveRepository {
           .map((e) =>
               LeaveApplication.fromJson((e as Map).cast<String, dynamic>()))
           .toList();
+    } on DioException catch (e) {
+      throw _asApiException(e);
+    }
+  }
+
+  /// Every comp-off request overlapping [from]..[to] — all employees' for
+  /// HR/admin, the caller's own otherwise. Powers the Leaves management screen's
+  /// Compensatory tab so oversight sees all requests with their stage.
+  Future<List<CompOffApplication>> getAllCompOff({
+    DateTime? from,
+    DateTime? to,
+  }) async {
+    try {
+      final resp = await _dio.get(
+        ApiPaths.compOffAll,
+        queryParameters: {
+          if (from != null) 'from_date': _ymd(from),
+          if (to != null) 'to_date': _ymd(to),
+        },
+      );
+      final msg = (resp.data['message'] as Map).cast<String, dynamic>();
+      return ((msg['requests'] as List?) ?? [])
+          .map((e) =>
+              CompOffApplication.fromJson((e as Map).cast<String, dynamic>()))
+          .toList();
+    } on DioException catch (e) {
+      throw _asApiException(e);
+    }
+  }
+
+  /// Downloads one leave attachment through the authenticated API and writes it
+  /// to a temp file, returning the local path. Private proof files can't be
+  /// opened by URL in an external browser (no auth token → 403), so we fetch the
+  /// bytes here and hand the caller a local copy to open/share.
+  Future<String> downloadAttachment(String fileName) async {
+    try {
+      final resp = await _dio.post(
+        ApiPaths.leaveDownloadAttachment,
+        data: {'file': fileName},
+      );
+      final msg = (resp.data['message'] as Map).cast<String, dynamic>();
+      final name = (msg['filename'] as String?) ?? 'attachment';
+      final bytes = base64Decode(msg['content'] as String);
+      final tmp = await getTemporaryDirectory();
+      final path = '${tmp.path}/$name';
+      await File(path).writeAsBytes(bytes, flush: true);
+      return path;
     } on DioException catch (e) {
       throw _asApiException(e);
     }

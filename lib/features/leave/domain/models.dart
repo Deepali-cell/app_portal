@@ -110,6 +110,56 @@ class CompOffSummary {
       );
 }
 
+/// One comp-off request in the management list (HR/admin see everyone's, others
+/// their own). Carries the raw [stage] so the screen can colour a status chip
+/// and the [stageLabel] so it can spell out where the request is sitting.
+@immutable
+class CompOffApplication {
+  const CompOffApplication({
+    required this.name,
+    required this.employeeName,
+    required this.leaveType,
+    required this.workFromDate,
+    required this.workEndDate,
+    required this.stage,
+    required this.stageLabel,
+    this.halfDay = false,
+    this.reason,
+  });
+
+  final String name;
+  final String employeeName;
+  final String leaveType;
+  final DateTime workFromDate;
+  final DateTime workEndDate;
+  final String stage;
+  final String stageLabel;
+  final bool halfDay;
+  final String? reason;
+
+  /// Maps the workflow stage onto the shared leave-status buckets so the UI can
+  /// reuse the same chip colours. "Open"/"Pending HR Approval" are both pending.
+  LeaveStatus get status => switch (stage) {
+        'Approved' => LeaveStatus.approved,
+        'Rejected' => LeaveStatus.rejected,
+        _ => LeaveStatus.open,
+      };
+
+  factory CompOffApplication.fromJson(Map<String, dynamic> j) =>
+      CompOffApplication(
+        name: j['name'] as String,
+        employeeName: (j['employee_name'] ?? j['employee'] ?? '') as String,
+        leaveType: (j['leave_type'] ?? '') as String,
+        workFromDate: DateTime.parse(j['work_from_date'] as String),
+        workEndDate: DateTime.parse(
+            (j['work_end_date'] ?? j['work_from_date']) as String),
+        stage: (j['stage'] ?? 'Open') as String,
+        stageLabel: (j['stage_label'] ?? '') as String,
+        halfDay: (j['half_day'] as num?)?.toInt() == 1,
+        reason: j['reason'] as String?,
+      );
+}
+
 /// One comp-off request waiting on the signed in user, at either approval hop.
 @immutable
 class PendingCompOffApproval {

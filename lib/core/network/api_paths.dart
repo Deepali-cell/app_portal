@@ -180,6 +180,10 @@ class ApiPaths {
       '/api/method/tcb_portal_erp.api.expense.act_on_claim';
   static const String expenseAllClaims =
       '/api/method/tcb_portal_erp.api.expense.get_all_claims';
+  // Download one claim attachment (base64) through the authenticated API,
+  // because private /private/files URLs 403 in an external browser.
+  static const String expenseDownloadAttachment =
+      '/api/method/tcb_portal_erp.api.expense.download_attachment';
 
   // Comp-Off (Compensatory Leave Request) approvals
   static const String compOffDetail =
@@ -188,6 +192,9 @@ class ApiPaths {
       '/api/method/tcb_portal_erp.api.leave.get_comp_off_pending_approvals';
   static const String compOffActOnRequest =
       '/api/method/tcb_portal_erp.api.leave.act_on_comp_off';
+  // Every comp-off request in a window (HR/admin see all; others their own).
+  static const String compOffAll =
+      '/api/method/tcb_portal_erp.api.leave.get_all_comp_off';
 
   // Leave notice-period policy (HR-configurable rules)
   static const String leaveNoticeRulesList =
@@ -316,6 +323,9 @@ class ApiPaths {
   // Every leave application in a window (HR/admin see all; others their own).
   static const String leaveAllApplications =
       '/api/method/tcb_portal_erp.api.leave.get_all_applications';
+  // Download one leave attachment (base64) through the authenticated API.
+  static const String leaveDownloadAttachment =
+      '/api/method/tcb_portal_erp.api.leave.download_attachment';
 
   // Task detail + update
   static const String taskDetail =
@@ -427,6 +437,9 @@ class ApiPaths {
   static const String adminSetPerm =
       '/api/method/tcb_portal_erp.api.admin.set_role_perm';
   // Administrator - per-role access to the curated reports
+  // Read-only health check of the site's set-up (apps, workflows, employees...).
+  static const String adminSetupCheck =
+      '/api/method/tcb_portal_erp.api.setup_check.get_setup_check';
   static const String adminReportMeta =
       '/api/method/tcb_portal_erp.api.admin.get_report_admin_meta';
   static const String adminReportRoles =

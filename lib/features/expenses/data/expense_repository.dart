@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:dio/dio.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/api_paths.dart';
@@ -108,6 +110,28 @@ class ExpenseRepository {
       return ExpenseClaimDetail.fromJson(
         (resp.data['message'] as Map).cast<String, dynamic>(),
       );
+    } on DioException catch (e) {
+      throw _asApiException(e);
+    }
+  }
+
+  /// Downloads one claim attachment through the authenticated API and writes it
+  /// to a temp file, returning the local path. Private receipt files can't be
+  /// opened by URL in an external browser (no auth token → 403), so we fetch
+  /// the bytes here and hand the caller a local copy to open/share.
+  Future<String> downloadAttachment(String fileName) async {
+    try {
+      final resp = await _dio.post(
+        ApiPaths.expenseDownloadAttachment,
+        data: {'file': fileName},
+      );
+      final msg = (resp.data['message'] as Map).cast<String, dynamic>();
+      final name = (msg['filename'] as String?) ?? 'attachment';
+      final bytes = base64Decode(msg['content'] as String);
+      final tmp = await getTemporaryDirectory();
+      final path = '${tmp.path}/$name';
+      await File(path).writeAsBytes(bytes, flush: true);
+      return path;
     } on DioException catch (e) {
       throw _asApiException(e);
     }

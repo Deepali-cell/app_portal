@@ -188,3 +188,84 @@ class PermFlags {
         ifOwner: (j['if_owner'] ?? 0) == 1,
       );
 }
+
+/// Outcome of one set-up check. `error` = a portal feature will not work until
+/// fixed, `warn` = works but incomplete, `info` = optional, `ok` = all good.
+enum SetupStatus { ok, warn, error, info }
+
+SetupStatus _setupStatusFrom(String? s) => switch (s) {
+      'ok' => SetupStatus.ok,
+      'warn' => SetupStatus.warn,
+      'error' => SetupStatus.error,
+      _ => SetupStatus.info,
+    };
+
+@immutable
+class SetupCheckItem {
+  const SetupCheckItem({
+    required this.key,
+    required this.label,
+    required this.status,
+    this.detail = '',
+    this.fix = '',
+  });
+  final String key;
+  final String label;
+  final SetupStatus status;
+  final String detail;
+  final String fix;
+
+  factory SetupCheckItem.fromJson(Map<String, dynamic> j) => SetupCheckItem(
+        key: (j['key'] ?? '') as String,
+        label: (j['label'] ?? '') as String,
+        status: _setupStatusFrom(j['status'] as String?),
+        detail: (j['detail'] ?? '') as String,
+        fix: (j['fix'] ?? '') as String,
+      );
+}
+
+@immutable
+class SetupCheckGroup {
+  const SetupCheckGroup({required this.title, required this.checks});
+  final String title;
+  final List<SetupCheckItem> checks;
+
+  factory SetupCheckGroup.fromJson(Map<String, dynamic> j) => SetupCheckGroup(
+        title: (j['title'] ?? '') as String,
+        checks: ((j['checks'] as List?) ?? const [])
+            .whereType<Map>()
+            .map((e) => SetupCheckItem.fromJson(e.cast<String, dynamic>()))
+            .toList(),
+      );
+}
+
+@immutable
+class SetupCheck {
+  const SetupCheck({
+    required this.ok,
+    required this.warn,
+    required this.error,
+    required this.info,
+    required this.groups,
+  });
+  final int ok;
+  final int warn;
+  final int error;
+  final int info;
+  final List<SetupCheckGroup> groups;
+
+  factory SetupCheck.fromJson(Map<String, dynamic> j) {
+    final s = ((j['summary'] as Map?) ?? const {}).cast<String, dynamic>();
+    int n(String k) => (s[k] as num?)?.toInt() ?? 0;
+    return SetupCheck(
+      ok: n('ok'),
+      warn: n('warn'),
+      error: n('error'),
+      info: n('info'),
+      groups: ((j['groups'] as List?) ?? const [])
+          .whereType<Map>()
+          .map((e) => SetupCheckGroup.fromJson(e.cast<String, dynamic>()))
+          .toList(),
+    );
+  }
+}

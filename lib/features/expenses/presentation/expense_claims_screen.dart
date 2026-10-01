@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../../../core/format/money.dart';
 import '../../../core/network/api_exception.dart';
@@ -253,6 +253,18 @@ class _ClaimCard extends StatelessWidget {
                     Text(_dateFmt.format(claim.postingDate),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: AppColors.onSurfaceVariant)),
+                    // While pending, spell out which hop it is sitting at
+                    // (approver vs HR) so oversight sees more than just "Pending".
+                    if (claim.status == ClaimStatus.draft &&
+                        claim.stageLabel != null &&
+                        claim.stageLabel!.trim().isNotEmpty) ...[
+                      const SizedBox(height: 2),
+                      Text(claim.stageLabel!.trim(),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: AppColors.onSurfaceVariant)),
+                    ],
                   ],
                 ),
               ),
@@ -454,14 +466,29 @@ class _ClaimDetailSheetState extends ConsumerState<_ClaimDetailSheet> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
   }
 
+  bool _opening = false;
+
+  /// Receipts are stored as private files, which a plain URL can't open from an
+  /// external browser (no auth token → 403). So we download the bytes through
+  /// the authenticated API and hand the saved copy to the OS share/preview sheet.
   Future<void> _open(ExpenseAttachment a) async {
-    final uri = Uri.tryParse(a.absoluteUrl);
-    if (uri == null) {
+    if (_opening) return;
+    setState(() => _opening = true);
+    _toast('Opening ${a.fileName}…');
+    try {
+      final path = await ref
+          .read(expenseRepositoryProvider)
+          .downloadAttachment(a.name);
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(path)], fileNameOverrides: [a.fileName]),
+      );
+    } on ApiException catch (e) {
+      _toast(e.message);
+    } catch (_) {
       _toast('Could not open the file.');
-      return;
+    } finally {
+      if (mounted) setState(() => _opening = false);
     }
-    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!ok) _toast('Could not open the file.');
   }
 
   Future<void> _act(String action) async {

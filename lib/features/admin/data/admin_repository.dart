@@ -58,6 +58,17 @@ class AdminRepository {
 
   // --- Reports: per-role access to the curated reports ---------------------
 
+  /// Read-only health check of this site's set-up. System Manager only.
+  Future<SetupCheck> getSetupCheck() async {
+    try {
+      final resp = await _dio.get(ApiPaths.adminSetupCheck);
+      return SetupCheck.fromJson(
+          (resp.data['message'] as Map).cast<String, dynamic>());
+    } on DioException catch (e) {
+      throw ApiException.fromDio(e);
+    }
+  }
+
   Future<ReportAdminMeta> getReportMeta() async {
     try {
       final resp = await _dio.get(ApiPaths.adminReportMeta);

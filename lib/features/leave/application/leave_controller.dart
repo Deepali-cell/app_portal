@@ -101,6 +101,13 @@ final allLeaveApplicationsProvider = FutureProvider.autoDispose
         .read(leaveRepositoryProvider)
         .getAllApplications(from: r.from, to: r.to));
 
+/// Every comp-off request overlapping a window (HR/admin see everyone's, others
+/// their own). Drives the Compensatory tab's management list.
+final allCompOffProvider = FutureProvider.autoDispose
+    .family<List<CompOffApplication>, LeaveApplicationsRange>((ref, r) => ref
+        .read(leaveRepositoryProvider)
+        .getAllCompOff(from: r.from, to: r.to));
+
 /// On-demand detail for a single Leave Application.
 final leaveApplicationDetailProvider =
     FutureProvider.family<LeaveApplicationDetail, String>(
