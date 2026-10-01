@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../../core/router/nav_history.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
 import '../../../core/network/api_exception.dart';
-import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../../../shared/widgets/brand_button.dart';
@@ -13,6 +11,7 @@ import '../../../shared/widgets/employee_only_notice.dart';
 import '../../auth/application/auth_controller.dart';
 import '../application/leave_controller.dart';
 import '../domain/models.dart';
+import 'leave_management_screen.dart' show showLeaveDetailSheet;
 
 final _dateFmt = DateFormat('d MMM yyyy');
 final _dateShort = DateFormat('d MMM');
@@ -621,7 +620,7 @@ class _RequestRow extends StatelessWidget {
         ? days.toInt().toString()
         : days.toString();
     return InkWell(
-      onTap: () => context.push(Routes.leaveDetail, extra: app.name),
+      onTap: () => showLeaveDetailSheet(context, app.name),
       child: Padding(
         padding: const EdgeInsets.all(AppDimens.md),
         child: Row(

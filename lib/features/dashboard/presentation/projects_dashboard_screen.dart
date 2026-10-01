@@ -159,9 +159,9 @@ class _Body extends StatelessWidget {
           children: [
             Expanded(
               child: _StatCard(
-                label: 'Unbilled hours',
-                value: _hrs(summary.unbilledTimesheetHours),
-                caption: 'Draft timesheets · last 30d',
+                label: 'Draft timesheets',
+                value: '${summary.draftTimesheetCount}',
+                caption: 'Not submitted · last 30d',
                 icon: Icons.access_time_outlined,
                 color: ProjectsDashboardScreen._green,
                 route: Routes.timesheet,
@@ -189,11 +189,6 @@ class _Body extends StatelessWidget {
         ],
       ],
     );
-  }
-
-  String _hrs(double h) {
-    if (h == h.roundToDouble()) return '${h.toInt()}h';
-    return '${h.toStringAsFixed(1)}h';
   }
 }
 

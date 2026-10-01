@@ -541,6 +541,11 @@ class _CompOffCard extends StatelessWidget {
 // ---------------------------------------------------------------------------
 // Leave detail sheet (read-only, or with approve/reject when [approval] is set)
 // ---------------------------------------------------------------------------
+/// Public entry so other screens (e.g. My Leave) can open the same read-only
+/// leave detail sheet — tap a request anywhere and get the identical modal.
+Future<void> showLeaveDetailSheet(BuildContext context, String name) =>
+    _showLeaveDetail(context, name);
+
 Future<void> _showLeaveDetail(
   BuildContext context,
   String name, {

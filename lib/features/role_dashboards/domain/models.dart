@@ -109,6 +109,7 @@ class ProjectsSummary {
     required this.tasksDueInPeriod,
     required this.tasksOverdue,
     required this.unbilledTimesheetHours,
+    required this.draftTimesheetCount,
     required this.nextDeadlines,
     required this.scope,
   });
@@ -116,6 +117,7 @@ class ProjectsSummary {
   final int tasksDueInPeriod;
   final int tasksOverdue;
   final double unbilledTimesheetHours;
+  final int draftTimesheetCount;
   final List<ProjectsDeadline> nextDeadlines;
   final String scope;
 
@@ -125,6 +127,8 @@ class ProjectsSummary {
         tasksOverdue: (j['tasks_overdue'] as num?)?.toInt() ?? 0,
         unbilledTimesheetHours:
             (j['unbilled_timesheet_hours'] as num?)?.toDouble() ?? 0.0,
+        draftTimesheetCount:
+            (j['draft_timesheet_count'] as num?)?.toInt() ?? 0,
         nextDeadlines: ((j['next_deadlines'] as List?) ?? const [])
             .whereType<Map>()
             .map((e) => ProjectsDeadline.fromJson(e.cast<String, dynamic>()))

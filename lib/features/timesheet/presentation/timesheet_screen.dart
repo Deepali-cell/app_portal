@@ -183,12 +183,6 @@ class _TimesheetScreenState extends ConsumerState<TimesheetScreen> {
               onSubmit: _submit,
             ),
 
-          // Running timer strip (also reachable from the draft grid row).
-          if (ctx.activeTimer != null) ...[
-            const SizedBox(height: AppDimens.md),
-            RunningTimerCard(timer: ctx.activeTimer!),
-          ],
-
           const SizedBox(height: AppDimens.xl),
           _HistorySection(history: history),
         ],
@@ -274,7 +268,6 @@ class _DraftForm extends ConsumerWidget {
             _ActionsRow(
               onAdd: () => onAdd(draftName),
               onTimer: onTimer,
-              onStop: stopRunning,
               timerRunning: d.hasActiveTimer,
             ),
             const SizedBox(height: AppDimens.md),
@@ -405,12 +398,10 @@ class _ActionsRow extends StatelessWidget {
   const _ActionsRow({
     required this.onAdd,
     required this.onTimer,
-    required this.onStop,
     required this.timerRunning,
   });
   final VoidCallback onAdd;
   final VoidCallback onTimer;
-  final VoidCallback onStop;
   final bool timerRunning;
 
   @override
@@ -449,17 +440,16 @@ class _ActionsRow extends StatelessWidget {
               ),
             ]),
           ),
-        const SizedBox(height: AppDimens.xs),
-        TextButton.icon(
-          onPressed: timerRunning ? onStop : onTimer,
-          icon: Icon(
-              timerRunning ? Icons.stop_circle_outlined : Icons.play_arrow,
-              size: 18),
-          label: Text(timerRunning ? 'Stop timer' : 'Start timer'),
-          style: TextButton.styleFrom(
-            foregroundColor: timerRunning ? AppColors.error : null,
+        // Starting a timer lives here; stopping is done from the running
+        // entry's own "Stop timer" button inside the Time Logs card.
+        if (!timerRunning) ...[
+          const SizedBox(height: AppDimens.xs),
+          TextButton.icon(
+            onPressed: onTimer,
+            icon: const Icon(Icons.play_arrow, size: 18),
+            label: const Text('Start timer'),
           ),
-        ),
+        ],
       ],
     );
   }
@@ -846,7 +836,6 @@ class _EmptyDraftForm extends StatelessWidget {
         _ActionsRow(
           onAdd: onAdd,
           onTimer: onTimer,
-          onStop: () {},
           timerRunning: timerRunning,
         ),
       ],

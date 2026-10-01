@@ -296,45 +296,82 @@ class _DetailsTab extends StatelessWidget {
         const SizedBox(height: AppDimens.lg),
         _QuickContact(deal: deal),
         const SizedBox(height: AppDimens.xl),
-        _Section(title: 'Opportunity', children: [
-          if (editing) _statusEditor(context)
-          else _row('Status', deal.status, null, editing: false),
-          _row('Opportunity value', editing ? null : (deal.dealValue == 0 ? null : money(deal.dealValue, deal.currency)),
-              ctrls['deal_value'], editing: editing, keyboardType: const TextInputType.numberWithOptions(decimal: true), numberOnly: true),
-          if (editing)
-            _row('Probability %', null, ctrls['probability'],
-                editing: true,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                numberOnly: true)
-          else
-            _ProbabilityRow(probability: deal.probability),
-          _row('Annual revenue', editing ? null : (deal.annualRevenue == 0 ? null : money(deal.annualRevenue, deal.currency)),
-              ctrls['annual_revenue'], editing: editing, keyboardType: const TextInputType.numberWithOptions(decimal: true), numberOnly: true),
-          _row('Next step', deal.nextStep, ctrls['next_step'], editing: editing),
-          _row('Owner', deal.dealOwner, ctrls['deal_owner'], editing: editing),
-          _row('Source', deal.source, ctrls['source'], editing: editing),
-          _row('Territory', deal.territory, ctrls['territory'], editing: editing),
+        _oppSection(context),
+        _section('Contact', [
+          _F('Salutation', deal.salutation, ctrls['salutation']),
+          _F('First name', deal.firstName, ctrls['first_name']),
+          _F('Last name', deal.lastName, ctrls['last_name']),
+          _F('Gender', deal.gender, ctrls['gender']),
+          _F('Email', deal.email, ctrls['email'], keyboardType: TextInputType.emailAddress),
+          _F('Mobile', deal.mobileNo, ctrls['mobile_no'], keyboardType: TextInputType.phone),
+          _F('Phone', deal.phone, ctrls['phone'], keyboardType: TextInputType.phone),
+          _F('Website', deal.website, ctrls['website'], keyboardType: TextInputType.url),
         ]),
-        _Section(title: 'Contact', children: [
-          _row('Salutation', deal.salutation, ctrls['salutation'], editing: editing),
-          _row('First name', deal.firstName, ctrls['first_name'], editing: editing),
-          _row('Last name', deal.lastName, ctrls['last_name'], editing: editing),
-          _row('Gender', deal.gender, ctrls['gender'], editing: editing),
-          _row('Email', deal.email, ctrls['email'], editing: editing, keyboardType: TextInputType.emailAddress),
-          _row('Mobile', deal.mobileNo, ctrls['mobile_no'], editing: editing, keyboardType: TextInputType.phone),
-          _row('Phone', deal.phone, ctrls['phone'], editing: editing, keyboardType: TextInputType.phone),
-          _row('Website', deal.website, ctrls['website'], editing: editing, keyboardType: TextInputType.url),
-        ]),
-        _Section(title: 'Organization', children: [
-          _row('Organization', deal.organization, ctrls['organization'], editing: editing),
-          _row('Display name', deal.organizationName, ctrls['organization_name'], editing: editing),
-          _row('Job title', deal.jobTitle, ctrls['job_title'], editing: editing),
-          _row('Employees', deal.noOfEmployees, ctrls['no_of_employees'], editing: editing),
-          _row('Industry', deal.industry, ctrls['industry'], editing: editing),
+        _section('Organization', [
+          _F('Organization', deal.organization, ctrls['organization']),
+          _F('Display name', deal.organizationName, ctrls['organization_name']),
+          _F('Job title', deal.jobTitle, ctrls['job_title']),
+          _F('Employees', deal.noOfEmployees, ctrls['no_of_employees']),
+          _F('Industry', deal.industry, ctrls['industry']),
         ]),
         const SizedBox(height: 80),
       ],
     );
+  }
+
+  /// The Opportunity section has special rows (money, probability pill, status
+  /// dropdown), so it's built by hand. In view mode only filled values show;
+  /// in edit mode every field is editable.
+  Widget _oppSection(BuildContext context) {
+    if (editing) {
+      const numKb = TextInputType.numberWithOptions(decimal: true);
+      return _Section(title: 'Opportunity', children: [
+        _statusEditor(context),
+        _editor(_F('Opportunity value', null, ctrls['deal_value'],
+            keyboardType: numKb, numberOnly: true)),
+        _editor(_F('Probability %', null, ctrls['probability'],
+            keyboardType: numKb, numberOnly: true)),
+        _editor(_F('Annual revenue', null, ctrls['annual_revenue'],
+            keyboardType: numKb, numberOnly: true)),
+        _editor(_F('Next step', null, ctrls['next_step'])),
+        _editor(_F('Owner', null, ctrls['deal_owner'])),
+        _editor(_F('Source', null, ctrls['source'])),
+        _editor(_F('Territory', null, ctrls['territory'])),
+      ]);
+    }
+    final rows = <Widget>[
+      if (deal.status.trim().isNotEmpty) _viewRow('Status', deal.status),
+      if (deal.dealValue != 0)
+        _viewRow('Opportunity value', money(deal.dealValue, deal.currency)),
+      if (deal.probability != null)
+        _ProbabilityRow(probability: deal.probability),
+      if (deal.annualRevenue != 0)
+        _viewRow('Annual revenue', money(deal.annualRevenue, deal.currency)),
+      if ((deal.nextStep ?? '').trim().isNotEmpty)
+        _viewRow('Next step', deal.nextStep!),
+      if ((deal.dealOwner ?? '').trim().isNotEmpty)
+        _viewRow('Owner', deal.dealOwner!),
+      if ((deal.source ?? '').trim().isNotEmpty) _viewRow('Source', deal.source!),
+      if ((deal.territory ?? '').trim().isNotEmpty)
+        _viewRow('Territory', deal.territory!),
+    ];
+    if (rows.isEmpty) return const SizedBox.shrink();
+    return _Section(title: 'Opportunity', children: rows);
+  }
+
+  /// A plain section that, in view mode, shows ONLY filled fields and hides
+  /// itself when nothing is filled; in edit mode every field is editable.
+  Widget _section(String title, List<_F> fields) {
+    if (editing) {
+      return _Section(
+          title: title, children: [for (final f in fields) _editor(f)]);
+    }
+    final filled =
+        fields.where((f) => (f.value ?? '').trim().isNotEmpty).toList();
+    if (filled.isEmpty) return const SizedBox.shrink();
+    return _Section(
+        title: title,
+        children: [for (final f in filled) _viewRow(f.label, f.value!)]);
   }
 
   Widget _statusEditor(BuildContext context) => Padding(
@@ -348,38 +385,48 @@ class _DetailsTab extends StatelessWidget {
         ),
       );
 
-  Widget _row(String label, String? value, TextEditingController? c,
-      {required bool editing, TextInputType? keyboardType, bool numberOnly = false}) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppDimens.xs),
-      child: editing && c != null
-          ? TextField(
-              controller: c,
-              keyboardType: keyboardType,
-              inputFormatters: numberOnly
-                  ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))]
-                  : null,
-              decoration: InputDecoration(labelText: label),
-            )
-          : Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                SizedBox(
-                  width: 110,
-                  child: Text(label,
-                      style: TextStyle(color: AppColors.inkMuted, fontSize: 13)),
-                ),
-                Expanded(
-                  child: Text(
-                    (value == null || value.isEmpty) ? '-' : value,
-                    style: TextStyle(
-                        color: AppColors.ink, fontWeight: FontWeight.w500),
-                  ),
-                ),
-              ],
+  Widget _editor(_F f) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppDimens.xs),
+        child: TextField(
+          controller: f.ctrl,
+          keyboardType: f.keyboardType,
+          inputFormatters: f.numberOnly
+              ? [FilteringTextInputFormatter.allow(RegExp(r'[0-9.]'))]
+              : null,
+          decoration: InputDecoration(labelText: f.label),
+        ),
+      );
+
+  Widget _viewRow(String label, String value) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: AppDimens.xs),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SizedBox(
+              width: 110,
+              child: Text(label,
+                  style: TextStyle(color: AppColors.inkMuted, fontSize: 13)),
             ),
-    );
-  }
+            Expanded(
+              child: Text(value,
+                  style: TextStyle(
+                      color: AppColors.ink, fontWeight: FontWeight.w500)),
+            ),
+          ],
+        ),
+      );
+}
+
+/// One editable detail field: its label, current value and the controller the
+/// edit form binds to.
+class _F {
+  const _F(this.label, this.value, this.ctrl,
+      {this.keyboardType, this.numberOnly = false});
+  final String label;
+  final String? value;
+  final TextEditingController? ctrl;
+  final TextInputType? keyboardType;
+  final bool numberOnly;
 }
 
 class _Section extends StatelessWidget {
