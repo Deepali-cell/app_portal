@@ -3,22 +3,36 @@ import 'package:dio/dio.dart';
 import '../../../core/config/app_config.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/api_paths.dart';
+import '../../../core/storage/secure_store.dart';
 import '../domain/tenant.dart';
 
 /// Calls the TCB middleware's tenant resolve endpoint.
 ///
-/// Uses its own short-lived Dio instance pointed at [AppConfig.middlewareBaseUrl]
-/// — NOT the per-tenant ERPNext URL (which we don't have yet). This is the
-/// only call the mobile ever makes against the middleware, and it happens
-/// once per Company-ID entry (i.e. once per login, or once when "Switch
-/// company" is used).
+/// Points at the control-plane base URL — the stored override if the user set
+/// one (SecureStore.readControlUrl), otherwise the URL baked into the build
+/// (AppConfig.middlewareBaseUrl). This is the ONLY call the mobile makes against
+/// the control server, and it happens once per Company-ID entry (login, or
+/// "Switch company"). NOT the per-tenant ERPNext URL (we don't have it yet).
 class TenantRepository {
-  TenantRepository();
+  TenantRepository(this._store);
+
+  final SecureStore _store;
+
+  /// The control-plane base URL to use right now: the stored override, or the
+  /// compile-time default. Trailing slashes stripped.
+  Future<String> controlBaseUrl() async {
+    final override = (await _store.readControlUrl())?.trim();
+    final base = (override != null && override.isNotEmpty)
+        ? override
+        : AppConfig.middlewareBaseUrl;
+    return base.replaceAll(RegExp(r'/+$'), '');
+  }
 
   Future<Tenant> resolve(String companyId) async {
+    final base = await controlBaseUrl();
     final dio = Dio(
       BaseOptions(
-        baseUrl: AppConfig.middlewareBaseUrl,
+        baseUrl: base,
         connectTimeout: AppConfig.connectTimeout,
         receiveTimeout: AppConfig.receiveTimeout,
         responseType: ResponseType.json,
@@ -38,8 +52,8 @@ class TenantRepository {
       // Normalise the logo URL: backend may return a site-relative path
       // (e.g. /files/acme.png) or an absolute URL whose host is internal
       // (tcb.local). Either way, the mobile needs a URL it can fetch
-      // directly. Re-anchor any relative-looking path to the middleware base.
-      msg['logo_url'] = _absoluteLogoUrl(msg['logo_url'] as String?);
+      // directly. Re-anchor any relative-looking path to the control base.
+      msg['logo_url'] = _absoluteLogoUrl(msg['logo_url'] as String?, base);
       return Tenant.fromResolveResponse(msg);
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
@@ -50,11 +64,10 @@ class TenantRepository {
 
   /// Logo paths from Frappe can be `/files/x.png`, `/private/files/x.png`,
   /// or absolute URLs against an internal host like `http://tcb.local/...`.
-  /// Rewrite to an absolute URL the phone can reach via the middleware.
-  static String? _absoluteLogoUrl(String? raw) {
+  /// Rewrite to an absolute URL the phone can reach via the control server.
+  static String? _absoluteLogoUrl(String? raw, String base) {
     if (raw == null || raw.trim().isEmpty) return null;
     final s = raw.trim();
-    final base = AppConfig.middlewareBaseUrl.replaceAll(RegExp(r'/+$'), '');
     if (s.startsWith('/')) return '$base$s';
     if (s.startsWith('http://') || s.startsWith('https://')) {
       // If it already points at the middleware host, keep as-is.

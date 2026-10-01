@@ -18,6 +18,7 @@ class SecureStore {
   static const _kToken = 'tcb.auth.token';
   static const _kProfile = 'tcb.auth.profile';
   static const _kTenant = 'tcb.tenant';
+  static const _kControlUrl = 'tcb.control.base_url';
   static const _kLeadsViewPrefs = 'tcb.leads.view_prefs';
   static const _kCallDetectEnabled = 'tcb.call_detect.enabled';
   static const _kCallDetectFirstSetup = 'tcb.call_detect.first_setup_done';
@@ -41,6 +42,15 @@ class SecureStore {
   Future<String?> readTenant() => _storage.read(key: _kTenant);
 
   Future<void> clearTenant() => _storage.delete(key: _kTenant);
+
+  /// Optional override for the control-plane (middleware) base URL used to
+  /// resolve a Company ID at login. Empty/unset means "use the URL baked into
+  /// the build" (AppConfig.middlewareBaseUrl). Lets one APK point at a different
+  /// control server — e.g. a laptop running its own control — without a rebuild.
+  Future<void> writeControlUrl(String url) =>
+      _storage.write(key: _kControlUrl, value: url);
+  Future<String?> readControlUrl() => _storage.read(key: _kControlUrl);
+  Future<void> clearControlUrl() => _storage.delete(key: _kControlUrl);
 
   /// Persisted UI prefs for the Leads list (sort + density). JSON-encoded.
   Future<void> writeLeadsViewPrefs(String json) =>

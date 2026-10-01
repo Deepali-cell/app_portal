@@ -6,8 +6,8 @@ import '../../../core/storage/secure_store.dart';
 import '../data/tenant_repository.dart';
 import '../domain/tenant.dart';
 
-final tenantRepositoryProvider =
-    Provider<TenantRepository>((ref) => TenantRepository());
+final tenantRepositoryProvider = Provider<TenantRepository>(
+    (ref) => TenantRepository(ref.read(secureStoreProvider)));
 
 final tenantControllerProvider =
     NotifierProvider<TenantController, Tenant?>(TenantController.new);

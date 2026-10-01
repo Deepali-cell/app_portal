@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
+import '../../../core/config/app_config.dart';
 import '../../../core/network/api_exception.dart';
 import '../../../core/storage/secure_store.dart';
 import '../../../core/theme/app_colors.dart';
@@ -63,11 +64,56 @@ class _CompanyIdStepState extends ConsumerState<_CompanyIdStep> {
   final _idCtrl = TextEditingController();
   bool _submitting = false;
   String? _error;
+  String? _controlUrl; // the control server currently in effect
+
+  @override
+  void initState() {
+    super.initState();
+    _loadControlUrl();
+  }
+
+  Future<void> _loadControlUrl() async {
+    final override = (await ref.read(secureStoreProvider).readControlUrl())?.trim();
+    if (!mounted) return;
+    setState(() => _controlUrl =
+        (override != null && override.isNotEmpty) ? override : AppConfig.middlewareBaseUrl);
+  }
+
+  String get _controlHost {
+    final u = _controlUrl;
+    if (u == null || u.isEmpty) return '';
+    return Uri.tryParse(u)?.host ?? u;
+  }
+
+  bool get _isCustomControl =>
+      _controlUrl != null &&
+      _controlUrl!.replaceAll(RegExp(r'/+$'), '') !=
+          AppConfig.middlewareBaseUrl.replaceAll(RegExp(r'/+$'), '');
 
   @override
   void dispose() {
     _idCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _changeServer() async {
+    final result = await showDialog<String?>(
+      context: context,
+      builder: (_) => _ServerDialog(current: _controlUrl ?? ''),
+    );
+    if (result == null) return; // cancelled
+    final store = ref.read(secureStoreProvider);
+    if (result.isEmpty) {
+      await store.clearControlUrl(); // back to the built-in default
+    } else {
+      await store.writeControlUrl(result);
+    }
+    await _loadControlUrl();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Server set to $_controlHost')),
+      );
+    }
   }
 
   Future<void> _continue() async {
@@ -147,8 +193,108 @@ class _CompanyIdStepState extends ConsumerState<_CompanyIdStep> {
             style:
                 theme.textTheme.bodySmall?.copyWith(color: AppColors.inkFaint),
           ),
+          const SizedBox(height: AppDimens.lg),
+          // Control-server selector. Lets one build point at a different control
+          // server (e.g. a laptop running its own) without a rebuild. The host
+          // in effect is always shown so it is obvious which one you are on.
+          TextButton.icon(
+            onPressed: _submitting ? null : _changeServer,
+            icon: Icon(
+              _isCustomControl ? Icons.dns : Icons.dns_outlined,
+              size: 16,
+              color: _isCustomControl ? AppColors.primary : AppColors.inkFaint,
+            ),
+            label: Text(
+              _controlHost.isEmpty
+                  ? 'Change server'
+                  : 'Server: $_controlHost${_isCustomControl ? " (custom)" : ""}',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: _isCustomControl ? AppColors.primary : AppColors.inkFaint,
+              ),
+            ),
+          ),
         ],
       ),
+    );
+  }
+}
+
+// ============================================================================
+// Control-server dialog (advanced): point the app at a different control server
+// ============================================================================
+class _ServerDialog extends StatefulWidget {
+  const _ServerDialog({required this.current});
+  final String current;
+
+  @override
+  State<_ServerDialog> createState() => _ServerDialogState();
+}
+
+class _ServerDialogState extends State<_ServerDialog> {
+  late final TextEditingController _ctrl =
+      TextEditingController(text: widget.current);
+  String? _error;
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  void _save() {
+    final v = _ctrl.text.trim();
+    if (v.isNotEmpty &&
+        !(v.startsWith('http://') || v.startsWith('https://'))) {
+      setState(() => _error = 'Must start with https:// (or http:// for local).');
+      return;
+    }
+    Navigator.of(context).pop(v);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Control server'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'The server that looks up your Company ID at login. Change it only '
+            'if TCB told you to, or to point at your own control server.',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+          const SizedBox(height: AppDimens.md),
+          TextField(
+            controller: _ctrl,
+            keyboardType: TextInputType.url,
+            autocorrect: false,
+            decoration: InputDecoration(
+              labelText: 'Control server URL',
+              hintText: 'https://tcb-portal.mukeshcoder.site',
+              errorText: _error,
+            ),
+          ),
+          const SizedBox(height: AppDimens.sm),
+          Text(
+            'Default: ${AppConfig.middlewareBaseUrl}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.inkFaint),
+          ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(null),
+          child: const Text('Cancel'),
+        ),
+        // Empty string signals "reset to the built-in default".
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(''),
+          child: const Text('Use default'),
+        ),
+        FilledButton(onPressed: _save, child: const Text('Save')),
+      ],
     );
   }
 }
