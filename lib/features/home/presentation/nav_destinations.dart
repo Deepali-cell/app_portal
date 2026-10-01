@@ -120,6 +120,7 @@ const List<NavDest> _allDestinations = [
   NavDest('Team Chat', Icons.forum_outlined, Icons.forum, Routes.teamChat, 'sees_sales', 'CRM'),
   NavDest('Team', Icons.groups_2_outlined, Icons.groups_2, Routes.teamStatus, 'manager_view', 'CRM'),
   NavDest('Calls', Icons.call_outlined, Icons.call, Routes.callDetection, 'sees_sales', 'CRM'),
+  NavDest('Recordings', Icons.graphic_eq_outlined, Icons.graphic_eq, Routes.recordings, 'sees_sales', 'CRM'),
   // Finance is a business-overview dashboard + reports. The transactional
   // Invoices screen is gone; Payroll / Payslips moved to HR (salary is HR).
   NavDest('Dashboard', Icons.space_dashboard_outlined, Icons.space_dashboard, Routes.financeDashboard, 'accounts_reports', 'Finance'),

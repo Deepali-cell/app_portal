@@ -100,6 +100,14 @@ class ApiPaths {
       '/api/method/tcb_portal_erp.api.call_intelligence.get_recording';
   static const String listRecordingsFor =
       '/api/method/tcb_portal_erp.api.call_intelligence.list_recordings_for';
+  /// Global "Recordings" screen: every recording the caller can see (own, or
+  /// all if admin/HR). Not scoped to a Lead/Deal.
+  static const String listMyRecordings =
+      '/api/method/tcb_portal_erp.api.call_intelligence.list_my_recordings';
+  /// Fetches one recording's audio bytes (base64) through an authenticated
+  /// request, since recordings are private files a bare URL can't stream.
+  static const String downloadRecording =
+      '/api/method/tcb_portal_erp.api.call_intelligence.download_recording';
   static const String applySuggestedStatus =
       '/api/method/tcb_portal_erp.api.call_intelligence.apply_suggested_status';
 

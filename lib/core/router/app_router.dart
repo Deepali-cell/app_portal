@@ -42,6 +42,7 @@ import '../../features/team_chat/presentation/chat_thread_screen.dart';
 import '../../features/team_chat/domain/models.dart' show ChatChannel;
 import '../../features/team_status/presentation/team_status_screen.dart';
 import '../../features/call_detection/presentation/call_detection_screen.dart';
+import '../../features/call_detection/presentation/recordings_screen.dart';
 import '../../features/leads_kanban/presentation/kanban_screen.dart';
 import '../../features/location_tracking/presentation/person_location_screen.dart';
 import '../../features/location_tracking/presentation/team_live_list_screen.dart';
@@ -179,6 +180,7 @@ class Routes {
   static const chatThread = '/team-chat/thread';
   static const teamStatus = '/team-status';
   static const callDetection = '/call-detection';
+  static const recordings = '/recordings';
   static const leadKanban = '/lead-kanban';
   static const salesWorkspace = '/sales-workspace';
   // Live location tracking (Phase LOC.1)
@@ -540,6 +542,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           path: Routes.callDetection,
           parentNavigatorKey: rootNavigatorKey,
           builder: (_, _) => const CallDetectionScreen()),
+      GoRoute(
+          path: Routes.recordings,
+          parentNavigatorKey: rootNavigatorKey,
+          builder: (_, _) => const RecordingsScreen()),
       GoRoute(
           path: Routes.leadKanban,
           parentNavigatorKey: rootNavigatorKey,

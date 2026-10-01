@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:math';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:path_provider/path_provider.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/api_paths.dart';
@@ -27,7 +29,9 @@ class CallRecording {
     required this.name,
     required this.status,
     this.phoneNumber,
+    this.direction,
     this.durationSeconds,
+    this.capturedAt,
     this.recordingFile,
     this.summary,
     this.sentiment,
@@ -49,7 +53,9 @@ class CallRecording {
   final String name;
   final String status; // Uploaded / Transcribing / Summarizing / Ready / Failed
   final String? phoneNumber;
+  final String? direction; // "Incoming" | "Outgoing" | null
   final int? durationSeconds;
+  final DateTime? capturedAt;
   final String? recordingFile;
   final String? summary;
   final String? sentiment;
@@ -79,7 +85,9 @@ class CallRecording {
         name: (j['name'] ?? '').toString(),
         status: (j['status'] ?? 'Uploaded').toString(),
         phoneNumber: j['phone_number'] as String?,
+        direction: j['direction'] as String?,
         durationSeconds: (j['duration_seconds'] as num?)?.toInt(),
+        capturedAt: _date(j['captured_at']),
         recordingFile: j['recording_file'] as String?,
         summary: j['summary'] as String?,
         sentiment: j['sentiment'] as String?,
@@ -232,6 +240,49 @@ class RecordingRepository {
       return list
           .map((e) => CallRecording.fromJson((e as Map).cast<String, dynamic>()))
           .toList();
+    } on DioException catch (e) {
+      throw e.error is ApiException
+          ? e.error as ApiException
+          : ApiException.fromDio(e);
+    }
+  }
+
+  /// Every recording the signed-in user can see (their own, or all when the
+  /// user is an admin/HR), newest first. Powers the global "Recordings" screen.
+  Future<List<CallRecording>> listMine({int limit = 100}) async {
+    try {
+      final resp = await _dio.get(
+        ApiPaths.listMyRecordings,
+        queryParameters: {'limit': limit},
+      );
+      final list = (resp.data['message'] as List).cast<dynamic>();
+      return list
+          .map((e) => CallRecording.fromJson((e as Map).cast<String, dynamic>()))
+          .toList();
+    } on DioException catch (e) {
+      throw e.error is ApiException
+          ? e.error as ApiException
+          : ApiException.fromDio(e);
+    }
+  }
+
+  /// Downloads a recording's audio through the authenticated API and writes it
+  /// to a temp file, returning the local path to feed an audio player. Private
+  /// recording files can't be streamed by URL (no auth token → 403), so we
+  /// fetch the bytes and play the local copy.
+  Future<String> downloadRecording(String name) async {
+    try {
+      final resp = await _dio.post(
+        ApiPaths.downloadRecording,
+        data: {'name': name},
+      );
+      final msg = (resp.data['message'] as Map).cast<String, dynamic>();
+      final filename = (msg['filename'] as String?) ?? '$name.mp3';
+      final bytes = base64Decode(msg['content'] as String);
+      final tmp = await getTemporaryDirectory();
+      final path = '${tmp.path}/$filename';
+      await File(path).writeAsBytes(bytes, flush: true);
+      return path;
     } on DioException catch (e) {
       throw e.error is ApiException
           ? e.error as ApiException

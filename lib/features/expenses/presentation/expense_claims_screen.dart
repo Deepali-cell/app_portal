@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:open_filex/open_filex.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/format/money.dart';
@@ -470,7 +471,9 @@ class _ClaimDetailSheetState extends ConsumerState<_ClaimDetailSheet> {
 
   /// Receipts are stored as private files, which a plain URL can't open from an
   /// external browser (no auth token → 403). So we download the bytes through
-  /// the authenticated API and hand the saved copy to the OS share/preview sheet.
+  /// the authenticated API and open the saved copy in the device's default
+  /// viewer (image/PDF). If no app can handle it, fall back to the OS share
+  /// sheet so the file is never a dead end.
   Future<void> _open(ExpenseAttachment a) async {
     if (_opening) return;
     setState(() => _opening = true);
@@ -479,9 +482,13 @@ class _ClaimDetailSheetState extends ConsumerState<_ClaimDetailSheet> {
       final path = await ref
           .read(expenseRepositoryProvider)
           .downloadAttachment(a.name);
-      await SharePlus.instance.share(
-        ShareParams(files: [XFile(path)], fileNameOverrides: [a.fileName]),
-      );
+      final result = await OpenFilex.open(path);
+      if (result.type != ResultType.done) {
+        // No viewer available for this type — hand it to the share sheet.
+        await SharePlus.instance.share(
+          ShareParams(files: [XFile(path)], fileNameOverrides: [a.fileName]),
+        );
+      }
     } on ApiException catch (e) {
       _toast(e.message);
     } catch (_) {
