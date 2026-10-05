@@ -142,7 +142,7 @@ The TCB Portal is a Flutter mobile app for **Employee Self-Service + CRM**, back
 - Login via `POST /api/method/login` then exchange for per-user `api_key:api_secret` via `tcb_inside.api.auth.get_credentials`.
 - `Authorization: token KEY:SECRET` on every later request. Tokens in iOS Keychain / Android Keystore via `flutter_secure_storage`.
 - Biometric unlock gated by `TCB_BIOMETRIC_LOCK` dart-define (default off for sim).
-- Test credentials: **`karishma.jain@tcbinfotech.co.in / tcb@12345`** (Employee + Sales User + Projects User). Administrator: **`admin / admin`** on tcb.local.
+- Test user: **`karishma.jain@tcbinfotech.co.in`** (Employee + Sales User + Projects User). Passwords are never kept in the repo — ask the site admin.
 
 ### Permission-driven UI
 - `tcb_inside.api.auth.get_profile` returns `capabilities` — booleans from `frappe.has_permission(<doctype>, <ptype>)`.
@@ -676,6 +676,6 @@ Shared bits worth extracting:
 - Latest PID this session: 76726.
 - Bench: `/Users/tcbinfotech/development/frappe-bench-v16`, site `tcb.local`, port 8001.
 - Custom app: `tcb_inside`.
-- Test user: `karishma.jain@tcbinfotech.co.in / tcb@12345`.
-- Admin: `admin / admin`.
+- Test user: `karishma.jain@tcbinfotech.co.in` (password: ask the site admin).
+- Admin: `Administrator` (password: ask the site admin).
 - Brand: `#022B60` / `#FAFAFA` (light-only). M3 tonal palette around `#031635`.

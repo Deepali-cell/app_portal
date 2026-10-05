@@ -137,23 +137,6 @@ class CallEventBridge {
     }
   }
 
-  /// Native → Flutter: ask whether MANAGE_EXTERNAL_STORAGE is granted.
-  /// Returns null on non-Android.
-  Future<bool?> hasAllFilesAccess() async {
-    try {
-      return await _channel.invokeMethod<bool>('hasAllFilesAccess');
-    } catch (_) {
-      return null;
-    }
-  }
-
-  /// Opens the system "All files access" Settings page for our package.
-  Future<void> openAllFilesAccessSettings() async {
-    try {
-      await _channel.invokeMethod('openAllFilesAccessSettings');
-    } catch (_) {/* swallow */}
-  }
-
   // ---- Background reliability (all Android brands) --------------------
   // These keep detection working when the app is closed/backgrounded by
   // running a persistent foreground service and taking the app out of the

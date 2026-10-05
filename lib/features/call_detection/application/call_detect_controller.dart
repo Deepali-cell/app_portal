@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/security/data_disclosure.dart';
 import '../../../core/storage/secure_store.dart';
 import '../data/permission_service.dart';
 import '../domain/permission_status.dart';
@@ -59,6 +60,14 @@ class CallDetectController extends Notifier<bool> {
   }
 
   Future<void> setEnabled(bool value) async {
+    if (value) {
+      // Turning call logging on is the user's choice, so show the disclosure
+      // again even if they declined it at first sign-in.
+      if (await disclosureAnswer(DataDisclosure.calls) != true) {
+        await resetDisclosure(DataDisclosure.calls);
+      }
+      if (!await ensureDisclosureAccepted(DataDisclosure.calls)) return;
+    }
     state = value;
     await ref.read(secureStoreProvider).writeCallDetectEnabled(value);
     // Start/stop the persistent foreground service so detection survives the

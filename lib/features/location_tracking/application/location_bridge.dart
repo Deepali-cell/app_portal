@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
 
+import '../../../core/security/data_disclosure.dart';
 import '../data/location_tracking_repository.dart';
 
 /// Owns the MethodChannel to the Android foreground service and pipes every
@@ -109,7 +110,15 @@ Future<String?> enableTrackingFlow(WidgetRef ref) async {
   if (!fine.isGranted) {
     return 'Location permission is required to share your position.';
   }
-  // 2. Background location (Android 10+).
+  // 2. Background location (Android 10+), behind our own disclosure. The
+  // user turned tracking on themselves, so ask again even if they declined
+  // the disclosure earlier.
+  if (await disclosureAnswer(DataDisclosure.backgroundLocation) != true) {
+    await resetDisclosure(DataDisclosure.backgroundLocation);
+  }
+  if (!await ensureDisclosureAccepted(DataDisclosure.backgroundLocation)) {
+    return 'Location tracking needs your consent to run in the background.';
+  }
   final bg = await ph.Permission.locationAlways.request();
   if (!bg.isGranted) {
     return "Grant 'Allow all the time' so tracking works when the screen is off.";

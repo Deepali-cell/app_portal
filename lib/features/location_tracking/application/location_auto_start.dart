@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show kIsWeb, debugPrint, kDebugMode;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
 
+import '../../../core/security/data_disclosure.dart';
 import '../../auth/application/auth_controller.dart';
 import '../data/location_tracking_repository.dart';
 import 'location_bridge.dart';
@@ -112,6 +113,12 @@ class LocationAutoStartController extends Notifier<bool> {
       }
     }
     if (!bg.isGranted) {
+      // Play requires our own disclosure before asking for background location.
+      if (!await ensureDisclosureAccepted(DataDisclosure.backgroundLocation)) {
+        await _sendHeartbeat('no_permission');
+        _startHealthLoop();
+        return;
+      }
       final r = await ph.Permission.locationAlways.request();
       if (!r.isGranted) {
         await _sendHeartbeat('no_permission');

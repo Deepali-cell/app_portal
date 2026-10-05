@@ -101,6 +101,12 @@ class AuthRepository {
 
   Future<void> logout() async {
     try {
+      // Kill this phone's API token on the server, then the web session.
+      await _dio.post(ApiPaths.revokeCredentials);
+    } catch (_) {
+      // best-effort; an older server without the endpoint still logs out
+    }
+    try {
       await _dio.post(ApiPaths.logout);
     } catch (_) {
       // best-effort server logout; local clear below is what matters

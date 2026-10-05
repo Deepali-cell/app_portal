@@ -235,7 +235,7 @@ class CallDetectionService : Service() {
                 return cursor.getString(0)?.takeIf { it.isNotBlank() }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "ContactsContract lookup failed for '$displayName': ${e.message}", e)
+            Log.e(TAG, "ContactsContract lookup failed: ${e.message}", e)
         } finally {
             cursor?.close()
         }

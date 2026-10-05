@@ -1,7 +1,6 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
 
 import '../domain/permission_status.dart';
@@ -13,16 +12,16 @@ import '../domain/permission_status.dart';
 class CallDetectPermissionService {
   bool get _isAndroid => !kIsWeb && Platform.isAndroid;
 
-  // Storage on Android 11+ needs MANAGE_EXTERNAL_STORAGE, which has no
-  // runtime dialog — must open a dedicated Settings screen. The native
-  // side (AllFilesAccessHelper) handles both the check and the launch.
-  static const _nativeChannel = MethodChannel('tcb_portal/call_detect');
+  // Recordings are audio files in shared storage, so the plain media
+  // permission is enough: READ_MEDIA_AUDIO on Android 13+, READ_EXTERNAL_STORAGE
+  // below. No "All files access" (Play only allows it for file managers).
+  static const _storagePerms = [ph.Permission.audio, ph.Permission.storage];
 
   /// Fetch the current status of a single permission.
   Future<PermissionState> check(CallDetectPermission p) async {
     if (!_isAndroid) return PermissionState.notApplicable;
     if (p == CallDetectPermission.storage) {
-      return _checkAllFilesAccess();
+      return _checkStorage();
     }
     final perm = _map(p);
     if (perm == null) return PermissionState.notApplicable;
@@ -38,15 +37,15 @@ class CallDetectPermissionService {
   }
 
   /// Request a permission. Returns the new state after the dialog flow.
-  /// Storage + SYSTEM_ALERT_WINDOW open a system Settings page rather than
-  /// a runtime dialog; state is re-verified when the user returns.
   Future<PermissionState> request(CallDetectPermission p) async {
     if (!_isAndroid) return PermissionState.notApplicable;
     if (p == CallDetectPermission.storage) {
-      try {
-        await _nativeChannel.invokeMethod('openAllFilesAccessSettings');
-      } catch (_) {/* ignore — screen will re-check on resume */}
-      return _checkAllFilesAccess();
+      for (final perm in _storagePerms) {
+        try {
+          await perm.request();
+        } catch (_) {/* not applicable on this Android version */}
+      }
+      return _checkStorage();
     }
     final perm = _map(p);
     if (perm == null) return PermissionState.notApplicable;
@@ -60,16 +59,19 @@ class CallDetectPermissionService {
     return ph.openAppSettings();
   }
 
-  Future<PermissionState> _checkAllFilesAccess() async {
-    try {
-      final granted =
-          await _nativeChannel.invokeMethod<bool>('hasAllFilesAccess');
-      return (granted ?? false)
-          ? PermissionState.granted
-          : PermissionState.denied;
-    } catch (_) {
-      return PermissionState.denied;
+  /// Granted when either media permission is (each applies to a different
+  /// Android version, and the other one never grants). Only "permanently
+  /// denied" when neither can be asked for again.
+  Future<PermissionState> _checkStorage() async {
+    final states = <PermissionState>[];
+    for (final perm in _storagePerms) {
+      try {
+        states.add(_fromHandler(await perm.status));
+      } catch (_) {/* not applicable on this Android version */}
     }
+    if (states.contains(PermissionState.granted)) return PermissionState.granted;
+    if (states.contains(PermissionState.denied)) return PermissionState.denied;
+    return states.isEmpty ? PermissionState.denied : PermissionState.permanentlyDenied;
   }
 
   // ---- internals ----
@@ -83,11 +85,8 @@ class CallDetectPermissionService {
         // request READ_CALL_LOG via a platform channel if OEM requires it.
         return ph.Permission.phone;
       case CallDetectPermission.storage:
-        // Handled via the native MANAGE_EXTERNAL_STORAGE bridge instead of
-        // permission_handler; this branch is unreachable in practice.
+        // Handled by _checkStorage / request; unreachable in practice.
         return null;
-      case CallDetectPermission.systemAlertWindow:
-        return ph.Permission.systemAlertWindow;
       case CallDetectPermission.notifications:
         return ph.Permission.notification;
     }

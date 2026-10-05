@@ -74,38 +74,6 @@ class _CallDetectionScreenState extends ConsumerState<CallDetectionScreen>
       await controller.requestPermission(perm);
       await Future<void>.delayed(const Duration(milliseconds: 400));
     }
-
-    // MANAGE_EXTERNAL_STORAGE is a SPECIAL permission — no runtime dialog,
-    // must open Settings → All files access. Check + prompt separately.
-    final bridge = ref.read(callEventBridgeProvider);
-    final hasAllFiles = await bridge.hasAllFilesAccess() ?? true;
-    if (!hasAllFiles && mounted) {
-      await showDialog<void>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Allow access to recording files'),
-          content: const Text(
-            "Android needs explicit 'All files access' for us to read the "
-            "call recording MP3 from your phone's recorder folder.\n\n"
-            "Tap Open Settings → toggle 'Allow access to manage all files' "
-            "ON → come back here. One-time setup.",
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(ctx).pop(),
-              child: const Text('Later'),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.of(ctx).pop();
-                bridge.openAllFilesAccessSettings();
-              },
-              child: const Text('Open Settings'),
-            ),
-          ],
-        ),
-      );
-    }
     if (!mounted) return;
     ref.invalidate(callDetectSnapshotProvider);
   }

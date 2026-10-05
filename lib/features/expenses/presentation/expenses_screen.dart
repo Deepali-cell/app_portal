@@ -498,6 +498,9 @@ class _NewClaimSheetState extends ConsumerState<_NewClaimSheet> {
     final picked = await FilePicker.platform.pickFiles(
       allowMultiple: true,
       withData: false,
+      // Same set the server accepts for receipts.
+      type: FileType.custom,
+      allowedExtensions: const ['pdf', 'jpg', 'jpeg', 'png', 'webp', 'heic'],
     );
     if (picked == null) return;
     setState(() {

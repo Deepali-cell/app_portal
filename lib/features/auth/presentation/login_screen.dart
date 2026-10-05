@@ -73,10 +73,9 @@ class _CompanyIdStepState extends ConsumerState<_CompanyIdStep> {
   }
 
   Future<void> _loadControlUrl() async {
-    final override = (await ref.read(secureStoreProvider).readControlUrl())?.trim();
+    final url = await ref.read(tenantRepositoryProvider).controlBaseUrl();
     if (!mounted) return;
-    setState(() => _controlUrl =
-        (override != null && override.isNotEmpty) ? override : AppConfig.middlewareBaseUrl);
+    setState(() => _controlUrl = url);
   }
 
   String get _controlHost {
@@ -197,7 +196,7 @@ class _CompanyIdStepState extends ConsumerState<_CompanyIdStep> {
           // Control-server selector. Lets one build point at a different control
           // server (e.g. a laptop running its own) without a rebuild. The host
           // in effect is always shown so it is obvious which one you are on.
-          TextButton.icon(
+          if (AppConfig.allowServerOverride) TextButton.icon(
             onPressed: _submitting ? null : _changeServer,
             icon: Icon(
               _isCustomControl ? Icons.dns : Icons.dns_outlined,
@@ -243,8 +242,7 @@ class _ServerDialogState extends State<_ServerDialog> {
 
   void _save() {
     final v = _ctrl.text.trim();
-    if (v.isNotEmpty &&
-        !(v.startsWith('http://') || v.startsWith('https://'))) {
+    if (v.isNotEmpty && !AppConfig.isAllowedServerUrl(v)) {
       setState(() => _error = 'Must start with https:// (or http:// for local).');
       return;
     }

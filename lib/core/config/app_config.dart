@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart' show kReleaseMode;
+
 /// Centralised runtime configuration.
 ///
 /// Overrides at build/run time via `--dart-define`. Example for local dev:
@@ -52,4 +54,30 @@ class AppConfig {
     'TCB_BIOMETRIC_LOCK',
     defaultValue: true,
   );
+
+  /// Public privacy-policy page, linked from the in-app data disclosures and
+  /// required by Google Play. Set it for store builds:
+  ///   --dart-define=TCB_PRIVACY_POLICY_URL=https://tcbinfotech.com/privacy
+  static const String privacyPolicyUrl = String.fromEnvironment(
+    'TCB_PRIVACY_POLICY_URL',
+    defaultValue: '',
+  );
+
+  /// Whether the login screen offers "Change server" (pointing the app at a
+  /// different control server). Debug/profile builds only by default: in a
+  /// store build anyone could be talked into entering a phishing server that
+  /// then receives their ERP password.
+  static const bool allowServerOverride = bool.fromEnvironment(
+    'TCB_ALLOW_SERVER_OVERRIDE',
+    defaultValue: !kReleaseMode,
+  );
+
+  /// True for a URL the app may send credentials to: https always, plain
+  /// http only in debug/profile builds (local benches).
+  static bool isAllowedServerUrl(String url) {
+    final u = Uri.tryParse(url.trim());
+    if (u == null || u.host.isEmpty) return false;
+    if (u.scheme == 'https') return true;
+    return !kReleaseMode && u.scheme == 'http';
+  }
 }

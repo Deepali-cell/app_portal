@@ -4,7 +4,11 @@ import 'package:hive_flutter/hive_flutter.dart';
 
 import '../../../core/notifications/notification_service.dart';
 import '../../../core/providers.dart';
+import '../../../core/storage/temp_file.dart';
 import '../../attendance/data/attendance_repository.dart';
+import '../../call_detection/application/call_detect_controller.dart';
+import '../../location_tracking/application/location_bridge.dart';
+import '../../location_tracking/data/location_tracking_repository.dart';
 import '../domain/profile.dart';
 import 'lock_controller.dart';
 
@@ -78,10 +82,27 @@ class AuthController extends Notifier<AuthState> {
   }
 
   Future<void> logout() async {
+    // Before the token is revoked: the server tracking session needs it.
+    await _stopBackgroundServices();
     await ref.read(authRepositoryProvider).logout();
     await _clearPerUserCaches();
     ref.invalidate(sessionUnlockedProvider);
     state = const AuthState.unauthenticated();
+  }
+
+  /// Location tracking and call detection run as foreground services that
+  /// survive the app closing. They belong to the signed-in user, so they stop
+  /// on sign-out instead of carrying on (or starting for the next user).
+  Future<void> _stopBackgroundServices() async {
+    try {
+      await ref.read(locationBridgeProvider).stopNativeService();
+    } catch (_) {}
+    try {
+      await ref.read(locationRepositoryProvider).setEnabled(false);
+    } catch (_) {/* best effort; the server session times out anyway */}
+    try {
+      await ref.read(callDetectControllerProvider.notifier).setEnabled(false);
+    } catch (_) {}
   }
 
   /// Per-user Hive caches that should NOT leak to the next user even if the
@@ -92,6 +113,7 @@ class AuthController extends Notifier<AuthState> {
     if (Hive.isBoxOpen(boxName)) {
       await Hive.box(boxName).clear();
     }
+    await clearTempFiles();
   }
 
   /// Pushes editable Employee fields to the server and updates local state.
@@ -108,7 +130,8 @@ class AuthController extends Notifier<AuthState> {
     if (state.status == AuthStatus.unauthenticated) return;
     ref.invalidate(sessionUnlockedProvider);
     state = const AuthState.unauthenticated();
-    // Clear stored credentials without blocking.
+    // Clear stored credentials and stop background services without blocking.
+    _stopBackgroundServices();
     ref.read(authRepositoryProvider).logout();
   }
 }

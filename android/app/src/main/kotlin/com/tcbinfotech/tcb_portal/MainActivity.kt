@@ -7,7 +7,6 @@ import android.content.IntentFilter
 import android.os.Build
 import android.os.Bundle
 import android.util.Log
-import com.tcbinfotech.tcb_portal.calldetect.AllFilesAccessHelper
 import com.tcbinfotech.tcb_portal.calldetect.BackgroundReliabilityHelper
 import com.tcbinfotech.tcb_portal.calldetect.CallDetectBridge
 import com.tcbinfotech.tcb_portal.calldetect.CallDetectionService
@@ -78,12 +77,6 @@ class MainActivity : FlutterFragmentActivity() {
         channel.setMethodCallHandler { call, result ->
             when (call.method) {
                 "ping" -> result.success("pong")
-                "hasAllFilesAccess" ->
-                    result.success(AllFilesAccessHelper.hasAllFilesAccess())
-                "openAllFilesAccessSettings" -> {
-                    AllFilesAccessHelper.openAllFilesAccessSettings(this)
-                    result.success(true)
-                }
                 "postLocalNotification" -> {
                     val args = call.arguments as? Map<*, *>
                     val title = args?.get("title") as? String ?: "TCB Portal"
@@ -196,8 +189,9 @@ class MainActivity : FlutterFragmentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(recv, filter, Context.RECEIVER_NOT_EXPORTED)
         } else {
-            @Suppress("DEPRECATION")
-            registerReceiver(recv, filter)
+            // Pre-13 dynamic receivers are exported: require our own
+            // signature permission so other apps cannot inject fake pings.
+            registerReceiver(recv, filter, "$packageName.permission.LOCATION_PING", null)
         }
     }
 

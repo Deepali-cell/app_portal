@@ -17,7 +17,7 @@ import 'package:tcb_portal/features/attendance/data/attendance_repository.dart';
 /// location-permission dialog. Everything else is real, including the server
 /// geofence validation. Run with --dart-define=TCB_BIOMETRIC_LOCK=false.
 ///
-/// Requires the bench up on 127.0.0.1:8001 and user ess.test@tcb.local / Test@12345.
+/// Requires the bench up on 127.0.0.1:8001 and user ess.test@tcb.local (password via --dart-define=TCB_TEST_PASSWORD=...).
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
@@ -50,7 +50,7 @@ void main() {
     if (needsLogin) {
       final fields = find.byType(TextField);
       await tester.enterText(fields.at(0), 'ess.test@tcb.local');
-      await tester.enterText(fields.at(1), 'Test@12345');
+      await tester.enterText(fields.at(1), const String.fromEnvironment('TCB_TEST_PASSWORD'));
       await _tap(tester, find.widgetWithText(ElevatedButton, 'Sign in'));
       await _waitFor(tester, find.text('Quick actions'), seconds: 40);
     }

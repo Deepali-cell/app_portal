@@ -32,7 +32,7 @@ void main() {
         !_present(find.text('Quick actions'))) {
       final fields = find.byType(TextField);
       await tester.enterText(fields.at(0), 'ess.test@tcb.local');
-      await tester.enterText(fields.at(1), 'Test@12345');
+      await tester.enterText(fields.at(1), const String.fromEnvironment('TCB_TEST_PASSWORD'));
       await _tap(tester, find.widgetWithText(ElevatedButton, 'Sign in'));
       await _waitFor(tester, find.text('Quick actions'), seconds: 40);
     }

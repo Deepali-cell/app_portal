@@ -144,7 +144,7 @@ object RecordingScanner {
     fun findLatest(windowSec: Int = 90, hintNumber: String? = null): Hit? {
         val root = Environment.getExternalStorageDirectory()
         if (root == null || !root.exists()) {
-            Log.w(TAG, "External storage not accessible — MANAGE_EXTERNAL_STORAGE granted?")
+            Log.w(TAG, "External storage not accessible — audio/storage permission granted?")
             return null
         }
         val cutoffMs = System.currentTimeMillis() - windowSec * 1000L

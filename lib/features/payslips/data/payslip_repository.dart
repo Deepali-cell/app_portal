@@ -1,11 +1,10 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:dio/dio.dart';
-import 'package:path_provider/path_provider.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/api_paths.dart';
+import '../../../core/storage/temp_file.dart';
 import '../domain/models.dart';
 
 class PayslipRepository {
@@ -70,10 +69,7 @@ class PayslipRepository {
       final fileName = (msg['filename'] as String?) ?? '$name.pdf';
       final b64 = msg['content'] as String;
       final bytes = base64Decode(b64);
-      final tmp = await getTemporaryDirectory();
-      final path = '${tmp.path}/$fileName';
-      await File(path).writeAsBytes(bytes, flush: true);
-      return path;
+      return await writeTempFile(fileName, bytes);
     } on DioException catch (e) {
       throw _asApiException(e);
     }

@@ -4,10 +4,10 @@ import 'dart:math';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
-import 'package:path_provider/path_provider.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/api_paths.dart';
+import '../../../core/storage/temp_file.dart';
 
 /// Generate a UUID-ish v4 string for upload idempotency. The mobile
 /// generates one BEFORE the multipart POST and the backend stores it
@@ -279,10 +279,7 @@ class RecordingRepository {
       final msg = (resp.data['message'] as Map).cast<String, dynamic>();
       final filename = (msg['filename'] as String?) ?? '$name.mp3';
       final bytes = base64Decode(msg['content'] as String);
-      final tmp = await getTemporaryDirectory();
-      final path = '${tmp.path}/$filename';
-      await File(path).writeAsBytes(bytes, flush: true);
-      return path;
+      return await writeTempFile(filename, bytes);
     } on DioException catch (e) {
       throw e.error is ApiException
           ? e.error as ApiException

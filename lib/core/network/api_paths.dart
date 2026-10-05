@@ -116,6 +116,8 @@ class ApiPaths {
   static const String logout = '/api/method/logout';
   static const String credentials =
       '/api/method/tcb_portal_erp.api.auth.get_credentials';
+  static const String revokeCredentials =
+      '/api/method/tcb_portal_erp.api.auth.revoke_credentials';
   static const String profile =
       '/api/method/tcb_portal_erp.api.auth.get_profile';
   static const String profileUpdate =

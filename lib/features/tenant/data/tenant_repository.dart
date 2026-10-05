@@ -21,8 +21,12 @@ class TenantRepository {
   /// The control-plane base URL to use right now: the stored override, or the
   /// compile-time default. Trailing slashes stripped.
   Future<String> controlBaseUrl() async {
-    final override = (await _store.readControlUrl())?.trim();
-    final base = (override != null && override.isNotEmpty)
+    final override = AppConfig.allowServerOverride
+        ? (await _store.readControlUrl())?.trim()
+        : null;
+    final base = (override != null &&
+            override.isNotEmpty &&
+            AppConfig.isAllowedServerUrl(override))
         ? override
         : AppConfig.middlewareBaseUrl;
     return base.replaceAll(RegExp(r'/+$'), '');
@@ -54,7 +58,16 @@ class TenantRepository {
       // (tcb.local). Either way, the mobile needs a URL it can fetch
       // directly. Re-anchor any relative-looking path to the control base.
       msg['logo_url'] = _absoluteLogoUrl(msg['logo_url'] as String?, base);
-      return Tenant.fromResolveResponse(msg);
+      final tenant = Tenant.fromResolveResponse(msg);
+      // The password goes to this URL next: never over plain http in a
+      // store build.
+      if (!AppConfig.isAllowedServerUrl(tenant.serverUrl)) {
+        throw const ApiException(
+          ApiErrorKind.unknown,
+          'This company server is not set up for secure (https) access. Contact TCB Infotech.',
+        );
+      }
+      return tenant;
     } on DioException catch (e) {
       throw ApiException.fromDio(e);
     } finally {

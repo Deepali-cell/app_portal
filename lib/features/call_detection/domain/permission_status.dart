@@ -1,12 +1,11 @@
 import 'package:flutter/foundation.dart';
 
-/// The 5 Android permissions required for full call detection + recording.
+/// The Android permissions required for full call detection + recording.
 /// iOS doesn't support any of these for call interception (Apple sandbox).
 enum CallDetectPermission {
   phoneState,        // READ_PHONE_STATE  — detect RINGING / OFFHOOK / IDLE
   callLog,           // READ_CALL_LOG     — resolve incoming number post-Android 10
-  storage,           // READ_EXTERNAL_STORAGE — read OEM recorder folder
-  systemAlertWindow, // SYSTEM_ALERT_WINDOW   — overlay above dialer
+  storage,           // READ_MEDIA_AUDIO (A13+) / READ_EXTERNAL_STORAGE — read OEM recorder folder
   notifications,     // POST_NOTIFICATIONS — Android 13+ foreground-service notif
 }
 
@@ -18,8 +17,6 @@ extension CallDetectPermissionX on CallDetectPermission {
             'Call log (read incoming number)',
         CallDetectPermission.storage =>
             'Storage (read recording files)',
-        CallDetectPermission.systemAlertWindow =>
-            'Display over other apps (caller overlay)',
         CallDetectPermission.notifications =>
             'Notifications (background service)',
       };
@@ -30,9 +27,7 @@ extension CallDetectPermissionX on CallDetectPermission {
         CallDetectPermission.callLog =>
             'Reads the incoming number from the system call log. Required on Android 10 and above.',
         CallDetectPermission.storage =>
-            "Reads the recording MP3 from your phone's built-in recorder folder.",
-        CallDetectPermission.systemAlertWindow =>
-            'Shows the caller-info popup on top of the dialer (Truecaller-style). Opens system settings.',
+            "Reads the call recording from your phone's built-in recorder folder.",
         CallDetectPermission.notifications =>
             'Lets the background service keep running so we never miss a call (Android 13+).',
       };
