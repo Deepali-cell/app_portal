@@ -5,7 +5,8 @@ import '../data/todays_plan_repository.dart';
 import '../domain/models.dart';
 
 final todaysPlanRepositoryProvider = Provider<TodaysPlanRepository>(
-    (ref) => TodaysPlanRepository(ref.watch(dioProvider)));
+  (ref) => TodaysPlanRepository(ref.watch(dioProvider)),
+);
 
 /// Today's Plan loads lazily on home-screen build and refreshes on demand.
 ///
@@ -14,16 +15,17 @@ final todaysPlanRepositoryProvider = Provider<TodaysPlanRepository>(
 /// (e.g. a task being marked Done should invalidate this).
 final todaysPlanControllerProvider =
     AsyncNotifierProvider<TodaysPlanController, TodaysPlan>(
-        TodaysPlanController.new);
+      TodaysPlanController.new,
+    );
 
 class TodaysPlanController extends AsyncNotifier<TodaysPlan> {
   @override
-  Future<TodaysPlan> build() =>
-      ref.read(todaysPlanRepositoryProvider).fetch();
+  Future<TodaysPlan> build() => ref.read(todaysPlanRepositoryProvider).fetch();
 
   Future<void> reload() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(
-        () => ref.read(todaysPlanRepositoryProvider).fetch());
+      () => ref.read(todaysPlanRepositoryProvider).fetch(),
+    );
   }
 }

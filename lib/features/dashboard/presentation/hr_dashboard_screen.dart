@@ -10,6 +10,8 @@ import '../../../core/theme/app_dimens.dart';
 import '../../role_dashboards/data/role_dashboards_repository.dart';
 import '../../role_dashboards/domain/models.dart';
 import 'module_dashboard_scaffold.dart';
+import '../../home/presentation/nav_destinations.dart';
+import '../../auth/application/auth_controller.dart';
 
 /// HR module dashboard — the manager's morning overview: approvals waiting,
 /// who is absent today, upcoming exits to plan for, and the birthdays to
@@ -43,8 +45,12 @@ class HrDashboardScreen extends ConsumerWidget {
           },
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(AppDimens.screenPadding,
-                AppDimens.md, AppDimens.screenPadding, AppDimens.xl),
+            padding: const EdgeInsets.fromLTRB(
+              AppDimens.screenPadding,
+              AppDimens.md,
+              AppDimens.screenPadding,
+              AppDimens.xl,
+            ),
             children: [
               const ModuleDashboardHeader(
                 title: 'HR',
@@ -55,9 +61,10 @@ class HrDashboardScreen extends ConsumerWidget {
               async.when(
                 loading: () => const FlowSkeleton(rows: 4),
                 error: (e, _) => FlowLoadError(
-                    message: e is ApiException
-                        ? e.message
-                        : "Couldn't load HR. Try again."),
+                  message: e is ApiException
+                      ? e.message
+                      : "Couldn't load HR. Try again.",
+                ),
                 data: (s) => _Body(summary: s),
               ),
             ],
@@ -77,8 +84,10 @@ class _Body extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const DashboardSectionTitle('Overview',
-            subtitle: 'People & approvals at a glance'),
+        const DashboardSectionTitle(
+          'Overview',
+          subtitle: 'People & approvals at a glance',
+        ),
         const SizedBox(height: AppDimens.sm),
         Row(
           children: [
@@ -130,7 +139,15 @@ class _Body extends StatelessWidget {
         const SizedBox(height: AppDimens.lg),
         const _ApprovalFlows(),
         const SizedBox(height: AppDimens.lg),
-        const _LeavePolicyTile(),
+        Consumer(
+          builder: (_, ref, _) =>
+              screenOn(
+                ref.watch(authControllerProvider).profile,
+                'hr.leave_rules',
+              )
+              ? const _LeavePolicyTile()
+              : const SizedBox.shrink(),
+        ),
         const SizedBox(height: AppDimens.lg),
         DashboardSectionTitle(
           'Birthdays this week',
@@ -152,8 +169,10 @@ class _Body extends StatelessWidget {
                 Icon(Icons.cake_outlined, color: AppColors.onSurfaceVariant),
                 const SizedBox(width: AppDimens.md),
                 Expanded(
-                  child: Text('Nothing coming up this week.',
-                      style: Theme.of(context).textTheme.bodyMedium),
+                  child: Text(
+                    'Nothing coming up this week.',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
                 ),
               ],
             ),
@@ -175,12 +194,16 @@ class _ApprovalFlows extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const DashboardSectionTitle('Approval flows',
-            subtitle: 'Who clears each request'),
+        const DashboardSectionTitle(
+          'Approval flows',
+          subtitle: 'Who clears each request',
+        ),
         const SizedBox(height: AppDimens.sm),
         Container(
           padding: const EdgeInsets.symmetric(
-              horizontal: AppDimens.md, vertical: AppDimens.sm),
+            horizontal: AppDimens.md,
+            vertical: AppDimens.sm,
+          ),
           decoration: BoxDecoration(
             color: AppColors.surfaceContainerLowest,
             borderRadius: BorderRadius.circular(AppDimens.radiusXl),
@@ -234,8 +257,10 @@ class _LeavePolicyTile extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const DashboardSectionTitle('Leave request rules',
-            subtitle: 'Advance-notice policy applied to every leave'),
+        const DashboardSectionTitle(
+          'Leave request rules',
+          subtitle: 'Advance-notice policy applied to every leave',
+        ),
         const SizedBox(height: AppDimens.sm),
         Material(
           color: Colors.transparent,
@@ -259,30 +284,36 @@ class _LeavePolicyTile extends StatelessWidget {
                       borderRadius: BorderRadius.circular(AppDimens.radiusMd),
                     ),
                     alignment: Alignment.center,
-                    child: Icon(Icons.rule_folder_outlined,
-                        color: HrDashboardScreen._blue, size: 22),
+                    child: Icon(
+                      Icons.rule_folder_outlined,
+                      color: HrDashboardScreen._blue,
+                      size: 22,
+                    ),
                   ),
                   const SizedBox(width: AppDimens.md),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Notice-period policy',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodyLarge
-                                ?.copyWith(fontWeight: FontWeight.w700)),
+                        Text(
+                          'Notice-period policy',
+                          style: Theme.of(context).textTheme.bodyLarge
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                        ),
                         const SizedBox(height: 2),
-                        Text('Set how far ahead each leave must be applied',
-                            style: Theme.of(context)
-                                .textTheme
-                                .bodySmall
-                                ?.copyWith(color: AppColors.onSurfaceVariant)),
+                        Text(
+                          'Set how far ahead each leave must be applied',
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: AppColors.onSurfaceVariant),
+                        ),
                       ],
                     ),
                   ),
-                  Icon(Icons.chevron_right,
-                      size: 20, color: AppColors.onSurfaceVariant),
+                  Icon(
+                    Icons.chevron_right,
+                    size: 20,
+                    color: AppColors.onSurfaceVariant,
+                  ),
                 ],
               ),
             ),
@@ -320,13 +351,15 @@ class _FlowRow extends StatelessWidget {
             width: 104,
             // Wrap to a second line at word boundaries so full titles like
             // "Work From Home" and "Compensatory" show whole - never mid-word.
-            child: Text(title,
-                maxLines: 2,
-                softWrap: true,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.onSurface,
-                    )),
+            child: Text(
+              title,
+              maxLines: 2,
+              softWrap: true,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: AppColors.onSurface,
+              ),
+            ),
           ),
           Expanded(
             child: Wrap(
@@ -336,8 +369,11 @@ class _FlowRow extends StatelessWidget {
               children: [
                 for (var i = 0; i < steps.length; i++) ...[
                   if (i > 0)
-                    Icon(Icons.arrow_right_alt,
-                        size: 16, color: AppColors.onSurfaceVariant),
+                    Icon(
+                      Icons.arrow_right_alt,
+                      size: 16,
+                      color: AppColors.onSurfaceVariant,
+                    ),
                   _FlowPill(label: steps[i], last: i == steps.length - 1),
                 ],
               ],
@@ -363,12 +399,17 @@ class _FlowPill extends StatelessWidget {
         color: tint.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(label,
-          maxLines: 1,
-          softWrap: false,
-          overflow: TextOverflow.ellipsis,
-          style: TextStyle(
-              fontSize: 11, fontWeight: FontWeight.w700, color: tint)),
+      child: Text(
+        label,
+        maxLines: 1,
+        softWrap: false,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          color: tint,
+        ),
+      ),
     );
   }
 }
@@ -428,18 +469,21 @@ class _MetricCard extends StatelessWidget {
                     child: Icon(icon, color: color, size: 22),
                   ),
                   const Spacer(),
-                  Icon(Icons.chevron_right,
-                      size: 20, color: AppColors.onSurfaceVariant),
+                  Icon(
+                    Icons.chevron_right,
+                    size: 20,
+                    color: AppColors.onSurfaceVariant,
+                  ),
                 ],
               ),
               const SizedBox(height: AppDimens.sm),
               Text(
                 count > 999 ? '999+' : '$count',
                 style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: AppColors.onSurface,
-                      fontWeight: FontWeight.w800,
-                      height: 1.0,
-                    ),
+                  color: AppColors.onSurface,
+                  fontWeight: FontWeight.w800,
+                  height: 1.0,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
@@ -447,9 +491,9 @@ class _MetricCard extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.onSurfaceVariant,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  color: AppColors.onSurfaceVariant,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
@@ -464,10 +508,10 @@ class _BirthdayRow extends StatelessWidget {
   final HrBirthday item;
 
   String _when(int days) => switch (days) {
-        0 => 'Today',
-        1 => 'Tomorrow',
-        _ => 'in $days days',
-      };
+    0 => 'Today',
+    1 => 'Tomorrow',
+    _ => 'in $days days',
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -490,34 +534,38 @@ class _BirthdayRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                      item.employeeName.isEmpty
-                          ? '(unnamed)'
-                          : item.employeeName,
+                    item.employeeName.isEmpty ? '(unnamed)' : item.employeeName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  if (item.designation.isNotEmpty)
+                    Text(
+                      item.designation,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w700)),
-                  if (item.designation.isNotEmpty)
-                    Text(item.designation,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: AppColors.onSurfaceVariant)),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                    ),
                 ],
               ),
             ),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: tint.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(999),
               ),
-              child: Text(_when(item.daysAway),
-                  style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: tint)),
+              child: Text(
+                _when(item.daysAway),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: tint,
+                ),
+              ),
             ),
           ],
         ),

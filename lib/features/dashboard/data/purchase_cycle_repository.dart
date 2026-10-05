@@ -17,7 +17,8 @@ class PurchaseCycleRepository {
     try {
       final resp = await _dio.get(ApiPaths.purchaseCycle);
       return ModuleFlow.fromJson(
-          (resp.data['message'] as Map).cast<String, dynamic>());
+        (resp.data['message'] as Map).cast<String, dynamic>(),
+      );
     } on DioException catch (e) {
       throw e.error is ApiException
           ? e.error as ApiException
@@ -27,7 +28,9 @@ class PurchaseCycleRepository {
 }
 
 final purchaseCycleRepositoryProvider = Provider<PurchaseCycleRepository>(
-    (ref) => PurchaseCycleRepository(ref.watch(dioProvider)));
+  (ref) => PurchaseCycleRepository(ref.watch(dioProvider)),
+);
 
 final purchaseCycleProvider = FutureProvider.autoDispose<ModuleFlow>(
-    (ref) => ref.read(purchaseCycleRepositoryProvider).fetch());
+  (ref) => ref.read(purchaseCycleRepositoryProvider).fetch(),
+);

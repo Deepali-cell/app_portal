@@ -46,8 +46,12 @@ class ProjectsDashboardScreen extends ConsumerWidget {
           },
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(AppDimens.screenPadding,
-                AppDimens.md, AppDimens.screenPadding, AppDimens.xl),
+            padding: const EdgeInsets.fromLTRB(
+              AppDimens.screenPadding,
+              AppDimens.md,
+              AppDimens.screenPadding,
+              AppDimens.xl,
+            ),
             children: [
               const ModuleDashboardHeader(
                 title: 'Projects',
@@ -60,9 +64,10 @@ class ProjectsDashboardScreen extends ConsumerWidget {
               async.when(
                 loading: () => const FlowSkeleton(rows: 4),
                 error: (e, _) => FlowLoadError(
-                    message: e is ApiException
-                        ? e.message
-                        : "Couldn't load projects. Try again."),
+                  message: e is ApiException
+                      ? e.message
+                      : "Couldn't load projects. Try again.",
+                ),
                 data: (s) => _Body(summary: s),
               ),
             ],
@@ -94,13 +99,16 @@ class _PeriodChips extends ConsumerWidget {
                       : AppColors.surfaceContainer,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Text(p.label,
-                    style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: p == active
-                            ? AppColors.onPrimary
-                            : AppColors.onSurfaceVariant)),
+                child: Text(
+                  p.label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: p == active
+                        ? AppColors.onPrimary
+                        : AppColors.onSurfaceVariant,
+                  ),
+                ),
               ),
             ),
           ),
@@ -182,8 +190,10 @@ class _Body extends StatelessWidget {
         ),
         if (summary.nextDeadlines.isNotEmpty) ...[
           const SizedBox(height: AppDimens.lg),
-          const DashboardSectionTitle('Next deadlines',
-              subtitle: 'The tasks coming up soonest'),
+          const DashboardSectionTitle(
+            'Next deadlines',
+            subtitle: 'The tasks coming up soonest',
+          ),
           const SizedBox(height: AppDimens.sm),
           for (final d in summary.nextDeadlines) _DeadlineRow(item: d),
         ],
@@ -230,22 +240,27 @@ class _StatCard extends StatelessWidget {
             child: Icon(icon, size: 18, color: color),
           ),
           const SizedBox(height: 10),
-          Text(value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.onSurface)),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: AppColors.onSurface,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(label,
-              style: const TextStyle(
-                  fontSize: 12, fontWeight: FontWeight.w700)),
-          Text(caption,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                  fontSize: 11, color: AppColors.onSurfaceVariant)),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+          ),
+          Text(
+            caption,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+          ),
         ],
       ),
     );
@@ -264,7 +279,9 @@ class _DeadlineRow extends StatelessWidget {
     final soon = item.daysLeft >= 0 && item.daysLeft <= 2;
     final tint = overdue
         ? ProjectsDashboardScreen._red
-        : (soon ? ProjectsDashboardScreen._amber : ProjectsDashboardScreen._blue);
+        : (soon
+              ? ProjectsDashboardScreen._amber
+              : ProjectsDashboardScreen._blue);
     final badge = overdue
         ? '${item.daysLeft.abs()}d late'
         : (item.daysLeft == 0 ? 'today' : 'in ${item.daysLeft}d');
@@ -284,33 +301,40 @@ class _DeadlineRow extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(item.subject.isEmpty ? '(untitled task)' : item.subject,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w700)),
                   Text(
-                      item.project.isEmpty
-                          ? item.status
-                          : '${item.project} · ${item.status}',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          fontSize: 12, color: AppColors.onSurfaceVariant)),
+                    item.subject.isEmpty ? '(untitled task)' : item.subject,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  Text(
+                    item.project.isEmpty
+                        ? item.status
+                        : '${item.project} · ${item.status}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
                 ],
               ),
             ),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: tint.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(999),
               ),
-              child: Text(badge,
-                  style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: tint)),
+              child: Text(
+                badge,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w800,
+                  color: tint,
+                ),
+              ),
             ),
           ],
         ),

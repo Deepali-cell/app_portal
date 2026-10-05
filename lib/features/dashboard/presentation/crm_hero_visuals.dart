@@ -58,8 +58,10 @@ class _CrmActivityRingsState extends State<CrmActivityRings>
     vsync: this,
     duration: const Duration(milliseconds: 900),
   )..forward();
-  late final Animation<double> _t =
-      CurvedAnimation(parent: _c, curve: Curves.easeOutCubic);
+  late final Animation<double> _t = CurvedAnimation(
+    parent: _c,
+    curve: Curves.easeOutCubic,
+  );
 
   @override
   void dispose() {
@@ -131,12 +133,18 @@ class _LegendRow extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(ring.label,
-                  style: theme.textTheme.bodyMedium
-                      ?.copyWith(fontWeight: FontWeight.w600)),
-              Text(ring.detail,
-                  style: theme.textTheme.bodySmall
-                      ?.copyWith(color: AppColors.inkMuted)),
+              Text(
+                ring.label,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              Text(
+                ring.detail,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppColors.inkMuted,
+                ),
+              ),
             ],
           ),
         ),
@@ -188,10 +196,7 @@ class _RingsPainter extends CustomPainter {
         ..shader = SweepGradient(
           startAngle: 0,
           endAngle: 2 * math.pi,
-          colors: [
-            rings[i].color.withValues(alpha: 0.65),
-            rings[i].color,
-          ],
+          colors: [rings[i].color.withValues(alpha: 0.65), rings[i].color],
           transform: const GradientRotation(-math.pi / 2),
         ).createShader(rect);
       canvas.drawArc(rect, -math.pi / 2, sweep, false, fg);
@@ -207,8 +212,7 @@ class _RingsPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_RingsPainter old) =>
-      old.t != t || old.rings != rings;
+  bool shouldRepaint(_RingsPainter old) => old.t != t || old.rings != rings;
 }
 
 // ---------------------------------------------------------------------------
@@ -235,8 +239,10 @@ class _CrmFunnelState extends State<CrmFunnel>
     vsync: this,
     duration: const Duration(milliseconds: 850),
   )..forward();
-  late final Animation<double> _t =
-      CurvedAnimation(parent: _c, curve: Curves.easeOutCubic);
+  late final Animation<double> _t = CurvedAnimation(
+    parent: _c,
+    curve: Curves.easeOutCubic,
+  );
 
   double get _height =>
       widget.stages.length * CrmFunnel._bandHeight +
@@ -259,14 +265,16 @@ class _CrmFunnelState extends State<CrmFunnel>
     return Card(
       child: Padding(
         padding: const EdgeInsets.symmetric(
-            horizontal: AppDimens.md, vertical: AppDimens.lg),
+          horizontal: AppDimens.md,
+          vertical: AppDimens.lg,
+        ),
         child: SizedBox(
           height: _height,
           width: double.infinity,
           child: GestureDetector(
             behavior: HitTestBehavior.opaque,
-            onTapUp: (d) => widget.onTapStage(
-                widget.stages[_bandAt(d.localPosition.dy)]),
+            onTapUp: (d) =>
+                widget.onTapStage(widget.stages[_bandAt(d.localPosition.dy)]),
             child: AnimatedBuilder(
               animation: _t,
               builder: (_, _) => CustomPaint(
@@ -275,12 +283,14 @@ class _CrmFunnelState extends State<CrmFunnel>
                   t: _t.value,
                   bandHeight: CrmFunnel._bandHeight,
                   gap: CrmFunnel._gap,
-                  labelStyle: Theme.of(context)
-                      .textTheme
-                      .titleSmall
-                      ?.copyWith(color: Colors.white, fontWeight: FontWeight.w700),
+                  labelStyle: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                  ),
                   convStyle: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: AppColors.inkMuted, fontWeight: FontWeight.w600),
+                    color: AppColors.inkMuted,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
@@ -312,8 +322,9 @@ class _FunnelPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     if (stages.isEmpty) return;
-    final maxCount =
-        stages.map((s) => s.count).fold(0, (a, b) => a > b ? a : b);
+    final maxCount = stages
+        .map((s) => s.count)
+        .fold(0, (a, b) => a > b ? a : b);
     final cx = size.width / 2;
 
     double widthOf(int i) {
@@ -345,28 +356,43 @@ class _FunnelPainter extends CustomPainter {
           ],
         ).createShader(Rect.fromLTWH(0, top, size.width, bandHeight));
       canvas.drawRRect(
-        RRect.fromRectAndRadius(
-            path.getBounds(), const Radius.circular(6)),
+        RRect.fromRectAndRadius(path.getBounds(), const Radius.circular(6)),
         paint,
       );
       canvas.drawPath(path, paint);
 
       // Stage label + count, centered on the band.
-      _text(canvas, '${stages[i].label}   ${stages[i].count}', labelStyle,
-          Offset(cx, top + bandHeight / 2), center: true);
+      _text(
+        canvas,
+        '${stages[i].label}   ${stages[i].count}',
+        labelStyle,
+        Offset(cx, top + bandHeight / 2),
+        center: true,
+      );
 
       // Conversion % pill on the gap below this band.
       if (i < stages.length - 1 && stages[i].count > 0) {
         final conv = (stages[i + 1].count / stages[i].count * 100).round();
-        _text(canvas, '↓ $conv%', convStyle,
-            Offset(size.width - 4, bottom + gap / 2),
-            center: false, rightAlign: true);
+        _text(
+          canvas,
+          '↓ $conv%',
+          convStyle,
+          Offset(size.width - 4, bottom + gap / 2),
+          center: false,
+          rightAlign: true,
+        );
       }
     }
   }
 
-  void _text(Canvas canvas, String s, TextStyle? style, Offset at,
-      {bool center = true, bool rightAlign = false}) {
+  void _text(
+    Canvas canvas,
+    String s,
+    TextStyle? style,
+    Offset at, {
+    bool center = true,
+    bool rightAlign = false,
+  }) {
     final tp = TextPainter(
       text: TextSpan(text: s, style: style),
       textDirection: TextDirection.ltr,
@@ -381,6 +407,5 @@ class _FunnelPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_FunnelPainter old) =>
-      old.t != t || old.stages != stages;
+  bool shouldRepaint(_FunnelPainter old) => old.t != t || old.stages != stages;
 }

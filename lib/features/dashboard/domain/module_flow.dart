@@ -42,12 +42,11 @@ class ModuleFlow {
   final List<FlowStageData> stages;
 
   factory ModuleFlow.fromJson(Map<String, dynamic> j) => ModuleFlow(
-        module: (j['module'] ?? '').toString(),
-        stages: ((j['stages'] as List?) ?? [])
-            .map((e) =>
-                FlowStageData.fromJson((e as Map).cast<String, dynamic>()))
-            .toList(),
-      );
+    module: (j['module'] ?? '').toString(),
+    stages: ((j['stages'] as List?) ?? [])
+        .map((e) => FlowStageData.fromJson((e as Map).cast<String, dynamic>()))
+        .toList(),
+  );
 }
 
 /// Raw (icon/colour as strings) stage data straight from the backend. The
@@ -71,11 +70,11 @@ class FlowStageData {
   final String? route;
 
   factory FlowStageData.fromJson(Map<String, dynamic> j) => FlowStageData(
-        label: (j['label'] ?? '').toString(),
-        count: (j['count'] as num?)?.toInt() ?? 0,
-        value: (j['value'] as num?)?.toDouble() ?? 0,
-        icon: (j['icon'] ?? '').toString(),
-        color: (j['color'] ?? '').toString(),
-        route: j['route'] as String?,
-      );
+    label: (j['label'] ?? '').toString(),
+    count: (j['count'] as num?)?.toInt() ?? 0,
+    value: (j['value'] as num?)?.toDouble() ?? 0,
+    icon: (j['icon'] ?? '').toString(),
+    color: (j['color'] ?? '').toString(),
+    route: j['route'] as String?,
+  );
 }

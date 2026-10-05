@@ -30,8 +30,8 @@ class CrmNote {
       );
 }
 
-/// A single WhatsApp outreach logged against a lead/deal. The portal opens
-/// wa.me for the actual send; this is the team-visible record of it.
+/// One WhatsApp message on a lead/deal: sent/received through the company
+/// Business API, or a click-to-chat outreach the salesperson logged.
 @immutable
 class WhatsAppMessage {
   const WhatsAppMessage({
@@ -42,6 +42,9 @@ class WhatsAppMessage {
     required this.creation,
     this.toNumber,
     this.direction = 'Outgoing',
+    this.sentVia,
+    this.status,
+    this.error,
   });
 
   final String name;
@@ -51,8 +54,16 @@ class WhatsAppMessage {
   final DateTime creation;
   final String? toNumber;
   final String direction; // 'Outgoing' | 'Incoming'
+  final String? sentVia; // 'Click to chat' | 'WhatsApp API' | ...
+  final String? status; // Sent | Delivered | Read | Failed | Received
+
+  /// Why WhatsApp rejected the message, when [status] is Failed.
+  final String? error;
 
   bool get isOutgoing => direction != 'Incoming';
+
+  /// Logged-only rows from click-to-chat; only these may be deleted.
+  bool get isClickToChat => sentVia == null || sentVia == 'Click to chat';
 
   factory WhatsAppMessage.fromJson(Map<String, dynamic> j) => WhatsAppMessage(
         name: j['name'] as String,
@@ -62,6 +73,9 @@ class WhatsAppMessage {
         creation: DateTime.parse(j['creation'] as String),
         toNumber: j['to_number'] as String?,
         direction: (j['direction'] ?? 'Outgoing') as String,
+        sentVia: j['sent_via'] as String?,
+        status: j['status'] as String?,
+        error: j['error'] as String?,
       );
 }
 

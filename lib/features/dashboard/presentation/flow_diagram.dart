@@ -35,7 +35,11 @@ class FlowDiagram extends StatelessWidget {
 }
 
 class _FlowNode extends StatelessWidget {
-  const _FlowNode({required this.stage, required this.index, required this.total});
+  const _FlowNode({
+    required this.stage,
+    required this.index,
+    required this.total,
+  });
   final FlowStage stage;
   final int index;
   final int total;
@@ -75,7 +79,8 @@ class _FlowNode extends StatelessWidget {
                     colors: [color, color.withValues(alpha: 0.55)],
                   ),
                   borderRadius: const BorderRadius.horizontal(
-                      left: Radius.circular(AppDimens.radiusXl)),
+                    left: Radius.circular(AppDimens.radiusXl),
+                  ),
                 ),
               ),
               const SizedBox(width: AppDimens.md - 2),
@@ -91,9 +96,9 @@ class _FlowNode extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: AppColors.onSurface,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        color: AppColors.onSurface,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                     const SizedBox(height: 1),
                     Text(
@@ -103,8 +108,8 @@ class _FlowNode extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.onSurfaceVariant,
-                          ),
+                        color: AppColors.onSurfaceVariant,
+                      ),
                     ),
                   ],
                 ),
@@ -114,8 +119,11 @@ class _FlowNode extends StatelessWidget {
               if (tappable)
                 Padding(
                   padding: const EdgeInsets.only(left: 2, right: AppDimens.sm),
-                  child: Icon(Icons.chevron_right,
-                      size: 20, color: AppColors.onSurfaceVariant),
+                  child: Icon(
+                    Icons.chevron_right,
+                    size: 20,
+                    color: AppColors.onSurfaceVariant,
+                  ),
                 )
               else
                 const SizedBox(width: AppDimens.md),
@@ -165,10 +173,10 @@ class _CountPill extends StatelessWidget {
       child: Text(
         count > 999 ? '999+' : '$count',
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w800,
-              height: 1.0,
-            ),
+          color: color,
+          fontWeight: FontWeight.w800,
+          height: 1.0,
+        ),
       ),
     );
   }
@@ -189,8 +197,11 @@ class _FlowConnector extends StatelessWidget {
           Column(
             children: [
               Container(width: 2, height: 10, color: AppColors.outlineVariant),
-              Icon(Icons.keyboard_arrow_down_rounded,
-                  size: 18, color: AppColors.onSurfaceVariant),
+              Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 18,
+                color: AppColors.onSurfaceVariant,
+              ),
             ],
           ),
           if (hint != null) ...[
@@ -198,9 +209,9 @@ class _FlowConnector extends StatelessWidget {
             Text(
               hint!,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                    color: AppColors.onSurfaceVariant,
-                    fontStyle: FontStyle.italic,
-                  ),
+                color: AppColors.onSurfaceVariant,
+                fontStyle: FontStyle.italic,
+              ),
             ),
           ],
         ],

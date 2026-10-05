@@ -1,6 +1,14 @@
 import 'package:flutter/foundation.dart';
 
-enum ClaimStatus { draft, submitted, approved, rejected, paid, unpaid, cancelled }
+enum ClaimStatus {
+  draft,
+  submitted,
+  approved,
+  rejected,
+  paid,
+  unpaid,
+  cancelled,
+}
 
 ClaimStatus claimStatusFrom(String? approval, String? status) {
   final a = (approval ?? '').toLowerCase();
@@ -48,15 +56,17 @@ class ExpenseClaim {
   final String? stageLabel;
 
   factory ExpenseClaim.fromJson(Map<String, dynamic> j) => ExpenseClaim(
-        name: j['name'] as String,
-        postingDate: DateTime.parse(j['posting_date'] as String),
-        totalClaimed: (j['total_claimed_amount'] as num?)?.toDouble() ?? 0,
-        totalSanctioned: (j['total_sanctioned_amount'] as num?)?.toDouble() ?? 0,
-        status: claimStatusFrom(
-            j['approval_status'] as String?, j['status'] as String?),
-        stageLabel: j['stage_label'] as String?,
-        employeeName: j['employee_name'] as String?,
-      );
+    name: j['name'] as String,
+    postingDate: DateTime.parse(j['posting_date'] as String),
+    totalClaimed: (j['total_claimed_amount'] as num?)?.toDouble() ?? 0,
+    totalSanctioned: (j['total_sanctioned_amount'] as num?)?.toDouble() ?? 0,
+    status: claimStatusFrom(
+      j['approval_status'] as String?,
+      j['status'] as String?,
+    ),
+    stageLabel: j['stage_label'] as String?,
+    employeeName: j['employee_name'] as String?,
+  );
 }
 
 /// One receipt/proof file attached to an expense claim.
@@ -76,7 +86,8 @@ class ExpenseAttachment {
   final int fileSize;
   final bool isPrivate;
 
-  factory ExpenseAttachment.fromJson(Map<String, dynamic> j) => ExpenseAttachment(
+  factory ExpenseAttachment.fromJson(Map<String, dynamic> j) =>
+      ExpenseAttachment(
         name: (j['name'] ?? '') as String,
         fileName: (j['file_name'] ?? j['file_url'] ?? '') as String,
         absoluteUrl: (j['absolute_url'] ?? j['file_url'] ?? '') as String,
@@ -139,14 +150,14 @@ class ExpenseLine {
   final String? description;
 
   factory ExpenseLine.fromJson(Map<String, dynamic> j) => ExpenseLine(
-        expenseType: (j['expense_type'] ?? '') as String,
-        amount: (j['amount'] as num?)?.toDouble() ?? 0,
-        sanctionedAmount: (j['sanctioned_amount'] as num?)?.toDouble() ?? 0,
-        expenseDate: j['expense_date'] != null
-            ? DateTime.tryParse(j['expense_date'].toString())
-            : null,
-        description: j['description'] as String?,
-      );
+    expenseType: (j['expense_type'] ?? '') as String,
+    amount: (j['amount'] as num?)?.toDouble() ?? 0,
+    sanctionedAmount: (j['sanctioned_amount'] as num?)?.toDouble() ?? 0,
+    expenseDate: j['expense_date'] != null
+        ? DateTime.tryParse(j['expense_date'].toString())
+        : null,
+    description: j['description'] as String?,
+  );
 }
 
 /// Full detail of one expense claim, with its line items.
@@ -182,31 +193,34 @@ class ExpenseClaimDetail {
   final String? expenseApprover;
   final String? remark;
 
-  factory ExpenseClaimDetail.fromJson(Map<String, dynamic> j) =>
-      ExpenseClaimDetail(
-        name: j['name'] as String,
-        employeeName: (j['employee_name'] ?? j['employee'] ?? '') as String,
-        postingDate: j['posting_date'] != null
-            ? DateTime.tryParse(j['posting_date'].toString())
-            : null,
-        currency: (j['currency'] ?? 'INR') as String,
-        totalClaimed: (j['total_claimed_amount'] as num?)?.toDouble() ?? 0,
-        totalSanctioned:
-            (j['total_sanctioned_amount'] as num?)?.toDouble() ?? 0,
-        status: claimStatusFrom(
-            j['approval_status'] as String?, j['status'] as String?),
-        stageLabel: (j['stage_label'] ?? '') as String,
-        lines: ((j['expenses'] as List?) ?? [])
-            .map((e) => ExpenseLine.fromJson(e as Map<String, dynamic>))
-            .toList(),
-        attachments: ((j['attachments'] as List?) ?? [])
-            .map((e) =>
-                ExpenseAttachment.fromJson((e as Map).cast<String, dynamic>()))
-            .toList(),
-        docstatus: (j['docstatus'] as num?)?.toInt() ?? 0,
-        expenseApprover: j['expense_approver'] as String?,
-        remark: j['remark'] as String?,
-      );
+  factory ExpenseClaimDetail.fromJson(
+    Map<String, dynamic> j,
+  ) => ExpenseClaimDetail(
+    name: j['name'] as String,
+    employeeName: (j['employee_name'] ?? j['employee'] ?? '') as String,
+    postingDate: j['posting_date'] != null
+        ? DateTime.tryParse(j['posting_date'].toString())
+        : null,
+    currency: (j['currency'] ?? 'INR') as String,
+    totalClaimed: (j['total_claimed_amount'] as num?)?.toDouble() ?? 0,
+    totalSanctioned: (j['total_sanctioned_amount'] as num?)?.toDouble() ?? 0,
+    status: claimStatusFrom(
+      j['approval_status'] as String?,
+      j['status'] as String?,
+    ),
+    stageLabel: (j['stage_label'] ?? '') as String,
+    lines: ((j['expenses'] as List?) ?? [])
+        .map((e) => ExpenseLine.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    attachments: ((j['attachments'] as List?) ?? [])
+        .map(
+          (e) => ExpenseAttachment.fromJson((e as Map).cast<String, dynamic>()),
+        )
+        .toList(),
+    docstatus: (j['docstatus'] as num?)?.toInt() ?? 0,
+    expenseApprover: j['expense_approver'] as String?,
+    remark: j['remark'] as String?,
+  );
 }
 
 @immutable
@@ -239,8 +253,7 @@ class ExpenseContext {
     return ExpenseContext(
       employee: j['employee'] as String,
       currency: (j['currency'] ?? 'INR') as String,
-      pendingApprovalCount:
-          (j['pending_approval_count'] as num?)?.toInt() ?? 0,
+      pendingApprovalCount: (j['pending_approval_count'] as num?)?.toInt() ?? 0,
       isHr: (j['is_hr'] ?? false) as bool,
       expenseTypes: ((j['expense_types'] as List?) ?? [])
           .map((e) => e.toString())
@@ -250,7 +263,7 @@ class ExpenseContext {
           .toList(),
       fromDate: j['from_date'] != null
           ? DateTime.tryParse(j['from_date'].toString()) ??
-              DateTime(now.year, now.month, 1)
+                DateTime(now.year, now.month, 1)
           : DateTime(now.year, now.month, 1),
       toDate: j['to_date'] != null
           ? DateTime.tryParse(j['to_date'].toString()) ?? now
@@ -273,9 +286,9 @@ class ExpenseItem {
   final String? description;
 
   Map<String, dynamic> toJson() => {
-        'expense_type': expenseType,
-        'amount': amount,
-        if (description != null && description!.isNotEmpty)
-          'description': description,
-      };
+    'expense_type': expenseType,
+    'amount': amount,
+    if (description != null && description!.isNotEmpty)
+      'description': description,
+  };
 }

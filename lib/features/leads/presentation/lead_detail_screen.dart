@@ -39,11 +39,25 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen>
 
   final Map<String, TextEditingController> _ctrls = {
     for (final f in [
-      'salutation','first_name','middle_name','last_name','gender',
-      'email','mobile_no','phone','website',
-      'organization','job_title','no_of_employees','industry','source','territory','lead_owner',
+      'salutation',
+      'first_name',
+      'middle_name',
+      'last_name',
+      'gender',
+      'email',
+      'mobile_no',
+      'phone',
+      'website',
+      'organization',
+      'job_title',
+      'no_of_employees',
+      'industry',
+      'source',
+      'territory',
+      'lead_owner',
       'annual_revenue',
-    ]) f: TextEditingController()
+    ])
+      f: TextEditingController(),
   };
   String? _status;
 
@@ -76,7 +90,9 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen>
     _ctrls['territory']!.text = l.territory ?? '';
     _ctrls['lead_owner']!.text = l.leadOwner ?? '';
     _ctrls['annual_revenue']!.text =
-        l.annualRevenue == null || l.annualRevenue == 0 ? '' : l.annualRevenue.toString();
+        l.annualRevenue == null || l.annualRevenue == 0
+        ? ''
+        : l.annualRevenue.toString();
     _status = l.status;
   }
 
@@ -93,10 +109,13 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen>
     };
     // annual_revenue is numeric — empty means "clear", non-empty parses.
     final revText = (fields['annual_revenue'] as String?)?.trim() ?? '';
-    fields['annual_revenue'] =
-        revText.isEmpty ? 0 : (double.tryParse(revText) ?? 0);
+    fields['annual_revenue'] = revText.isEmpty
+        ? 0
+        : (double.tryParse(revText) ?? 0);
     try {
-      await ref.read(leadsControllerProvider.notifier).save(widget.name, fields);
+      await ref
+          .read(leadsControllerProvider.notifier)
+          .save(widget.name, fields);
       if (mounted) setState(() => _editing = false);
     } on ApiException catch (e) {
       _snack(e.message);
@@ -111,17 +130,20 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen>
       builder: (ctx) => AlertDialog(
         title: const Text('Convert to Opportunity?'),
         content: const Text(
-            "An Opportunity will be created from this lead. That's the first "
-            "step of the sales flow: Lead → Opportunity → Customer. Open the "
-            "Opportunity later to convert it into a Customer. The lead will be "
-            "marked 'Converted'."),
+          "An Opportunity will be created from this lead. That's the first "
+          "step of the sales flow: Lead → Opportunity → Customer. Open the "
+          "Opportunity later to convert it into a Customer. The lead will be "
+          "marked 'Converted'.",
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Convert')),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Convert'),
+          ),
         ],
       ),
     );
@@ -132,9 +154,11 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen>
           .read(leadsControllerProvider.notifier)
           .convertToOpportunity(widget.name);
       if (!mounted) return;
-      _snack(opportunity.isNotEmpty
-          ? 'Created opportunity: $opportunity'
-          : 'Lead converted');
+      _snack(
+        opportunity.isNotEmpty
+            ? 'Created opportunity: $opportunity'
+            : 'Lead converted',
+      );
       // Keep the user on the lead screen; the status now shows Converted and
       // the new Opportunity appears on the Opportunities tab.
     } on ApiException catch (e) {
@@ -176,7 +200,9 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen>
             ),
           if (onDetailsTab && _editing) ...[
             TextButton(
-              onPressed: _saving ? null : () => setState(() => _editing = false),
+              onPressed: _saving
+                  ? null
+                  : () => setState(() => _editing = false),
               child: const Text('Cancel'),
             ),
             TextButton(
@@ -188,8 +214,11 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen>
             IconButton(
               tooltip: 'Convert to Opportunity',
               icon: _converting
-                  ? const SizedBox(width: 18, height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2))
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
                   : const Icon(Icons.swap_horiz),
               onPressed: _converting ? null : _convert,
             ),
@@ -222,11 +251,20 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen>
         data: (lead) => TabBarView(
           controller: _tabs,
           children: [
-            _DetailsTab(lead: lead, editing: _editing, ctrls: _ctrls, statuses: statuses, status: _status, onStatus: (s) => setState(() => _status = s)),
+            _DetailsTab(
+              lead: lead,
+              editing: _editing,
+              ctrls: _ctrls,
+              statuses: statuses,
+              status: _status,
+              onStatus: (s) => setState(() => _status = s),
+            ),
             ActivityTab(crmRef: _ref),
             CallsTab(crmRef: _ref, suggestedPhone: lead.mobileNo ?? lead.phone),
             WhatsAppTab(
-                crmRef: _ref, suggestedPhone: lead.mobileNo ?? lead.phone),
+              crmRef: _ref,
+              suggestedPhone: lead.mobileNo ?? lead.phone,
+            ),
             CrmTasksTab(crmRef: _ref),
             AttachmentsTab(crmRef: _ref),
             EmailsTab(crmRef: _ref, suggestedTo: lead.email),
@@ -235,10 +273,15 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen>
           ],
         ),
       ),
-      bottomNavigationBar: (onDetailsTab && !_editing && lead != null && !lead.converted)
+      bottomNavigationBar:
+          (onDetailsTab && !_editing && lead != null && !lead.converted)
           ? Padding(
-              padding: const EdgeInsets.fromLTRB(AppDimens.lg, AppDimens.sm,
-                  AppDimens.lg, AppDimens.lg),
+              padding: const EdgeInsets.fromLTRB(
+                AppDimens.lg,
+                AppDimens.sm,
+                AppDimens.lg,
+                AppDimens.lg,
+              ),
               child: BrandButton(
                 label: 'Convert to Opportunity',
                 icon: Icons.swap_horiz,
@@ -253,21 +296,26 @@ class _LeadDetailScreenState extends ConsumerState<LeadDetailScreen>
   String _count(int? n) => (n == null || n == 0) ? '' : '  $n';
 
   Widget _err(BuildContext context, Object e) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppDimens.xl),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.error_outline, size: 40, color: AppColors.danger),
-            const SizedBox(height: AppDimens.md),
-            Text(e is ApiException ? e.message : 'Could not load.',
-                textAlign: TextAlign.center),
-            const SizedBox(height: AppDimens.lg),
-            OutlinedButton(
-              onPressed: () => ref.invalidate(leadDetailProvider(widget.name)),
-              child: const Text('Retry'),
-            ),
-          ]),
-        ),
-      );
+    child: Padding(
+      padding: const EdgeInsets.all(AppDimens.xl),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.error_outline, size: 40, color: AppColors.danger),
+          const SizedBox(height: AppDimens.md),
+          Text(
+            e is ApiException ? e.message : 'Could not load.',
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppDimens.lg),
+          OutlinedButton(
+            onPressed: () => ref.invalidate(leadDetailProvider(widget.name)),
+            child: const Text('Retry'),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _DetailsTab extends StatelessWidget {
@@ -304,19 +352,44 @@ class _DetailsTab extends StatelessWidget {
           _F('Gender', lead.gender, ctrls['gender']),
         ]),
         _section('Contact', [
-          _F('Email', lead.email, ctrls['email'], keyboardType: TextInputType.emailAddress),
-          _F('Mobile', lead.mobileNo, ctrls['mobile_no'], keyboardType: TextInputType.phone),
-          _F('Phone', lead.phone, ctrls['phone'], keyboardType: TextInputType.phone),
-          _F('Website', lead.website, ctrls['website'], keyboardType: TextInputType.url),
+          _F(
+            'Email',
+            lead.email,
+            ctrls['email'],
+            keyboardType: TextInputType.emailAddress,
+          ),
+          _F(
+            'Mobile',
+            lead.mobileNo,
+            ctrls['mobile_no'],
+            keyboardType: TextInputType.phone,
+          ),
+          _F(
+            'Phone',
+            lead.phone,
+            ctrls['phone'],
+            keyboardType: TextInputType.phone,
+          ),
+          _F(
+            'Website',
+            lead.website,
+            ctrls['website'],
+            keyboardType: TextInputType.url,
+          ),
         ]),
         _section('Organization', [
           _F('Organization', lead.organization, ctrls['organization']),
           _F('Job title', lead.jobTitle, ctrls['job_title']),
           _F('Employees', lead.noOfEmployees, ctrls['no_of_employees']),
           _F('Industry', lead.industry, ctrls['industry']),
-          _F('Annual revenue',
-              lead.annualRevenue == null || lead.annualRevenue == 0 ? null : lead.annualRevenue.toString(),
-              ctrls['annual_revenue'], keyboardType: TextInputType.number),
+          _F(
+            'Annual revenue',
+            lead.annualRevenue == null || lead.annualRevenue == 0
+                ? null
+                : lead.annualRevenue.toString(),
+            ctrls['annual_revenue'],
+            keyboardType: TextInputType.number,
+          ),
         ]),
         _salesSection(context),
         const SizedBox(height: 80),
@@ -330,28 +403,36 @@ class _DetailsTab extends StatelessWidget {
   Widget _section(String title, List<_F> fields) {
     if (editing) {
       return _Section(
-          title: title, children: [for (final f in fields) _editor(f)]);
+        title: title,
+        children: [for (final f in fields) _editor(f)],
+      );
     }
-    final filled =
-        fields.where((f) => (f.value ?? '').trim().isNotEmpty).toList();
+    final filled = fields
+        .where((f) => (f.value ?? '').trim().isNotEmpty)
+        .toList();
     if (filled.isEmpty) return const SizedBox.shrink();
     return _Section(
-        title: title,
-        children: [for (final f in filled) _viewRow(f.label, f.value!)]);
+      title: title,
+      children: [for (final f in filled) _viewRow(f.label, f.value!)],
+    );
   }
 
   Widget _salesSection(BuildContext context) {
     if (editing) {
-      return _Section(title: 'Sales', children: [
-        _statusEditor(context),
-        _editor(_F('Source', null, ctrls['source'])),
-        _editor(_F('Territory', null, ctrls['territory'])),
-        _editor(_F('Owner', null, ctrls['lead_owner'])),
-      ]);
+      return _Section(
+        title: 'Sales',
+        children: [
+          _statusEditor(context),
+          _editor(_F('Source', null, ctrls['source'])),
+          _editor(_F('Territory', null, ctrls['territory'])),
+          _editor(_F('Owner', null, ctrls['lead_owner'])),
+        ],
+      );
     }
     final rows = <Widget>[
       if (lead.status.trim().isNotEmpty) _viewRow('Status', lead.status),
-      if ((lead.source ?? '').trim().isNotEmpty) _viewRow('Source', lead.source!),
+      if ((lead.source ?? '').trim().isNotEmpty)
+        _viewRow('Source', lead.source!),
       if ((lead.territory ?? '').trim().isNotEmpty)
         _viewRow('Territory', lead.territory!),
       if ((lead.leadOwner ?? '').trim().isNotEmpty)
@@ -362,45 +443,48 @@ class _DetailsTab extends StatelessWidget {
   }
 
   Widget _statusEditor(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppDimens.xs),
-        child: DropdownButtonFormField<String>(
-          initialValue: statuses.contains(status) ? status : null,
-          isExpanded: true,
-          decoration: const InputDecoration(labelText: 'Status'),
-          items: statuses
-              .map((s) => DropdownMenuItem(value: s, child: Text(s)))
-              .toList(),
-          onChanged: onStatus,
-        ),
-      );
+    padding: const EdgeInsets.symmetric(vertical: AppDimens.xs),
+    child: DropdownButtonFormField<String>(
+      initialValue: statuses.contains(status) ? status : null,
+      isExpanded: true,
+      decoration: const InputDecoration(labelText: 'Status'),
+      items: statuses
+          .map((s) => DropdownMenuItem(value: s, child: Text(s)))
+          .toList(),
+      onChanged: onStatus,
+    ),
+  );
 
   Widget _editor(_F f) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppDimens.xs),
-        child: TextField(
-          controller: f.ctrl,
-          keyboardType: f.keyboardType,
-          decoration: InputDecoration(labelText: f.label),
-        ),
-      );
+    padding: const EdgeInsets.symmetric(vertical: AppDimens.xs),
+    child: TextField(
+      controller: f.ctrl,
+      keyboardType: f.keyboardType,
+      decoration: InputDecoration(labelText: f.label),
+    ),
+  );
 
   Widget _viewRow(String label, String value) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppDimens.xs),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 110,
-              child: Text(label,
-                  style: TextStyle(color: AppColors.inkMuted, fontSize: 13)),
-            ),
-            Expanded(
-              child: Text(value,
-                  style: TextStyle(
-                      color: AppColors.ink, fontWeight: FontWeight.w500)),
-            ),
-          ],
+    padding: const EdgeInsets.symmetric(vertical: AppDimens.xs),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 110,
+          child: Text(
+            label,
+            style: TextStyle(color: AppColors.inkMuted, fontSize: 13),
+          ),
         ),
-      );
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(color: AppColors.ink, fontWeight: FontWeight.w500),
+          ),
+        ),
+      ],
+    ),
+  );
 }
 
 /// One editable detail field: its label, current value and the controller the
@@ -419,27 +503,34 @@ class _Section extends StatelessWidget {
   final List<Widget> children;
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.only(bottom: AppDimens.lg),
-        child: Card(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-                AppDimens.lg, AppDimens.md, AppDimens.lg, AppDimens.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title.toUpperCase(),
-                    style: TextStyle(
-                        color: AppColors.inkMuted,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 12,
-                        letterSpacing: 0.6)),
-                const SizedBox(height: AppDimens.sm),
-                ...children,
-              ],
-            ),
-          ),
+    padding: const EdgeInsets.only(bottom: AppDimens.lg),
+    child: Card(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(
+          AppDimens.lg,
+          AppDimens.md,
+          AppDimens.lg,
+          AppDimens.lg,
         ),
-      );
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title.toUpperCase(),
+              style: TextStyle(
+                color: AppColors.inkMuted,
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
+                letterSpacing: 0.6,
+              ),
+            ),
+            const SizedBox(height: AppDimens.sm),
+            ...children,
+          ],
+        ),
+      ),
+    ),
+  );
 }
 
 class _Header extends StatelessWidget {
@@ -453,41 +544,51 @@ class _Header extends StatelessWidget {
         CircleAvatar(
           radius: 28,
           backgroundColor: AppColors.navy,
-          child: Text(lead.initials,
-              style: TextStyle(
-                  color: AppColors.canvas,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700)),
+          child: Text(
+            lead.initials,
+            style: TextStyle(
+              color: AppColors.canvas,
+              fontSize: 18,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
         ),
         const SizedBox(width: AppDimens.md),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(lead.title,
-                  style: Theme.of(context).textTheme.titleLarge,
-                  maxLines: 2, overflow: TextOverflow.ellipsis),
-              if (lead.organization != null && lead.organization!.isNotEmpty &&
+              Text(
+                lead.title,
+                style: Theme.of(context).textTheme.titleLarge,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+              if (lead.organization != null &&
+                  lead.organization!.isNotEmpty &&
                   lead.organization != lead.title)
-                Text(lead.organization!,
-                    style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  lead.organization!,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               const SizedBox(height: AppDimens.xs),
               Wrap(
-                  spacing: AppDimens.xs,
-                  runSpacing: AppDimens.xs,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  children: [
-                    _chip(lead.status, AppColors.navy, filled: true),
-                    // Only show a separate "Converted" chip when the status text
-                    // isn't already "Converted" — otherwise the header showed the
-                    // same badge twice.
-                    if (lead.converted &&
-                        lead.status.trim().toLowerCase() != 'converted')
-                      _chip('Converted', AppColors.success, filled: true),
-                    if (lead.daysSinceContact != null &&
-                        lead.daysSinceContact! >= 1)
-                      FollowupGapBadge(days: lead.daysSinceContact!),
-                  ]),
+                spacing: AppDimens.xs,
+                runSpacing: AppDimens.xs,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  _chip(lead.status, AppColors.navy, filled: true),
+                  // Only show a separate "Converted" chip when the status text
+                  // isn't already "Converted" — otherwise the header showed the
+                  // same badge twice.
+                  if (lead.converted &&
+                      lead.status.trim().toLowerCase() != 'converted')
+                    _chip('Converted', AppColors.success, filled: true),
+                  if (lead.daysSinceContact != null &&
+                      lead.daysSinceContact! >= 1)
+                    FollowupGapBadge(days: lead.daysSinceContact!),
+                ],
+              ),
             ],
           ),
         ),
@@ -496,15 +597,17 @@ class _Header extends StatelessWidget {
   }
 
   Widget _chip(String label, Color c, {bool filled = false}) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: AppDimens.sm, vertical: 3),
-        decoration: BoxDecoration(
-          color: filled ? c.withValues(alpha: 0.12) : Colors.transparent,
-          border: filled ? null : Border.all(color: AppColors.line),
-          borderRadius: BorderRadius.circular(AppDimens.radiusSm),
-        ),
-        child: Text(label,
-            style: TextStyle(color: c, fontWeight: FontWeight.w600, fontSize: 12)),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: AppDimens.sm, vertical: 3),
+    decoration: BoxDecoration(
+      color: filled ? c.withValues(alpha: 0.12) : Colors.transparent,
+      border: filled ? null : Border.all(color: AppColors.line),
+      borderRadius: BorderRadius.circular(AppDimens.radiusSm),
+    ),
+    child: Text(
+      label,
+      style: TextStyle(color: c, fontWeight: FontWeight.w600, fontSize: 12),
+    ),
+  );
 }
 
 class _QuickContact extends StatelessWidget {
@@ -515,7 +618,8 @@ class _QuickContact extends StatelessWidget {
     if (!await launchUrl(uri, mode: LaunchMode.externalApplication)) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('No app available to handle this.')));
+          const SnackBar(content: Text('No app available to handle this.')),
+        );
       }
     }
   }
@@ -532,34 +636,59 @@ class _QuickContact extends StatelessWidget {
         ? lead.mobileNo!
         : (lead.phone?.isNotEmpty == true ? lead.phone! : null);
     if (primaryDialable != null) {
-      actions.add(_Quick(Icons.phone, 'Call',
-          () => _launch(Uri(scheme: 'tel', path: primaryDialable), context)));
+      actions.add(
+        _Quick(
+          Icons.phone,
+          'Call',
+          () => _launch(Uri(scheme: 'tel', path: primaryDialable), context),
+        ),
+      );
     }
     if (lead.email != null && lead.email!.isNotEmpty) {
-      actions.add(_Quick(Icons.mail_outline, 'Email', () => _launch(Uri(scheme: 'mailto', path: lead.email!), context)));
+      actions.add(
+        _Quick(
+          Icons.mail_outline,
+          'Email',
+          () => _launch(Uri(scheme: 'mailto', path: lead.email!), context),
+        ),
+      );
     }
     if (lead.website != null && lead.website!.isNotEmpty) {
-      actions.add(_Quick(Icons.public, 'Web', () => _launch(Uri.parse(_norm(lead.website!)), context)));
+      actions.add(
+        _Quick(
+          Icons.public,
+          'Web',
+          () => _launch(Uri.parse(_norm(lead.website!)), context),
+        ),
+      );
     }
     // Log-outcome action is always available — works even for leads with no
     // contact info, since outcomes can capture "No answer" or "Wrong number".
-    actions.add(_Quick(Icons.phone_callback, 'Log call', () async {
-      final newId = await showCallOutcomeSheet(
-        context,
-        referenceDoctype: 'Lead',
-        referenceDocname: lead.name,
-        parentLabel: lead.title,
-      );
-      if (newId != null && context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Call outcome saved.')));
-      }
-    }));
+    actions.add(
+      _Quick(Icons.phone_callback, 'Log call', () async {
+        final newId = await showCallOutcomeSheet(
+          context,
+          referenceDoctype: 'Lead',
+          referenceDocname: lead.name,
+          parentLabel: lead.title,
+        );
+        if (newId != null && context.mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Call outcome saved.')));
+        }
+      }),
+    );
     if (actions.isEmpty) return const SizedBox.shrink();
-    return Row(children: actions.map((a) => Expanded(child: _QuickButton(action: a))).toList());
+    return Row(
+      children: actions
+          .map((a) => Expanded(child: _QuickButton(action: a)))
+          .toList(),
+    );
   }
 
-  String _norm(String u) => (u.startsWith('http://') || u.startsWith('https://')) ? u : 'https://$u';
+  String _norm(String u) =>
+      (u.startsWith('http://') || u.startsWith('https://')) ? u : 'https://$u';
 }
 
 class _Quick {

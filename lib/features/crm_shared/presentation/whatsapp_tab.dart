@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
@@ -10,11 +12,13 @@ import '../application/providers.dart';
 import '../domain/crm_ref.dart';
 import '../domain/models.dart';
 
-/// WhatsApp-style outreach for a lead/deal. The portal doesn't send WhatsApp
-/// itself: tapping send opens wa.me with the customer's number + typed message
-/// pre-filled (the salesperson sends it from their own WhatsApp), and the same
-/// text is logged to the backend so the whole team sees the conversation as
-/// chat bubbles.
+/// WhatsApp conversation for a lead/deal.
+///
+/// When the server has the WhatsApp Business Cloud API configured, send goes
+/// out from the company number and the customer's replies land here (polled
+/// while the tab is open) — the salesperson never uses their own WhatsApp.
+/// Otherwise it falls back to click-to-chat: open wa.me with the message
+/// pre-filled and log the text so the team still sees it as chat bubbles.
 class WhatsAppTab extends ConsumerStatefulWidget {
   const WhatsAppTab({super.key, required this.crmRef, this.suggestedPhone});
   final CrmRef crmRef;
@@ -35,9 +39,22 @@ final _time = DateFormat('h:mm a');
 class _WhatsAppTabState extends ConsumerState<WhatsAppTab> {
   final _input = TextEditingController();
   bool _sending = false;
+  Timer? _poll;
+
+  bool get _cloud => ref.read(whatsAppCloudProvider).value ?? false;
+
+  @override
+  void initState() {
+    super.initState();
+    // Pick up customer replies while the conversation is open (cloud mode).
+    _poll = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (mounted && _cloud) ref.invalidate(whatsAppProvider(widget.crmRef));
+    });
+  }
 
   @override
   void dispose() {
+    _poll?.cancel();
     _input.dispose();
     super.dispose();
   }
@@ -61,7 +78,17 @@ class _WhatsAppTabState extends ConsumerState<WhatsAppTab> {
 
     setState(() => _sending = true);
     try {
-      // 1) Log it first so the record survives even if WhatsApp doesn't open.
+      if (_cloud) {
+        // Sent by the server from the company WhatsApp number.
+        await ref
+            .read(crmCollabRepositoryProvider)
+            .sendWhatsApp(widget.crmRef, message: text);
+        ref.invalidate(whatsAppProvider(widget.crmRef));
+        _input.clear();
+        return;
+      }
+
+      // Click-to-chat: 1) Log it first so the record survives even if WhatsApp doesn't open.
       await ref.read(crmCollabRepositoryProvider).logWhatsApp(
             widget.crmRef,
             message: text,
@@ -120,12 +147,13 @@ class _WhatsAppTabState extends ConsumerState<WhatsAppTab> {
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(whatsAppProvider(widget.crmRef));
+    final cloud = ref.watch(whatsAppCloudProvider).value ?? false;
     final number = _waNumber();
     return Scaffold(
       backgroundColor: const Color(0xFFECE5DD), // WhatsApp chat backdrop.
       body: Column(
         children: [
-          if (number == null) _noNumberBanner(),
+          if (number == null) _noNumberBanner(cloud),
           Expanded(
             child: async.when(
               loading: () =>
@@ -134,7 +162,7 @@ class _WhatsAppTabState extends ConsumerState<WhatsAppTab> {
                   child: Text(
                       e is ApiException ? e.message : 'Could not load chat.')),
               data: (msgs) {
-                if (msgs.isEmpty) return _empty();
+                if (msgs.isEmpty) return _empty(cloud);
                 return RefreshIndicator(
                   onRefresh: () async =>
                       ref.invalidate(whatsAppProvider(widget.crmRef)),
@@ -142,32 +170,37 @@ class _WhatsAppTabState extends ConsumerState<WhatsAppTab> {
                     padding: const EdgeInsets.symmetric(
                         horizontal: AppDimens.md, vertical: AppDimens.md),
                     itemCount: msgs.length,
-                    itemBuilder: (_, i) =>
-                        _Bubble(msg: msgs[i], onDelete: () => _delete(msgs[i])),
+                    itemBuilder: (_, i) => _Bubble(
+                        msg: msgs[i],
+                        onDelete: msgs[i].isClickToChat
+                            ? () => _delete(msgs[i])
+                            : null),
                   ),
                 );
               },
             ),
           ),
-          _composer(),
+          _composer(enabled: !cloud || number != null),
         ],
       ),
     );
   }
 
-  Widget _noNumberBanner() => Container(
+  Widget _noNumberBanner(bool cloud) => Container(
         width: double.infinity,
         color: AppColors.warning.withValues(alpha: 0.15),
         padding:
             const EdgeInsets.symmetric(horizontal: AppDimens.md, vertical: 8),
         child: Text(
-          'No phone number on this record — WhatsApp will open the contact '
-          'picker. Add a mobile number to send directly.',
+          cloud
+              ? 'No mobile number on this record. Add one to send WhatsApp.'
+              : 'No phone number on this record — WhatsApp will open the '
+                  'contact picker. Add a mobile number to send directly.',
           style: TextStyle(fontSize: 12, color: AppColors.ink),
         ),
       );
 
-  Widget _empty() => ListView(
+  Widget _empty(bool cloud) => ListView(
         children: [
           const SizedBox(height: 80),
           Icon(Icons.chat_bubble_outline, size: 44, color: _waTeal),
@@ -178,21 +211,24 @@ class _WhatsAppTabState extends ConsumerState<WhatsAppTab> {
                     color: _waTeal, fontWeight: FontWeight.w600, fontSize: 15)),
           ),
           const SizedBox(height: 6),
-          const Center(
+          Center(
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 40),
+              padding: const EdgeInsets.symmetric(horizontal: 40),
               child: Text(
-                'Type below and tap send — it opens WhatsApp with the message '
-                'ready, and logs it here for your team.',
+                cloud
+                    ? 'Messages go from the company WhatsApp number and the '
+                        "customer's replies show up here."
+                    : 'Type below and tap send — it opens WhatsApp with the '
+                        'message ready, and logs it here for your team.',
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: Colors.black54),
+                style: const TextStyle(fontSize: 13, color: Colors.black54),
               ),
             ),
           ),
         ],
       );
 
-  Widget _composer() {
+  Widget _composer({required bool enabled}) {
     return Container(
       color: const Color(0xFFF0F0F0),
       padding: EdgeInsets.fromLTRB(
@@ -211,6 +247,7 @@ class _WhatsAppTabState extends ConsumerState<WhatsAppTab> {
                 ),
                 child: TextField(
                   controller: _input,
+                  enabled: enabled,
                   minLines: 1,
                   maxLines: 5,
                   textCapitalization: TextCapitalization.sentences,
@@ -225,11 +262,11 @@ class _WhatsAppTabState extends ConsumerState<WhatsAppTab> {
             ),
             const SizedBox(width: 6),
             Material(
-              color: _waGreen,
+              color: enabled ? _waGreen : Colors.black26,
               shape: const CircleBorder(),
               child: InkWell(
                 customBorder: const CircleBorder(),
-                onTap: _sending ? null : _send,
+                onTap: _sending || !enabled ? null : _send,
                 child: Padding(
                   padding: const EdgeInsets.all(12),
                   child: _sending
@@ -250,9 +287,11 @@ class _WhatsAppTabState extends ConsumerState<WhatsAppTab> {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble({required this.msg, required this.onDelete});
+  const _Bubble({required this.msg, this.onDelete});
   final WhatsAppMessage msg;
-  final VoidCallback onDelete;
+
+  /// Null for messages actually sent/received through WhatsApp — those stay.
+  final VoidCallback? onDelete;
 
   @override
   Widget build(BuildContext context) {
@@ -293,14 +332,49 @@ class _Bubble extends StatelessWidget {
               const SizedBox(height: 2),
               Align(
                 alignment: Alignment.centerRight,
-                child: Text(_time.format(msg.creation.toLocal()),
-                    style: const TextStyle(
-                        fontSize: 10, color: Colors.black45)),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(_time.format(msg.creation.toLocal()),
+                        style: const TextStyle(
+                            fontSize: 10, color: Colors.black45)),
+                    if (out && !msg.isClickToChat) ...[
+                      const SizedBox(width: 3),
+                      _StatusTick(status: msg.status),
+                    ],
+                  ],
+                ),
               ),
+              if (msg.status == 'Failed' && (msg.error ?? '').isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text('Not delivered: ${msg.error}',
+                      style: TextStyle(fontSize: 11, color: AppColors.error)),
+                ),
             ],
           ),
         ),
       ),
     );
+  }
+}
+
+/// WhatsApp-style delivery ticks: ✓ sent, ✓✓ delivered, blue ✓✓ read.
+class _StatusTick extends StatelessWidget {
+  const _StatusTick({required this.status});
+  final String? status;
+
+  @override
+  Widget build(BuildContext context) {
+    switch (status) {
+      case 'Failed':
+        return Icon(Icons.error_outline, size: 14, color: AppColors.error);
+      case 'Read':
+        return const Icon(Icons.done_all, size: 14, color: Color(0xFF34B7F1));
+      case 'Delivered':
+        return const Icon(Icons.done_all, size: 14, color: Colors.black45);
+      default:
+        return const Icon(Icons.done, size: 14, color: Colors.black45);
+    }
   }
 }

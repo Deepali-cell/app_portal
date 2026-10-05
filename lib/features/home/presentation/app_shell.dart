@@ -84,8 +84,11 @@ String _currentRoute(BuildContext context) =>
 /// Level 1 (no module active): Home + one tile per module that has at
 /// least one visible destination. Level 2 (inside a module): a "Modules"
 /// tile to go back to Home, followed by that module's own destinations.
-List<_NavTile> _buildNavTiles(BuildContext context,
-    List<NavDest> dests, String currentRoute) {
+List<_NavTile> _buildNavTiles(
+  BuildContext context,
+  List<NavDest> dests,
+  String currentRoute,
+) {
   final activeModule = activeModuleFor(dests, currentRoute);
 
   if (activeModule == null) {
@@ -94,15 +97,17 @@ List<_NavTile> _buildNavTiles(BuildContext context,
     final tiles = <_NavTile>[];
     for (final d in dests.where((d) => d.module == null)) {
       final selected = isInBranch(d.route, currentRoute);
-      tiles.add(_NavTile(
-        icon: d.icon,
-        selectedIcon: d.selectedIcon,
-        label: d.label,
-        selected: selected,
-        onTap: () {
-          if (!selected) AppNav.go(context, d.route);
-        },
-      ));
+      tiles.add(
+        _NavTile(
+          icon: d.icon,
+          selectedIcon: d.selectedIcon,
+          label: d.label,
+          selected: selected,
+          onTap: () {
+            if (!selected) AppNav.go(context, d.route);
+          },
+        ),
+      );
     }
     return tiles;
   }
@@ -122,15 +127,17 @@ List<_NavTile> _buildNavTiles(BuildContext context,
   ];
   for (final d in dests.where((d) => d.module == activeModule)) {
     final selected = isInBranch(d.route, currentRoute);
-    tiles.add(_NavTile(
-      icon: d.icon,
-      selectedIcon: d.selectedIcon,
-      label: d.label,
-      selected: selected,
-      onTap: () {
-        if (!selected) AppNav.go(context, d.route);
-      },
-    ));
+    tiles.add(
+      _NavTile(
+        icon: d.icon,
+        selectedIcon: d.selectedIcon,
+        label: d.label,
+        selected: selected,
+        onTap: () {
+          if (!selected) AppNav.go(context, d.route);
+        },
+      ),
+    );
   }
   return tiles;
 }
@@ -164,7 +171,9 @@ class _ScrollableBottomNav extends StatelessWidget {
           end: Alignment.bottomCenter,
           colors: [AppColors.graphiteHigh, AppColors.graphite],
         ),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(AppDimens.radiusXl)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppDimens.radiusXl),
+        ),
         boxShadow: [
           BoxShadow(
             color: AppColors.graphite.withValues(alpha: 0.35),
@@ -182,9 +191,7 @@ class _ScrollableBottomNav extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: AppDimens.sm),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                for (final t in tiles) _BottomNavItem(tile: t),
-              ],
+              children: [for (final t in tiles) _BottomNavItem(tile: t)],
             ),
           ),
         ),
@@ -209,7 +216,9 @@ class _BottomNavItem extends StatelessWidget {
           duration: const Duration(milliseconds: 150),
           curve: Curves.easeOut,
           padding: EdgeInsets.symmetric(
-              horizontal: selected ? 14 : 10, vertical: 4),
+            horizontal: selected ? 14 : 10,
+            vertical: 4,
+          ),
           decoration: BoxDecoration(
             color: selected
                 ? Colors.white.withValues(alpha: 0.16)
@@ -264,7 +273,9 @@ class _SideRail extends StatelessWidget {
       width: AppDimens.sidebarWidth,
       color: AppColors.surface,
       padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.md, vertical: AppDimens.lg),
+        horizontal: AppDimens.md,
+        vertical: AppDimens.lg,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -278,22 +289,25 @@ class _SideRail extends StatelessWidget {
                   borderRadius: BorderRadius.circular(AppDimens.radiusXl),
                 ),
                 alignment: Alignment.center,
-                child: Text('TCB',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: AppColors.onPrimaryContainer)),
+                child: Text(
+                  'TCB',
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: AppColors.onPrimaryContainer,
+                  ),
+                ),
               ),
               const SizedBox(width: AppDimens.sm),
-              Text('TCB Portal',
-                  style: Theme.of(context).textTheme.headlineSmall),
+              Text(
+                'TCB Portal',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
             ],
           ),
           const SizedBox(height: AppDimens.xl),
           Expanded(
             child: ListView(
               padding: EdgeInsets.zero,
-              children: [
-                for (final t in tiles) _SideTile(tile: t),
-              ],
+              children: [for (final t in tiles) _SideTile(tile: t)],
             ),
           ),
         ],
@@ -316,7 +330,9 @@ class _SideTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         child: Container(
           padding: const EdgeInsets.symmetric(
-              horizontal: AppDimens.md, vertical: AppDimens.sm + 4),
+            horizontal: AppDimens.md,
+            vertical: AppDimens.sm + 4,
+          ),
           decoration: BoxDecoration(
             color: selected ? AppColors.secondaryFixed : Colors.transparent,
             borderRadius: BorderRadius.circular(999),
@@ -337,11 +353,11 @@ class _SideTile extends StatelessWidget {
                   softWrap: false,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: selected
-                            ? AppColors.onSecondaryFixed
-                            : AppColors.onSurfaceVariant,
-                        fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
-                      ),
+                    color: selected
+                        ? AppColors.onSecondaryFixed
+                        : AppColors.onSurfaceVariant,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w600,
+                  ),
                 ),
               ),
             ],

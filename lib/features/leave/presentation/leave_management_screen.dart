@@ -13,6 +13,8 @@ import '../../../core/theme/app_dimens.dart';
 import '../../../shared/widgets/date_range_bar.dart';
 import '../application/leave_controller.dart';
 import '../domain/models.dart';
+import '../../home/presentation/nav_destinations.dart';
+import '../../auth/application/auth_controller.dart';
 
 final _dateFmt = DateFormat('d MMM yyyy');
 
@@ -27,8 +29,11 @@ final _dateFmt = DateFormat('d MMM yyyy');
 /// This carries the same approval flow as the old Approval Requests screen
 /// (Leave + Comp-Off), which has been removed in favour of this screen.
 class LeaveManagementScreen extends StatelessWidget {
-  const LeaveManagementScreen(
-      {super.key, this.initialTab = 0, this.initialStatus});
+  const LeaveManagementScreen({
+    super.key,
+    this.initialTab = 0,
+    this.initialStatus,
+  });
 
   /// 0 = Applications, 1 = Requests, 2 = Comp-Off, 3 = WFH.
   final int initialTab;
@@ -49,10 +54,21 @@ class LeaveManagementScreen extends StatelessWidget {
           backgroundColor: AppColors.surfaceContainerLowest,
           title: const Text('Leaves'),
           actions: [
-            IconButton(
-              tooltip: 'Leave policy',
-              icon: Icon(Icons.rule_folder_outlined, color: AppColors.primary),
-              onPressed: () => context.push(Routes.leaveNoticeRules),
+            Consumer(
+              builder: (context, ref, _) =>
+                  screenOn(
+                    ref.watch(authControllerProvider).profile,
+                    'hr.leave_rules',
+                  )
+                  ? IconButton(
+                      tooltip: 'Leave policy',
+                      icon: Icon(
+                        Icons.rule_folder_outlined,
+                        color: AppColors.primary,
+                      ),
+                      onPressed: () => context.push(Routes.leaveNoticeRules),
+                    )
+                  : const SizedBox.shrink(),
             ),
             Consumer(
               builder: (context, ref, _) => IconButton(
@@ -101,18 +117,18 @@ enum _StatusFilter { all, pending, approved, rejected }
 
 extension _StatusFilterX on _StatusFilter {
   String get label => switch (this) {
-        _StatusFilter.all => 'All',
-        _StatusFilter.pending => 'Pending',
-        _StatusFilter.approved => 'Approved',
-        _StatusFilter.rejected => 'Rejected',
-      };
+    _StatusFilter.all => 'All',
+    _StatusFilter.pending => 'Pending',
+    _StatusFilter.approved => 'Approved',
+    _StatusFilter.rejected => 'Rejected',
+  };
 
   bool matches(LeaveStatus s) => switch (this) {
-        _StatusFilter.all => true,
-        _StatusFilter.pending => s == LeaveStatus.open,
-        _StatusFilter.approved => s == LeaveStatus.approved,
-        _StatusFilter.rejected => s == LeaveStatus.rejected,
-      };
+    _StatusFilter.all => true,
+    _StatusFilter.pending => s == LeaveStatus.open,
+    _StatusFilter.approved => s == LeaveStatus.approved,
+    _StatusFilter.rejected => s == LeaveStatus.rejected,
+  };
 }
 
 class _ApplicationsTab extends ConsumerStatefulWidget {
@@ -162,8 +178,12 @@ class _ApplicationsTabState extends ConsumerState<_ApplicationsTab>
       },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(AppDimens.screenPadding, AppDimens.md,
-            AppDimens.screenPadding, AppDimens.xl),
+        padding: const EdgeInsets.fromLTRB(
+          AppDimens.screenPadding,
+          AppDimens.md,
+          AppDimens.screenPadding,
+          AppDimens.xl,
+        ),
         children: [
           DateRangeBar(
             from: _from,
@@ -204,8 +224,7 @@ class _ApplicationsTabState extends ConsumerState<_ApplicationsTab>
               ),
             ),
             data: (all) {
-              final apps =
-                  all.where((a) => _filter.matches(a.status)).toList();
+              final apps = all.where((a) => _filter.matches(a.status)).toList();
               if (apps.isEmpty) {
                 return const _EmptyState(
                   icon: Icons.event_busy_outlined,
@@ -237,8 +256,8 @@ class _ApplicationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final title =
         (app.employeeName != null && app.employeeName!.trim().isNotEmpty)
-            ? app.employeeName!
-            : app.name;
+        ? app.employeeName!
+        : app.name;
     return Card(
       margin: EdgeInsets.zero,
       child: InkWell(
@@ -252,30 +271,37 @@ class _ApplicationCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700)),
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     const SizedBox(height: 2),
-                    Text('${app.leaveType} · ${_range(app.fromDate, app.toDate)}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.onSurfaceVariant)),
+                    Text(
+                      '${app.leaveType} · ${_range(app.fromDate, app.toDate)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                    ),
                     // While pending, spell out which hop it is sitting at
                     // (manager vs HR) so oversight sees more than just "Pending".
                     if (app.status == LeaveStatus.open &&
                         app.stageLabel != null &&
                         app.stageLabel!.trim().isNotEmpty) ...[
                       const SizedBox(height: 2),
-                      Text(app.stageLabel!.trim(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: AppColors.onSurfaceVariant)),
+                      Text(
+                        app.stageLabel!.trim(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
                     ],
                   ],
                 ),
@@ -284,11 +310,12 @@ class _ApplicationCard extends StatelessWidget {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(_days(app.totalLeaveDays),
-                      style: Theme.of(context)
-                          .textTheme
-                          .titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w800)),
+                  Text(
+                    _days(app.totalLeaveDays),
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
                   const SizedBox(height: 4),
                   _LeaveStatusChip(status: app.status),
                 ],
@@ -356,8 +383,12 @@ class _RequestsTabState extends ConsumerState<_RequestsTab>
           }
           return ListView.separated(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(AppDimens.screenPadding,
-                AppDimens.md, AppDimens.screenPadding, AppDimens.xl),
+            padding: const EdgeInsets.fromLTRB(
+              AppDimens.screenPadding,
+              AppDimens.md,
+              AppDimens.screenPadding,
+              AppDimens.xl,
+            ),
             itemCount: items.length,
             separatorBuilder: (_, _) => const SizedBox(height: AppDimens.md),
             itemBuilder: (_, i) => _RequestCard(item: items[i]),
@@ -388,27 +419,31 @@ class _RequestCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Text(item.employeeName,
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w700)),
+                    child: Text(
+                      item.employeeName,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                   _HatBadge(asHr: item.asHr),
                 ],
               ),
               const SizedBox(height: 2),
               Text(
-                  '${item.leaveType} · ${_range(item.fromDate, item.toDate)}'
-                  ' · ${_days(item.totalLeaveDays)}',
-                  style: Theme.of(context).textTheme.bodySmall),
+                '${item.leaveType} · ${_range(item.fromDate, item.toDate)}'
+                ' · ${_days(item.totalLeaveDays)}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
               if (item.stageLabel.trim().isNotEmpty) ...[
                 const SizedBox(height: 2),
-                Text(item.stageLabel,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppColors.onSurfaceVariant)),
+                Text(
+                  item.stageLabel,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
               ],
               const SizedBox(height: AppDimens.sm),
               Align(
@@ -471,8 +506,12 @@ class _CompOffTabState extends ConsumerState<_CompOffTab>
       },
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(AppDimens.screenPadding, AppDimens.md,
-            AppDimens.screenPadding, AppDimens.xl),
+        padding: const EdgeInsets.fromLTRB(
+          AppDimens.screenPadding,
+          AppDimens.md,
+          AppDimens.screenPadding,
+          AppDimens.xl,
+        ),
         children: [
           DateRangeBar(
             from: _from,
@@ -513,8 +552,9 @@ class _CompOffTabState extends ConsumerState<_CompOffTab>
               ),
             ),
             data: (all) {
-              final items =
-                  all.where((r) => _filter.matches(r.status)).toList();
+              final items = all
+                  .where((r) => _filter.matches(r.status))
+                  .toList();
               if (items.isEmpty) {
                 return const _EmptyState(
                   icon: Icons.event_available_outlined,
@@ -544,8 +584,9 @@ class _CompOffCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final title =
-        item.employeeName.trim().isNotEmpty ? item.employeeName : item.name;
+    final title = item.employeeName.trim().isNotEmpty
+        ? item.employeeName
+        : item.name;
     return Card(
       margin: EdgeInsets.zero,
       child: InkWell(
@@ -559,27 +600,34 @@ class _CompOffCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700)),
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                     const SizedBox(height: 2),
-                    Text('Worked · ${_range(item.workFromDate, item.workEndDate)}',
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.onSurfaceVariant)),
+                    Text(
+                      'Worked · ${_range(item.workFromDate, item.workEndDate)}',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                    ),
                     if (item.status == LeaveStatus.open &&
                         item.stageLabel.trim().isNotEmpty) ...[
                       const SizedBox(height: 2),
-                      Text(item.stageLabel.trim(),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: AppColors.onSurfaceVariant)),
+                      Text(
+                        item.stageLabel.trim(),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
                     ],
                   ],
                 ),
@@ -614,8 +662,9 @@ Future<void> _showLeaveDetail(
     isScrollControlled: true,
     backgroundColor: AppColors.surfaceContainerLowest,
     shape: const RoundedRectangleBorder(
-      borderRadius:
-          BorderRadius.vertical(top: Radius.circular(AppDimens.radiusXl)),
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(AppDimens.radiusXl),
+      ),
     ),
     builder: (_) => _LeaveDetailSheet(name: name, approval: approval),
   );
@@ -650,8 +699,9 @@ class _LeaveDetailSheetState extends ConsumerState<_LeaveDetailSheet> {
     setState(() => _opening = true);
     _toast('Opening ${a.fileName}…');
     try {
-      final path =
-          await ref.read(leaveRepositoryProvider).downloadAttachment(a.name);
+      final path = await ref
+          .read(leaveRepositoryProvider)
+          .downloadAttachment(a.name);
       final result = await OpenFilex.open(path);
       if (result.type != ResultType.done) {
         // No viewer available for this type — hand it to the share sheet.
@@ -686,17 +736,17 @@ class _LeaveDetailSheetState extends ConsumerState<_LeaveDetailSheet> {
 
     setState(() => _busy = true);
     try {
-      await ref.read(leaveControllerProvider.notifier).actOnApplication(
-            name: widget.name,
-            action: action,
-            reason: reason,
-          );
+      await ref
+          .read(leaveControllerProvider.notifier)
+          .actOnApplication(name: widget.name, action: action, reason: reason);
       ref.invalidate(allLeaveApplicationsProvider);
       if (!mounted) return;
       Navigator.of(context).pop();
-      _toast(action == 'Approve'
-          ? 'Approved. ${item.asHr ? "The leave is now approved." : "Sent to HR."}'
-          : 'Rejected.');
+      _toast(
+        action == 'Approve'
+            ? 'Approved. ${item.asHr ? "The leave is now approved." : "Sent to HR."}'
+            : 'Rejected.',
+      );
     } on ApiException catch (e) {
       _toast(e.message);
     } catch (_) {
@@ -724,9 +774,11 @@ class _LeaveDetailSheetState extends ConsumerState<_LeaveDetailSheet> {
             child: Row(
               children: [
                 Expanded(
-                  child: Text(e is ApiException
-                      ? e.message
-                      : 'Could not load the application.'),
+                  child: Text(
+                    e is ApiException
+                        ? e.message
+                        : 'Could not load the application.',
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
@@ -753,7 +805,11 @@ class _LeaveDetailSheetState extends ConsumerState<_LeaveDetailSheet> {
         // Header with title, status and close cross.
         Padding(
           padding: const EdgeInsets.fromLTRB(
-              AppDimens.lg, AppDimens.md, AppDimens.sm, 0),
+            AppDimens.lg,
+            AppDimens.md,
+            AppDimens.sm,
+            0,
+          ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -761,12 +817,18 @@ class _LeaveDetailSheetState extends ConsumerState<_LeaveDetailSheet> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(who,
-                        style: theme.textTheme.titleLarge
-                            ?.copyWith(fontWeight: FontWeight.w800)),
-                    Text(d.leaveType,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                            color: AppColors.onSurfaceVariant)),
+                    Text(
+                      who,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      d.leaveType,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -784,21 +846,25 @@ class _LeaveDetailSheetState extends ConsumerState<_LeaveDetailSheet> {
         Flexible(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(
-                AppDimens.lg, 0, AppDimens.lg, AppDimens.lg),
+              AppDimens.lg,
+              0,
+              AppDimens.lg,
+              AppDimens.lg,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 if (d.stageLabel != null && d.stageLabel!.trim().isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(bottom: AppDimens.sm),
-                    child: Text(d.stageLabel!,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                            color: AppColors.onSurfaceVariant)),
+                    child: Text(
+                      d.stageLabel!,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                    ),
                   ),
-                _InfoRow(
-                  label: 'Dates',
-                  value: _range(d.fromDate, d.toDate),
-                ),
+                _InfoRow(label: 'Dates', value: _range(d.fromDate, d.toDate)),
                 _InfoRow(label: 'Days', value: _days(d.totalLeaveDays)),
                 if (d.halfDay)
                   _InfoRow(
@@ -812,14 +878,18 @@ class _LeaveDetailSheetState extends ConsumerState<_LeaveDetailSheet> {
                   _InfoRow(label: 'Approver', value: d.leaveApproverName!),
                 if (d.postingDate != null)
                   _InfoRow(
-                      label: 'Applied on',
-                      value: _dateFmt.format(d.postingDate!)),
-                if (d.description != null && d.description!.trim().isNotEmpty) ...[
+                    label: 'Applied on',
+                    value: _dateFmt.format(d.postingDate!),
+                  ),
+                if (d.description != null &&
+                    d.description!.trim().isNotEmpty) ...[
                   const SizedBox(height: AppDimens.md),
                   Text('Reason', style: theme.textTheme.titleSmall),
                   const SizedBox(height: 4),
-                  Text(d.description!.trim(),
-                      style: theme.textTheme.bodyMedium),
+                  Text(
+                    d.description!.trim(),
+                    style: theme.textTheme.bodyMedium,
+                  ),
                 ],
                 if (d.attachments.isNotEmpty) ...[
                   const Divider(height: AppDimens.xl),
@@ -839,21 +909,174 @@ class _LeaveDetailSheetState extends ConsumerState<_LeaveDetailSheet> {
 }
 
 // ---------------------------------------------------------------------------
-// Comp-off detail sheet. Read-only oversight for any request; approve/reject
-// is offered only while the request is still pending (the server also enforces
-// that only HR/admin may act, and never on their own request).
+// The applicant's own comp-off / WFH requests (My Leave). Same modal as a leave
+// request, read-only: the list row already carries every field to show.
 // ---------------------------------------------------------------------------
-Future<void> _showCompOffDetail(
-  BuildContext context,
-  CompOffApplication item,
-) {
+Future<void> showMyCompOffDetailSheet(BuildContext context, CompOffSummary r) =>
+    _showRequestSheet(
+      context,
+      title: r.leaveType.isEmpty ? 'Compensatory Off' : r.leaveType,
+      subtitle: 'Compensatory Off request',
+      status: r.status,
+      stageLabel: r.stageLabel,
+      rows: [
+        _InfoRow(
+          label: 'Worked on',
+          value: _range(r.workFromDate, r.workEndDate),
+        ),
+        if (r.halfDay) const _InfoRow(label: 'Half day', value: 'Yes'),
+        if (r.postingDate != null)
+          _InfoRow(label: 'Applied on', value: _dateFmt.format(r.postingDate!)),
+        _InfoRow(label: 'Request ID', value: r.name),
+      ],
+      reason: r.reason,
+    );
+
+Future<void> showMyWfhDetailSheet(BuildContext context, WfhSummary r) =>
+    _showRequestSheet(
+      context,
+      title: 'Work From Home',
+      subtitle: 'WFH request',
+      status: r.status,
+      stageLabel: r.stageLabel,
+      rows: [
+        _InfoRow(label: 'Dates', value: _range(r.fromDate, r.toDate)),
+        if (r.halfDay)
+          _InfoRow(
+            label: 'Half day',
+            value: r.halfDayDate != null
+                ? _dateFmt.format(r.halfDayDate!)
+                : 'Yes',
+          ),
+        if (r.postingDate != null)
+          _InfoRow(label: 'Applied on', value: _dateFmt.format(r.postingDate!)),
+        _InfoRow(label: 'Request ID', value: r.name),
+      ],
+      reason: r.explanation,
+    );
+
+Future<void> _showRequestSheet(
+  BuildContext context, {
+  required String title,
+  required String subtitle,
+  required LeaveStatus status,
+  required String stageLabel,
+  required List<Widget> rows,
+  String? reason,
+}) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
     backgroundColor: AppColors.surfaceContainerLowest,
     shape: const RoundedRectangleBorder(
-      borderRadius:
-          BorderRadius.vertical(top: Radius.circular(AppDimens.radiusXl)),
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(AppDimens.radiusXl),
+      ),
+    ),
+    builder: (ctx) {
+      final theme = Theme.of(ctx);
+      return SafeArea(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(ctx).size.height * 0.88,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppDimens.lg,
+                  AppDimens.md,
+                  AppDimens.sm,
+                  0,
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            title,
+                            style: theme.textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          Text(
+                            subtitle,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: AppColors.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: AppDimens.sm),
+                    _LeaveStatusChip(status: status),
+                    IconButton(
+                      tooltip: 'Close',
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.of(ctx).pop(),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: AppDimens.md),
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppDimens.lg,
+                    0,
+                    AppDimens.lg,
+                    AppDimens.lg,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      if (stageLabel.trim().isNotEmpty)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: AppDimens.sm),
+                          child: Text(
+                            stageLabel,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: AppColors.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ...rows,
+                      if (reason != null && reason.trim().isNotEmpty) ...[
+                        const SizedBox(height: AppDimens.md),
+                        Text('Reason', style: theme.textTheme.titleSmall),
+                        const SizedBox(height: 4),
+                        Text(reason.trim(), style: theme.textTheme.bodyMedium),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Comp-off detail sheet. Read-only oversight for any request; approve/reject
+// is offered only while the request is still pending (the server also enforces
+// that only HR/admin may act, and never on their own request).
+// ---------------------------------------------------------------------------
+Future<void> _showCompOffDetail(BuildContext context, CompOffApplication item) {
+  return showModalBottomSheet<void>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: AppColors.surfaceContainerLowest,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(AppDimens.radiusXl),
+      ),
     ),
     builder: (_) => _CompOffDetailSheet(item: item),
   );
@@ -893,11 +1116,9 @@ class _CompOffDetailSheetState extends ConsumerState<_CompOffDetailSheet> {
 
     setState(() => _busy = true);
     try {
-      await ref.read(leaveControllerProvider.notifier).actOnCompOff(
-            name: item.name,
-            action: action,
-            reason: reason,
-          );
+      await ref
+          .read(leaveControllerProvider.notifier)
+          .actOnCompOff(name: item.name, action: action, reason: reason);
       ref.invalidate(allCompOffProvider);
       if (!mounted) return;
       Navigator.of(context).pop();
@@ -928,7 +1149,11 @@ class _CompOffDetailSheetState extends ConsumerState<_CompOffDetailSheet> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(
-                  AppDimens.lg, AppDimens.md, AppDimens.sm, 0),
+                AppDimens.lg,
+                AppDimens.md,
+                AppDimens.sm,
+                0,
+              ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -936,12 +1161,18 @@ class _CompOffDetailSheetState extends ConsumerState<_CompOffDetailSheet> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(item.employeeName,
-                            style: theme.textTheme.titleLarge
-                                ?.copyWith(fontWeight: FontWeight.w800)),
-                        Text(item.leaveType.isEmpty ? 'Comp-Off' : item.leaveType,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                                color: AppColors.onSurfaceVariant)),
+                        Text(
+                          item.employeeName,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        Text(
+                          item.leaveType.isEmpty ? 'Comp-Off' : item.leaveType,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -959,16 +1190,23 @@ class _CompOffDetailSheetState extends ConsumerState<_CompOffDetailSheet> {
             Flexible(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(
-                    AppDimens.lg, 0, AppDimens.lg, AppDimens.lg),
+                  AppDimens.lg,
+                  0,
+                  AppDimens.lg,
+                  AppDimens.lg,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     if (item.stageLabel.trim().isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(bottom: AppDimens.sm),
-                        child: Text(item.stageLabel,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                                color: AppColors.onSurfaceVariant)),
+                        child: Text(
+                          item.stageLabel,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                        ),
                       ),
                     _InfoRow(
                       label: 'Worked on',
@@ -981,8 +1219,10 @@ class _CompOffDetailSheetState extends ConsumerState<_CompOffDetailSheet> {
                       const SizedBox(height: AppDimens.md),
                       Text('Reason', style: theme.textTheme.titleSmall),
                       const SizedBox(height: 4),
-                      Text(item.reason!.trim(),
-                          style: theme.textTheme.bodyMedium),
+                      Text(
+                        item.reason!.trim(),
+                        style: theme.textTheme.bodyMedium,
+                      ),
                     ],
                   ],
                 ),
@@ -1049,8 +1289,12 @@ class _WfhTabState extends ConsumerState<_WfhTab>
           }
           return ListView.separated(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(AppDimens.screenPadding,
-                AppDimens.md, AppDimens.screenPadding, AppDimens.xl),
+            padding: const EdgeInsets.fromLTRB(
+              AppDimens.screenPadding,
+              AppDimens.md,
+              AppDimens.screenPadding,
+              AppDimens.xl,
+            ),
             itemCount: items.length,
             separatorBuilder: (_, _) => const SizedBox(height: AppDimens.md),
             itemBuilder: (_, i) => _WfhCard(item: items[i]),
@@ -1081,25 +1325,30 @@ class _WfhCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(
-                    child: Text(item.employeeName,
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w700)),
+                    child: Text(
+                      item.employeeName,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: AppColors.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                   _HatBadge(asHr: item.asHr),
                 ],
               ),
               const SizedBox(height: 2),
-              Text('WFH · ${_range(item.fromDate, item.toDate)}',
-                  style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                'WFH · ${_range(item.fromDate, item.toDate)}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
               if (item.stageLabel.trim().isNotEmpty) ...[
                 const SizedBox(height: 2),
-                Text(item.stageLabel,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppColors.onSurfaceVariant)),
+                Text(
+                  item.stageLabel,
+                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
               ],
               const SizedBox(height: AppDimens.sm),
               Align(
@@ -1124,8 +1373,9 @@ Future<void> _showWfhDetail(BuildContext context, PendingWfhApproval item) {
     isScrollControlled: true,
     backgroundColor: AppColors.surfaceContainerLowest,
     shape: const RoundedRectangleBorder(
-      borderRadius:
-          BorderRadius.vertical(top: Radius.circular(AppDimens.radiusXl)),
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(AppDimens.radiusXl),
+      ),
     ),
     builder: (_) => _WfhDetailSheet(item: item),
   );
@@ -1163,16 +1413,16 @@ class _WfhDetailSheetState extends ConsumerState<_WfhDetailSheet> {
 
     setState(() => _busy = true);
     try {
-      await ref.read(leaveControllerProvider.notifier).actOnWfh(
-            name: item.name,
-            action: action,
-            reason: reason,
-          );
+      await ref
+          .read(leaveControllerProvider.notifier)
+          .actOnWfh(name: item.name, action: action, reason: reason);
       if (!mounted) return;
       Navigator.of(context).pop();
-      _toast(action == 'Approve'
-          ? 'Approved. ${item.asHr ? "WFH marked." : "Sent to HR."}'
-          : 'Rejected.');
+      _toast(
+        action == 'Approve'
+            ? 'Approved. ${item.asHr ? "WFH marked." : "Sent to HR."}'
+            : 'Rejected.',
+      );
     } on ApiException catch (e) {
       _toast(e.message);
     } catch (_) {
@@ -1196,7 +1446,11 @@ class _WfhDetailSheetState extends ConsumerState<_WfhDetailSheet> {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(
-                  AppDimens.lg, AppDimens.md, AppDimens.sm, 0),
+                AppDimens.lg,
+                AppDimens.md,
+                AppDimens.sm,
+                0,
+              ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1204,12 +1458,18 @@ class _WfhDetailSheetState extends ConsumerState<_WfhDetailSheet> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(item.employeeName,
-                            style: theme.textTheme.titleLarge
-                                ?.copyWith(fontWeight: FontWeight.w800)),
-                        Text('Work From Home',
-                            style: theme.textTheme.bodySmall?.copyWith(
-                                color: AppColors.onSurfaceVariant)),
+                        Text(
+                          item.employeeName,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        Text(
+                          'Work From Home',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -1227,16 +1487,23 @@ class _WfhDetailSheetState extends ConsumerState<_WfhDetailSheet> {
             Flexible(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(
-                    AppDimens.lg, 0, AppDimens.lg, AppDimens.lg),
+                  AppDimens.lg,
+                  0,
+                  AppDimens.lg,
+                  AppDimens.lg,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     if (item.stageLabel.trim().isNotEmpty)
                       Padding(
                         padding: const EdgeInsets.only(bottom: AppDimens.sm),
-                        child: Text(item.stageLabel,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                                color: AppColors.onSurfaceVariant)),
+                        child: Text(
+                          item.stageLabel,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: AppColors.onSurfaceVariant,
+                          ),
+                        ),
                       ),
                     _InfoRow(
                       label: 'Dates',
@@ -1249,8 +1516,10 @@ class _WfhDetailSheetState extends ConsumerState<_WfhDetailSheet> {
                       const SizedBox(height: AppDimens.md),
                       Text('Reason', style: theme.textTheme.titleSmall),
                       const SizedBox(height: 4),
-                      Text(item.explanation!.trim(),
-                          style: theme.textTheme.bodyMedium),
+                      Text(
+                        item.explanation!.trim(),
+                        style: theme.textTheme.bodyMedium,
+                      ),
                     ],
                   ],
                 ),
@@ -1276,7 +1545,11 @@ class _ActionBar extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-          AppDimens.lg, 0, AppDimens.lg, AppDimens.md),
+        AppDimens.lg,
+        0,
+        AppDimens.lg,
+        AppDimens.md,
+      ),
       child: Row(
         children: [
           Expanded(
@@ -1302,7 +1575,10 @@ class _ActionBar extends StatelessWidget {
                       width: 16,
                       height: 16,
                       child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white))
+                        strokeWidth: 2,
+                        color: Colors.white,
+                      ),
+                    )
                   : const Icon(Icons.check, size: 18),
               label: const Text('Approve'),
               style: FilledButton.styleFrom(
@@ -1333,11 +1609,14 @@ class _HatBadge extends StatelessWidget {
         color: AppColors.secondaryFixed,
         borderRadius: BorderRadius.circular(AppDimens.radiusSm),
       ),
-      child: Text(asHr ? 'As HR' : 'Your team',
-          style: TextStyle(
-              color: AppColors.onSecondaryFixedVariant,
-              fontWeight: FontWeight.w700,
-              fontSize: 10)),
+      child: Text(
+        asHr ? 'As HR' : 'Your team',
+        style: TextStyle(
+          color: AppColors.onSecondaryFixedVariant,
+          fontWeight: FontWeight.w700,
+          fontSize: 10,
+        ),
+      ),
     );
   }
 }
@@ -1356,16 +1635,20 @@ class _InfoRow extends StatelessWidget {
         children: [
           SizedBox(
             width: 96,
-            child: Text(label,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.onSurfaceVariant)),
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: AppColors.onSurfaceVariant,
+              ),
+            ),
           ),
           Expanded(
-            child: Text(value,
-                style: Theme.of(context)
-                    .textTheme
-                    .bodyMedium
-                    ?.copyWith(fontWeight: FontWeight.w600)),
+            child: Text(
+              value,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w600),
+            ),
           ),
         ],
       ),
@@ -1415,8 +1698,11 @@ class _AttachmentRow extends StatelessWidget {
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                 ),
-                Icon(Icons.open_in_new,
-                    size: 18, color: AppColors.onSurfaceVariant),
+                Icon(
+                  Icons.open_in_new,
+                  size: 18,
+                  color: AppColors.onSurfaceVariant,
+                ),
               ],
             ),
           ),
@@ -1444,9 +1730,14 @@ class _LeaveStatusChip extends StatelessWidget {
         color: color.withValues(alpha: 0.12),
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(label,
-          style: TextStyle(
-              color: color, fontWeight: FontWeight.w800, fontSize: 11)),
+      child: Text(
+        label,
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w800,
+          fontSize: 11,
+        ),
+      ),
     );
   }
 }
@@ -1464,9 +1755,11 @@ class _EmptyState extends StatelessWidget {
         children: [
           Icon(icon, size: 40, color: AppColors.onSurfaceVariant),
           const SizedBox(height: AppDimens.md),
-          Text(text,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium),
+          Text(
+            text,
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
         ],
       ),
     );
@@ -1484,11 +1777,13 @@ Future<bool> _confirmApprove(BuildContext context, String message) async {
       content: Text(message),
       actions: [
         TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel')),
+          onPressed: () => Navigator.pop(ctx, false),
+          child: const Text('Cancel'),
+        ),
         FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Approve')),
+          onPressed: () => Navigator.pop(ctx, true),
+          child: const Text('Approve'),
+        ),
       ],
     ),
   );
@@ -1508,8 +1803,10 @@ Future<String?> _askReason(BuildContext context, String who) {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('$who will see this reason.',
-                style: Theme.of(ctx).textTheme.bodySmall),
+            Text(
+              '$who will see this reason.',
+              style: Theme.of(ctx).textTheme.bodySmall,
+            ),
             const SizedBox(height: AppDimens.md),
             TextField(
               controller: ctrl,
@@ -1526,8 +1823,9 @@ Future<String?> _askReason(BuildContext context, String who) {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Cancel'),
+          ),
           TextButton(
             onPressed: () {
               final v = ctrl.text.trim();

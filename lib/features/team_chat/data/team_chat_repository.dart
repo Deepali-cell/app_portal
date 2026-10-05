@@ -1,5 +1,3 @@
-import 'dart:convert';
-
 import 'package:dio/dio.dart';
 
 import '../../../core/network/api_exception.dart';
@@ -48,17 +46,6 @@ class TeamChatRepository {
     try {
       final resp =
           await _dio.post(ApiPaths.chatStartDirect, data: {'other_user': user});
-      return (resp.data['message']['name'] ?? '').toString();
-    } on DioException catch (e) {
-      throw ApiException.fromDio(e);
-    }
-  }
-
-  /// Create a group channel; returns the channel id.
-  Future<String> createGroup(String title, List<String> members) async {
-    try {
-      final resp = await _dio.post(ApiPaths.chatCreateGroup,
-          data: {'title': title, 'members': jsonEncode(members)});
       return (resp.data['message']['name'] ?? '').toString();
     } on DioException catch (e) {
       throw ApiException.fromDio(e);

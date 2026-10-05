@@ -49,8 +49,9 @@ class NavHistoryNotifier extends Notifier<List<String>> {
   void clear() => state = const [];
 }
 
-final navHistoryProvider =
-    NotifierProvider<NavHistoryNotifier, List<String>>(NavHistoryNotifier.new);
+final navHistoryProvider = NotifierProvider<NavHistoryNotifier, List<String>>(
+  NavHistoryNotifier.new,
+);
 
 /// Navigation helpers that keep [navHistoryProvider] in sync so back always
 /// lands on the previous screen, portal-wide.
@@ -73,9 +74,10 @@ class AppNav {
     final goRouter = GoRouter.of(context);
     final current = GoRouterState.of(context).matchedLocation;
     if (current != route) {
-      ProviderScope.containerOf(context, listen: false)
-          .read(navHistoryProvider.notifier)
-          .push(current);
+      ProviderScope.containerOf(
+        context,
+        listen: false,
+      ).read(navHistoryProvider.notifier).push(current);
     }
     final root = rootNavigatorKey.currentState;
     while (root != null && root.canPop()) {
@@ -95,9 +97,10 @@ class AppNav {
       goRouter.pop();
       return;
     }
-    final prev = ProviderScope.containerOf(context, listen: false)
-        .read(navHistoryProvider.notifier)
-        .pop();
+    final prev = ProviderScope.containerOf(
+      context,
+      listen: false,
+    ).read(navHistoryProvider.notifier).pop();
     if (prev != null) {
       goRouter.go(prev);
       return;
@@ -114,9 +117,10 @@ class AppNav {
   /// False only when we are at Home with no pushed page and no history.
   static bool canGoBack(BuildContext context) {
     if (GoRouter.of(context).canPop()) return true;
-    if (ProviderScope.containerOf(context, listen: false)
-        .read(navHistoryProvider)
-        .isNotEmpty) {
+    if (ProviderScope.containerOf(
+      context,
+      listen: false,
+    ).read(navHistoryProvider).isNotEmpty) {
       return true;
     }
     return GoRouterState.of(context).matchedLocation != Routes.home;

@@ -23,6 +23,7 @@ import '../../features/invoices/presentation/invoice_detail_screen.dart';
 import '../../features/invoices/presentation/invoices_screen.dart';
 import '../../features/home/presentation/app_shell.dart';
 import '../../features/home/presentation/home_screen.dart';
+import '../../features/home/presentation/nav_destinations.dart';
 import '../../features/leads/presentation/lead_detail_screen.dart';
 import '../../features/leads/presentation/leads_screen.dart';
 import '../../features/leave/presentation/leave_detail_screen.dart';
@@ -184,7 +185,7 @@ class Routes {
   static const leadKanban = '/lead-kanban';
   static const salesWorkspace = '/sales-workspace';
   // Live location tracking (Phase LOC.1)
-  static const locationTeam = '/location/team';        // list view (landing)
+  static const locationTeam = '/location/team'; // list view (landing)
   static const locationTeamMap = '/location/team/map'; // map of all pins
   static const locationPerson = '/location/person/:employee';
 
@@ -218,7 +219,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           final mustUnlock = AppConfig.biometricLockEnabled && !unlocked;
           if (mustUnlock) return loc == Routes.unlock ? null : Routes.unlock;
           const transient = {Routes.splash, Routes.login, Routes.unlock};
-          return transient.contains(loc) ? Routes.home : null;
+          if (transient.contains(loc)) return Routes.home;
+          // Module / screen layers: a screen the company has switched off
+          // (or not licensed) never opens, even from a deep link or push.
+          if (isRouteBlocked(auth.profile, loc)) return Routes.home;
+          return null;
       }
     },
     routes: [
@@ -229,220 +234,333 @@ final routerProvider = Provider<GoRouter>((ref) {
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(shell: shell),
         branches: [
-          StatefulShellBranch(routes: [
-            GoRoute(path: Routes.home, builder: (_, _) => const HomeScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: Routes.time, builder: (_, _) => const AttendanceScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
-              path: Routes.allAttendance,
-              builder: (_, _) => const AttendanceRosterScreen(
-                title: 'All Attendance',
-                canManage: false,
+          StatefulShellBranch(
+            routes: [
+              GoRoute(path: Routes.home, builder: (_, _) => const HomeScreen()),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.time,
+                builder: (_, _) => const AttendanceScreen(),
               ),
-            ),
-            GoRoute(
-              path: Routes.onLeave,
-              builder: (_, _) => const OnLeaveScreen(),
-            ),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
-              path: Routes.hrAttendance,
-              builder: (_, _) => const AttendanceRosterScreen(
-                title: 'Attendance Management',
-                canManage: true,
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.allAttendance,
+                builder: (_, _) => const AttendanceRosterScreen(
+                  title: 'All Attendance',
+                  canManage: false,
+                ),
               ),
-            ),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
-              path: Routes.pendingAttendance,
-              builder: (_, _) => const PendingAttendanceScreen(),
-            ),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: Routes.leave, builder: (_, _) => const LeaveScreen()),
-            GoRoute(
-              path: Routes.leaveDetail,
-              builder: (_, state) =>
-                  LeaveDetailScreen(name: state.extra! as String),
-            ),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
-              path: Routes.leaveManagement,
-              // `?tab=` deep-links to a section: 0 Applications, 1 Requests,
-              // 2 Comp-Off, 3 WFH. `?status=` pre-sets the Applications filter
-              // (e.g. pending) for the dashboard "Pending Leaves" card.
-              builder: (_, state) => LeaveManagementScreen(
-                initialTab:
-                    int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0,
-                initialStatus: state.uri.queryParameters['status'],
+              GoRoute(
+                path: Routes.onLeave,
+                builder: (_, _) => const OnLeaveScreen(),
               ),
-            ),
-            GoRoute(
-              path: Routes.leaveNoticeRules,
-              builder: (_, _) => const LeavePolicyScreen(),
-            ),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: Routes.payroll, builder: (_, _) => const PayslipsScreen()),
-            GoRoute(
-              path: Routes.payslipDetail,
-              builder: (_, state) =>
-                  PayslipDetailScreen(name: state.extra! as String),
-            ),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
-              path: Routes.allPayslips,
-              builder: (_, _) => const AllPayslipsScreen(),
-            ),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: Routes.tasks, builder: (_, _) => const TasksScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: Routes.timesheet, builder: (_, _) => const TimesheetScreen()),
-            GoRoute(
-              path: Routes.timesheetDetail,
-              builder: (_, state) =>
-                  TimesheetDetailScreen(name: state.extra! as String),
-            ),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
-              path: Routes.allTimesheets,
-              builder: (_, _) => const AllTimesheetsScreen(),
-            ),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: Routes.expenses, builder: (_, _) => const ExpensesScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
-              path: Routes.expenseClaims,
-              // `?tab=` deep-links to a section: 0 Claims, 1 Requests.
-              // `?filter=` pre-selects the Claims status chip, e.g. 'pending'.
-              builder: (_, state) => ExpenseClaimsScreen(
-                initialTab:
-                    int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0,
-                initialFilter: state.uri.queryParameters['filter'],
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.hrAttendance,
+                builder: (_, _) => const AttendanceRosterScreen(
+                  title: 'Attendance Management',
+                  canManage: true,
+                ),
               ),
-            ),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.pendingAttendance,
+                builder: (_, _) => const PendingAttendanceScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.leave,
+                builder: (_, _) => const LeaveScreen(),
+              ),
+              GoRoute(
+                path: Routes.leaveDetail,
+                builder: (_, state) =>
+                    LeaveDetailScreen(name: state.extra! as String),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.leaveManagement,
+                // `?tab=` deep-links to a section: 0 Applications, 1 Requests,
+                // 2 Comp-Off, 3 WFH. `?status=` pre-sets the Applications filter
+                // (e.g. pending) for the dashboard "Pending Leaves" card.
+                builder: (_, state) => LeaveManagementScreen(
+                  initialTab:
+                      int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0,
+                  initialStatus: state.uri.queryParameters['status'],
+                ),
+              ),
+              GoRoute(
+                path: Routes.leaveNoticeRules,
+                builder: (_, _) => const LeavePolicyScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.payroll,
+                builder: (_, _) => const PayslipsScreen(),
+              ),
+              GoRoute(
+                path: Routes.payslipDetail,
+                builder: (_, state) =>
+                    PayslipDetailScreen(name: state.extra! as String),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.allPayslips,
+                builder: (_, _) => const AllPayslipsScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.tasks,
+                builder: (_, _) => const TasksScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.timesheet,
+                builder: (_, _) => const TimesheetScreen(),
+              ),
+              GoRoute(
+                path: Routes.timesheetDetail,
+                builder: (_, state) =>
+                    TimesheetDetailScreen(name: state.extra! as String),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.allTimesheets,
+                builder: (_, _) => const AllTimesheetsScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.expenses,
+                builder: (_, _) => const ExpensesScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.expenseClaims,
+                // `?tab=` deep-links to a section: 0 Claims, 1 Requests.
+                // `?filter=` pre-selects the Claims status chip, e.g. 'pending'.
+                builder: (_, state) => ExpenseClaimsScreen(
+                  initialTab:
+                      int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0,
+                  initialFilter: state.uri.queryParameters['filter'],
+                ),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: Routes.crmDashboard,
-                builder: (_, _) => const CrmDashboardScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
+                builder: (_, _) => const CrmDashboardScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: Routes.salesDashboard,
-                builder: (_, _) => const SalesDashboardScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: Routes.leads, builder: (_, _) => const LeadsScreen()),
-            GoRoute(
-              path: Routes.leadDetail,
-              builder: (_, state) =>
-                  LeadDetailScreen(name: state.extra! as String),
-            ),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: Routes.deals, builder: (_, _) => const DealsScreen()),
-            GoRoute(
-              path: Routes.dealDetail,
-              builder: (_, state) =>
-                  DealDetailScreen(name: state.extra! as String),
-            ),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
+                builder: (_, _) => const SalesDashboardScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.leads,
+                builder: (_, _) => const LeadsScreen(),
+              ),
+              GoRoute(
+                path: Routes.leadDetail,
+                builder: (_, state) =>
+                    LeadDetailScreen(name: state.extra! as String),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.deals,
+                builder: (_, _) => const DealsScreen(),
+              ),
+              GoRoute(
+                path: Routes.dealDetail,
+                builder: (_, state) =>
+                    DealDetailScreen(name: state.extra! as String),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: Routes.directory,
-                builder: (_, _) => const DirectoryScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
+                builder: (_, _) => const DirectoryScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: Routes.invoices,
-                builder: (_, _) => const InvoicesScreen()),
-          ]),
+                builder: (_, _) => const InvoicesScreen(),
+              ),
+            ],
+          ),
           // Sales-scoped billing: sales invoices and customer receipts are
           // separate screens (own routes / bottom-nav tabs), not tabs in one.
-          StatefulShellBranch(routes: [
-            GoRoute(
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: Routes.salesInvoices,
                 builder: (_, _) => const InvoicesScreen(
-                    scope: InvoiceScope.sales, pane: InvoicePane.invoices)),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
+                  scope: InvoiceScope.sales,
+                  pane: InvoicePane.invoices,
+                ),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: Routes.salesPayments,
                 builder: (_, _) => const InvoicesScreen(
-                    scope: InvoiceScope.sales, pane: InvoicePane.payments)),
-          ]),
+                  scope: InvoiceScope.sales,
+                  pane: InvoicePane.payments,
+                ),
+              ),
+            ],
+          ),
           // Purchase-scoped billing: purchase invoices and supplier payments,
           // likewise as two separate screens.
-          StatefulShellBranch(routes: [
-            GoRoute(
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: Routes.purchaseInvoices,
                 builder: (_, _) => const InvoicesScreen(
-                    scope: InvoiceScope.purchase, pane: InvoicePane.invoices)),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
+                  scope: InvoiceScope.purchase,
+                  pane: InvoicePane.invoices,
+                ),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: Routes.purchasePayments,
                 builder: (_, _) => const InvoicesScreen(
-                    scope: InvoiceScope.purchase, pane: InvoicePane.payments)),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
+                  scope: InvoiceScope.purchase,
+                  pane: InvoicePane.payments,
+                ),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: Routes.purchaseDashboard,
-                builder: (_, _) => const PurchaseDashboardScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
+                builder: (_, _) => const PurchaseDashboardScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: Routes.financeDashboard,
-                builder: (_, _) => const FinanceDashboardScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
+                builder: (_, _) => const FinanceDashboardScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: Routes.projectsDashboard,
-                builder: (_, _) => const ProjectsDashboardScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
+                builder: (_, _) => const ProjectsDashboardScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: Routes.hrDashboard,
-                builder: (_, _) => const HrDashboardScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: Routes.stock, builder: (_, _) => const ItemsScreen()),
-            GoRoute(
-              path: Routes.stockItemDetail,
-              builder: (_, state) =>
-                  ItemDetailScreen(name: state.extra! as String),
-            ),
-            GoRoute(
-              path: Routes.stockItemCreate,
-              builder: (_, _) => const ItemCreateScreen(),
-            ),
-            GoRoute(
-              path: Routes.stockItemEdit,
-              builder: (_, state) =>
-                  ItemEditScreen(item: state.extra! as ItemDetail),
-            ),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: Routes.admin, builder: (_, _) => const AdminScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
+                builder: (_, _) => const HrDashboardScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.stock,
+                builder: (_, _) => const ItemsScreen(),
+              ),
+              GoRoute(
+                path: Routes.stockItemDetail,
+                builder: (_, state) =>
+                    ItemDetailScreen(name: state.extra! as String),
+              ),
+              GoRoute(
+                path: Routes.stockItemCreate,
+                builder: (_, _) => const ItemCreateScreen(),
+              ),
+              GoRoute(
+                path: Routes.stockItemEdit,
+                builder: (_, state) =>
+                    ItemEditScreen(item: state.extra! as ItemDetail),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.admin,
+                builder: (_, _) => const AdminScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
                 path: Routes.mfgDashboard,
-                builder: (_, _) => const ManufacturingDashboardScreen()),
-          ]),
+                builder: (_, _) => const ManufacturingDashboardScreen(),
+              ),
+            ],
+          ),
           _recordBranch(Routes.mfgBom, 'mfg_bom'),
           _recordBranch(Routes.mfgWorkOrder, 'mfg_work_order'),
           _recordBranch(Routes.mfgJobCard, 'mfg_job_card'),
@@ -454,7 +572,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           _recordBranch(Routes.hrHolidayLists, 'hr_holiday_list'),
           _recordBranch(Routes.hrLeavePolicies, 'hr_leave_policy'),
           _recordBranch(
-              Routes.hrLeavePolicyAssignments, 'hr_leave_policy_assignment'),
+            Routes.hrLeavePolicyAssignments,
+            'hr_leave_policy_assignment',
+          ),
           _recordBranch(Routes.hrLeaveAllocations, 'hr_leave_allocation'),
           _recordBranch(Routes.hrHolidayAssignments, 'hr_holiday_assignment'),
           _recordBranch(Routes.projectsProject, 'projects_project'),
@@ -464,17 +584,35 @@ final routerProvider = Provider<GoRouter>((ref) {
           _recordBranch(Routes.purchaseSupplier, 'purchase_supplier'),
           _recordBranch(Routes.purchaseRfq, 'purchase_rfq'),
           _recordBranch(
-              Routes.purchaseSupplierQuotation, 'purchase_supplier_quotation'),
+            Routes.purchaseSupplierQuotation,
+            'purchase_supplier_quotation',
+          ),
           _recordBranch(Routes.purchaseOrder, 'purchase_order'),
           _recordBranch(Routes.purchaseReceipt, 'purchase_receipt'),
           _recordBranch(Routes.salesCustomer, 'sales_customer'),
           _recordBranch(Routes.salesQuotation, 'sales_quotation'),
           _recordBranch(Routes.salesOrder, 'sales_order'),
           _recordBranch(Routes.salesDelivery, 'sales_delivery'),
-          _reportsBranch(Routes.accountsReports, 'Accounts', 'Accounts Reports'),
+          _reportsBranch(
+            Routes.accountsReports,
+            'Accounts',
+            'Accounts Reports',
+          ),
           _reportsBranch(Routes.salesReports, 'Sales', 'Sales Reports'),
-          _reportsBranch(Routes.purchaseReports, 'Purchase', 'Purchase Reports'),
+          _reportsBranch(
+            Routes.purchaseReports,
+            'Purchase',
+            'Purchase Reports',
+          ),
           _reportsBranch(Routes.stockReports, 'Stock', 'Stock Reports'),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.recordings,
+                builder: (_, _) => const RecordingsScreen(),
+              ),
+            ],
+          ),
         ],
       ),
       GoRoute(
@@ -498,77 +636,88 @@ final routerProvider = Provider<GoRouter>((ref) {
         },
       ),
       GoRoute(
-          path: Routes.profile,
-          parentNavigatorKey: rootNavigatorKey,
-          builder: (_, _) => const ProfileScreen()),
+        path: Routes.profile,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, _) => const ProfileScreen(),
+      ),
       GoRoute(
-          path: Routes.emailSettings,
-          parentNavigatorKey: rootNavigatorKey,
-          builder: (_, _) => const EmailSettingsScreen()),
+        path: Routes.emailSettings,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, _) => const EmailSettingsScreen(),
+      ),
       GoRoute(
-          path: Routes.leaveApprovals,
-          parentNavigatorKey: rootNavigatorKey,
-          builder: (_, _) => const LeaveApprovalsScreen()),
+        path: Routes.leaveApprovals,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, _) => const LeaveApprovalsScreen(),
+      ),
       GoRoute(
-          path: Routes.notifications,
-          parentNavigatorKey: rootNavigatorKey,
-          builder: (_, _) => const NotificationsScreen()),
+        path: Routes.notifications,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, _) => const NotificationsScreen(),
+      ),
       GoRoute(
-          path: Routes.missedActivities,
-          parentNavigatorKey: rootNavigatorKey,
-          builder: (_, _) => const MissedActivitiesScreen()),
+        path: Routes.missedActivities,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, _) => const MissedActivitiesScreen(),
+      ),
       GoRoute(
-          path: Routes.leaderboard,
-          parentNavigatorKey: rootNavigatorKey,
-          builder: (_, _) => const LeaderboardScreen()),
+        path: Routes.leaderboard,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, _) => const LeaderboardScreen(),
+      ),
       GoRoute(
-          path: Routes.pipeline,
-          parentNavigatorKey: rootNavigatorKey,
-          builder: (_, _) => const PerformanceScreen()),
+        path: Routes.pipeline,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, _) => const PerformanceScreen(),
+      ),
       GoRoute(
-          path: Routes.teamChat,
-          parentNavigatorKey: rootNavigatorKey,
-          builder: (_, _) => const TeamChatScreen()),
+        path: Routes.teamChat,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, _) => const TeamChatScreen(),
+      ),
       GoRoute(
-          path: Routes.chatThread,
-          parentNavigatorKey: rootNavigatorKey,
-          builder: (_, state) =>
-              ChatThreadScreen(channel: state.extra! as ChatChannel)),
+        path: Routes.chatThread,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, state) =>
+            ChatThreadScreen(channel: state.extra! as ChatChannel),
+      ),
       GoRoute(
-          path: Routes.teamStatus,
-          parentNavigatorKey: rootNavigatorKey,
-          builder: (_, _) => const TeamStatusScreen()),
+        path: Routes.teamStatus,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, _) => const TeamStatusScreen(),
+      ),
       GoRoute(
-          path: Routes.callDetection,
-          parentNavigatorKey: rootNavigatorKey,
-          builder: (_, _) => const CallDetectionScreen()),
+        path: Routes.callDetection,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, _) => const CallDetectionScreen(),
+      ),
       GoRoute(
-          path: Routes.recordings,
-          parentNavigatorKey: rootNavigatorKey,
-          builder: (_, _) => const RecordingsScreen()),
+        path: Routes.leadKanban,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, _) => const LeadKanbanScreen(),
+      ),
       GoRoute(
-          path: Routes.leadKanban,
-          parentNavigatorKey: rootNavigatorKey,
-          builder: (_, _) => const LeadKanbanScreen()),
+        path: Routes.salesWorkspace,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, _) => const SalesWorkspaceScreen(),
+      ),
       GoRoute(
-          path: Routes.salesWorkspace,
-          parentNavigatorKey: rootNavigatorKey,
-          builder: (_, _) => const SalesWorkspaceScreen()),
+        path: Routes.locationTeam,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, _) => const TeamLiveListScreen(),
+      ),
       GoRoute(
-          path: Routes.locationTeam,
-          parentNavigatorKey: rootNavigatorKey,
-          builder: (_, _) => const TeamLiveListScreen()),
+        path: Routes.locationTeamMap,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (_, _) => const TeamLiveMapScreen(),
+      ),
       GoRoute(
-          path: Routes.locationTeamMap,
-          parentNavigatorKey: rootNavigatorKey,
-          builder: (_, _) => const TeamLiveMapScreen()),
-      GoRoute(
-          path: Routes.locationPerson,
-          parentNavigatorKey: rootNavigatorKey,
-          builder: (context, state) => PersonLocationScreen(
-                employee: Uri.decodeComponent(
-                    state.pathParameters['employee'] ?? ''),
-              )),
+        path: Routes.locationPerson,
+        parentNavigatorKey: rootNavigatorKey,
+        builder: (context, state) => PersonLocationScreen(
+          employee: Uri.decodeComponent(state.pathParameters['employee'] ?? ''),
+        ),
+      ),
     ],
   );
 
@@ -593,24 +742,28 @@ final routerProvider = Provider<GoRouter>((ref) {
 /// registered under [key]. Keeps the router terse as modules grow.
 StatefulShellBranch _recordBranch(String path, String key) {
   final descriptor = recordRegistry[key]!;
-  return StatefulShellBranch(routes: [
-    GoRoute(
-      path: path,
-      builder: (_, _) => RecordListScreen(descriptor: descriptor),
-    ),
-  ]);
+  return StatefulShellBranch(
+    routes: [
+      GoRoute(
+        path: path,
+        builder: (_, _) => RecordListScreen(descriptor: descriptor),
+      ),
+    ],
+  );
 }
 
 /// A shell branch that hosts the [ReportsHubScreen] for one backend module
 /// (Accounts/Sales/Purchase/Stock). The hub lists only the reports the user is
 /// permitted to run.
 StatefulShellBranch _reportsBranch(String path, String module, String title) {
-  return StatefulShellBranch(routes: [
-    GoRoute(
-      path: path,
-      builder: (_, _) => ReportsHubScreen(module: module, title: title),
-    ),
-  ]);
+  return StatefulShellBranch(
+    routes: [
+      GoRoute(
+        path: path,
+        builder: (_, _) => ReportsHubScreen(module: module, title: title),
+      ),
+    ],
+  );
 }
 
 /// Bridges Riverpod state changes to GoRouter's redirect re-evaluation.

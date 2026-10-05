@@ -58,77 +58,80 @@ class Lead {
   final DateTime? lastContactAt;
   final int? daysSinceContact;
 
-  String get title =>
-      (leadName?.trim().isNotEmpty ?? false) ? leadName! : (organization ?? name);
+  String get title => (leadName?.trim().isNotEmpty ?? false)
+      ? leadName!
+      : (organization ?? name);
 
   /// Returns a copy with selected fields overridden — used by the Kanban
   /// optimistic-update flow.
   Lead copyWith({String? status}) => Lead(
-        name: name,
-        status: status ?? this.status,
-        leadName: leadName,
-        salutation: salutation,
-        firstName: firstName,
-        middleName: middleName,
-        lastName: lastName,
-        gender: gender,
-        organization: organization,
-        email: email,
-        mobileNo: mobileNo,
-        phone: phone,
-        website: website,
-        jobTitle: jobTitle,
-        noOfEmployees: noOfEmployees,
-        annualRevenue: annualRevenue,
-        industry: industry,
-        source: source,
-        territory: territory,
-        leadOwner: leadOwner,
-        image: image,
-        converted: converted,
-        assignees: assignees,
-        counts: counts,
-        lastContactAt: lastContactAt,
-        daysSinceContact: daysSinceContact,
-      );
+    name: name,
+    status: status ?? this.status,
+    leadName: leadName,
+    salutation: salutation,
+    firstName: firstName,
+    middleName: middleName,
+    lastName: lastName,
+    gender: gender,
+    organization: organization,
+    email: email,
+    mobileNo: mobileNo,
+    phone: phone,
+    website: website,
+    jobTitle: jobTitle,
+    noOfEmployees: noOfEmployees,
+    annualRevenue: annualRevenue,
+    industry: industry,
+    source: source,
+    territory: territory,
+    leadOwner: leadOwner,
+    image: image,
+    converted: converted,
+    assignees: assignees,
+    counts: counts,
+    lastContactAt: lastContactAt,
+    daysSinceContact: daysSinceContact,
+  );
 
   String get initials {
     final source = title.trim();
     if (source.isEmpty) return '?';
     final parts = source.split(RegExp(r'\s+'));
     if (parts.length == 1) return parts.first.substring(0, 1).toUpperCase();
-    return (parts.first.substring(0, 1) + parts.last.substring(0, 1)).toUpperCase();
+    return (parts.first.substring(0, 1) + parts.last.substring(0, 1))
+        .toUpperCase();
   }
 
   factory Lead.fromJson(Map<String, dynamic> j) => Lead(
-        name: j['name'] as String,
-        status: (j['status'] ?? '') as String,
-        leadName: j['lead_name'] as String?,
-        salutation: j['salutation'] as String?,
-        firstName: j['first_name'] as String?,
-        middleName: j['middle_name'] as String?,
-        lastName: j['last_name'] as String?,
-        gender: j['gender'] as String?,
-        organization: j['organization'] as String?,
-        email: j['email'] as String?,
-        mobileNo: j['mobile_no'] as String?,
-        phone: j['phone'] as String?,
-        website: j['website'] as String?,
-        jobTitle: j['job_title'] as String?,
-        noOfEmployees: j['no_of_employees'] as String?,
-        annualRevenue: (j['annual_revenue'] as num?)?.toDouble(),
-        industry: j['industry'] as String?,
-        source: j['source'] as String?,
-        territory: j['territory'] as String?,
-        leadOwner: j['lead_owner'] as String?,
-        image: j['image'] as String?,
-        converted: (j['converted'] as num?)?.toInt() == 1,
-        assignees:
-            ((j['assignees'] as List?) ?? []).map((e) => e.toString()).toList(),
-        counts: LeadCounts.fromJson(j['counts'] as Map<String, dynamic>?),
-        lastContactAt: _parseDate(j['last_contact_at']),
-        daysSinceContact: (j['days_since_contact'] as num?)?.toInt(),
-      );
+    name: j['name'] as String,
+    status: (j['status'] ?? '') as String,
+    leadName: j['lead_name'] as String?,
+    salutation: j['salutation'] as String?,
+    firstName: j['first_name'] as String?,
+    middleName: j['middle_name'] as String?,
+    lastName: j['last_name'] as String?,
+    gender: j['gender'] as String?,
+    organization: j['organization'] as String?,
+    email: j['email'] as String?,
+    mobileNo: j['mobile_no'] as String?,
+    phone: j['phone'] as String?,
+    website: j['website'] as String?,
+    jobTitle: j['job_title'] as String?,
+    noOfEmployees: j['no_of_employees'] as String?,
+    annualRevenue: (j['annual_revenue'] as num?)?.toDouble(),
+    industry: j['industry'] as String?,
+    source: j['source'] as String?,
+    territory: j['territory'] as String?,
+    leadOwner: j['lead_owner'] as String?,
+    image: j['image'] as String?,
+    converted: (j['converted'] as num?)?.toInt() == 1,
+    assignees: ((j['assignees'] as List?) ?? [])
+        .map((e) => e.toString())
+        .toList(),
+    counts: LeadCounts.fromJson(j['counts'] as Map<String, dynamic>?),
+    lastContactAt: _parseDate(j['last_contact_at']),
+    daysSinceContact: (j['days_since_contact'] as num?)?.toInt(),
+  );
 }
 
 DateTime? _parseDate(dynamic v) {
@@ -180,10 +183,11 @@ class LeadsContext {
   final List<String> statuses;
 
   factory LeadsContext.fromJson(Map<String, dynamic> j) => LeadsContext(
-        leads: ((j['leads'] as List?) ?? [])
-            .map((e) => Lead.fromJson(e as Map<String, dynamic>))
-            .toList(),
-        statuses:
-            ((j['statuses'] as List?) ?? []).map((e) => e.toString()).toList(),
-      );
+    leads: ((j['leads'] as List?) ?? [])
+        .map((e) => Lead.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    statuses: ((j['statuses'] as List?) ?? [])
+        .map((e) => e.toString())
+        .toList(),
+  );
 }

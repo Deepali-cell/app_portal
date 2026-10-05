@@ -79,15 +79,15 @@ class PlanTask {
   final int? daysOverdue;
 
   factory PlanTask.fromJson(Map<String, dynamic> j) => PlanTask(
-        name: j['name'].toString(),
-        subject: (j['subject'] ?? '').toString(),
-        status: (j['status'] ?? 'Open').toString(),
-        priority: j['priority'] as String?,
-        expEndDate: _parseDate(j['exp_end_date']),
-        project: j['project'] as String?,
-        dueLabel: j['due_label'] as String?,
-        daysOverdue: (j['days_overdue'] as num?)?.toInt(),
-      );
+    name: j['name'].toString(),
+    subject: (j['subject'] ?? '').toString(),
+    status: (j['status'] ?? 'Open').toString(),
+    priority: j['priority'] as String?,
+    expEndDate: _parseDate(j['exp_end_date']),
+    project: j['project'] as String?,
+    dueLabel: j['due_label'] as String?,
+    daysOverdue: (j['days_overdue'] as num?)?.toInt(),
+  );
 }
 
 @immutable
@@ -117,17 +117,17 @@ class PlanCrmTask {
   final int? daysOverdue;
 
   factory PlanCrmTask.fromJson(Map<String, dynamic> j) => PlanCrmTask(
-        name: j['name'].toString(),
-        title: (j['title'] ?? '').toString(),
-        status: (j['status'] ?? 'Todo').toString(),
-        priority: j['priority'] as String?,
-        dueDate: _parseDate(j['due_date']),
-        referenceDoctype: j['reference_doctype'] as String?,
-        referenceDocname: j['reference_docname'] as String?,
-        linkedLabel: j['linked_label'] as String?,
-        dueLabel: j['due_label'] as String?,
-        daysOverdue: (j['days_overdue'] as num?)?.toInt(),
-      );
+    name: j['name'].toString(),
+    title: (j['title'] ?? '').toString(),
+    status: (j['status'] ?? 'Todo').toString(),
+    priority: j['priority'] as String?,
+    dueDate: _parseDate(j['due_date']),
+    referenceDoctype: j['reference_doctype'] as String?,
+    referenceDocname: j['reference_docname'] as String?,
+    linkedLabel: j['linked_label'] as String?,
+    dueLabel: j['due_label'] as String?,
+    daysOverdue: (j['days_overdue'] as num?)?.toInt(),
+  );
 }
 
 @immutable
@@ -153,15 +153,15 @@ class PlanLead {
   final int daysSinceCreated;
 
   factory PlanLead.fromJson(Map<String, dynamic> j) => PlanLead(
-        name: j['name'].toString(),
-        leadName: (j['lead_name'] ?? '').toString(),
-        status: (j['status'] ?? 'New').toString(),
-        mobileNo: j['mobile_no'] as String?,
-        email: j['email'] as String?,
-        source: j['source'] as String?,
-        creation: _parseDate(j['creation']) ?? DateTime.now(),
-        daysSinceCreated: (j['days_since_created'] as num?)?.toInt() ?? 0,
-      );
+    name: j['name'].toString(),
+    leadName: (j['lead_name'] ?? '').toString(),
+    status: (j['status'] ?? 'New').toString(),
+    mobileNo: j['mobile_no'] as String?,
+    email: j['email'] as String?,
+    source: j['source'] as String?,
+    creation: _parseDate(j['creation']) ?? DateTime.now(),
+    daysSinceCreated: (j['days_since_created'] as num?)?.toInt() ?? 0,
+  );
 }
 
 DateTime? _parseDate(dynamic v) {
@@ -172,5 +172,4 @@ DateTime? _parseDate(dynamic v) {
   return DateTime.tryParse(s);
 }
 
-Map<String, dynamic> _asMap(dynamic e) =>
-    (e as Map).cast<String, dynamic>();
+Map<String, dynamic> _asMap(dynamic e) => (e as Map).cast<String, dynamic>();

@@ -15,6 +15,7 @@ import '../../../shared/widgets/employee_only_notice.dart';
 import '../../auth/application/auth_controller.dart';
 import '../application/expense_controller.dart';
 import '../domain/models.dart';
+import 'expense_claims_screen.dart' show showClaimDetailSheet;
 
 final _dateFmt = DateFormat('d MMM yyyy');
 final _rangeFmt = DateFormat('d MMM yyyy');
@@ -47,87 +48,104 @@ class ExpensesScreen extends ConsumerWidget {
       body: noEmployee
           ? const EmployeeOnlyNotice(feature: 'Expenses')
           : async.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => _ErrorView(
-          message: e is ApiException ? e.message : 'Something unexpected happened. Please try again.',
-          onRetry: () => ref.read(expenseControllerProvider.notifier).reload(),
-        ),
-        data: (ctx) => RefreshIndicator(
-          onRefresh: () =>
-              ref.read(expenseControllerProvider.notifier).reload(),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(
-                AppDimens.screenPadding,
-                AppDimens.md,
-                AppDimens.screenPadding,
-                AppDimens.xl),
-            children: [
-              _Header(
-                title: 'My Expenses',
-                subtitle: 'Submit claims and track approvals.',
-                cta: 'New Claim',
-                onPressed: () => _openSheet(context, ctx),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => _ErrorView(
+                message: e is ApiException
+                    ? e.message
+                    : 'Something unexpected happened. Please try again.',
+                onRetry: () =>
+                    ref.read(expenseControllerProvider.notifier).reload(),
               ),
-              const SizedBox(height: AppDimens.md),
-              DateRangeBar(
-                from: ctx.fromDate,
-                to: ctx.toDate,
-                onChanged: (f, t) =>
-                    ref.read(expenseControllerProvider.notifier).setRange(f, t),
-              ),
-              const SizedBox(height: AppDimens.md),
-              if (ctx.claims.isEmpty)
-                _EmptyCard(
-                  icon: Icons.receipt_long_outlined,
-                  text:
-                      'No expense claims between ${_rangeFmt.format(ctx.fromDate)} and ${_rangeFmt.format(ctx.toDate)}.',
-                )
-              else ...[
-                _TotalsCard(
-                    claims: ctx.claims,
-                    currency: ctx.currency,
-                    fromDate: ctx.fromDate,
-                    toDate: ctx.toDate),
-                const SizedBox(height: AppDimens.md),
-                Card(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(AppDimens.md,
-                            AppDimens.md, AppDimens.md, AppDimens.sm),
-                        child: Text('My Claims',
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleMedium
-                                ?.copyWith(
-                                    color: AppColors.primary,
-                                    fontWeight: FontWeight.w600)),
-                      ),
-                      for (var i = 0; i < ctx.claims.length; i++) ...[
-                        if (i > 0)
-                          Divider(
-                              height: 1,
-                              indent: 64,
-                              color: AppColors.outlineVariant),
-                        _ClaimRow(
-                            claim: ctx.claims[i], currency: ctx.currency),
-                      ],
-                    ],
+              data: (ctx) => RefreshIndicator(
+                onRefresh: () =>
+                    ref.read(expenseControllerProvider.notifier).reload(),
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppDimens.screenPadding,
+                    AppDimens.md,
+                    AppDimens.screenPadding,
+                    AppDimens.xl,
                   ),
+                  children: [
+                    _Header(
+                      title: 'My Expenses',
+                      subtitle: 'Submit claims and track approvals.',
+                      cta: 'New Claim',
+                      onPressed: () => _openSheet(context, ctx),
+                    ),
+                    const SizedBox(height: AppDimens.md),
+                    DateRangeBar(
+                      from: ctx.fromDate,
+                      to: ctx.toDate,
+                      onChanged: (f, t) => ref
+                          .read(expenseControllerProvider.notifier)
+                          .setRange(f, t),
+                    ),
+                    const SizedBox(height: AppDimens.md),
+                    if (ctx.claims.isEmpty)
+                      _EmptyCard(
+                        icon: Icons.receipt_long_outlined,
+                        text:
+                            'No expense claims between ${_rangeFmt.format(ctx.fromDate)} and ${_rangeFmt.format(ctx.toDate)}.',
+                      )
+                    else ...[
+                      _TotalsCard(
+                        claims: ctx.claims,
+                        currency: ctx.currency,
+                        fromDate: ctx.fromDate,
+                        toDate: ctx.toDate,
+                      ),
+                      const SizedBox(height: AppDimens.md),
+                      Card(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(
+                                AppDimens.md,
+                                AppDimens.md,
+                                AppDimens.md,
+                                AppDimens.sm,
+                              ),
+                              child: Text(
+                                'My Claims',
+                                style: Theme.of(context).textTheme.titleMedium
+                                    ?.copyWith(
+                                      color: AppColors.primary,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                              ),
+                            ),
+                            for (var i = 0; i < ctx.claims.length; i++) ...[
+                              if (i > 0)
+                                Divider(
+                                  height: 1,
+                                  indent: 64,
+                                  color: AppColors.outlineVariant,
+                                ),
+                              _ClaimRow(
+                                claim: ctx.claims[i],
+                                currency: ctx.currency,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
-              ],
-            ],
-          ),
-        ),
-      ),
+              ),
+            ),
     );
   }
 
   Future<void> _openSheet(BuildContext context, ExpenseContext ctx) async {
     if (ctx.expenseTypes.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('No expense types configured. Contact HR.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No expense types configured. Contact HR.'),
+        ),
+      );
       return;
     }
     final ok = await showModalBottomSheet<bool>(
@@ -135,16 +153,20 @@ class ExpensesScreen extends ConsumerWidget {
       isScrollControlled: true,
       backgroundColor: AppColors.surfaceContainerLowest,
       shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(AppDimens.radiusXl)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppDimens.radiusXl),
+        ),
       ),
       builder: (_) => _NewClaimSheet(ctx: ctx),
     );
     if (ok == true && context.mounted) {
       ScaffoldMessenger.of(context)
         ..hideCurrentSnackBar()
-        ..showSnackBar(const SnackBar(
-            content: Text('Expense claim submitted for approval.')));
+        ..showSnackBar(
+          const SnackBar(
+            content: Text('Expense claim submitted for approval.'),
+          ),
+        );
     }
   }
 }
@@ -229,30 +251,40 @@ class _TotalsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Claims summary',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: AppColors.onPrimary,
-                  fontWeight: FontWeight.w600)),
+          Text(
+            'Claims summary',
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: AppColors.onPrimary,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           const SizedBox(height: 2),
           Text(
-              '${_rangeFmt.format(fromDate)} – ${_rangeFmt.format(toDate)} · ${claims.length} ${claims.length == 1 ? 'claim' : 'claims'}',
-              style:
-                  TextStyle(color: AppColors.primaryFixedDim, fontSize: 12)),
+            '${_rangeFmt.format(fromDate)} – ${_rangeFmt.format(toDate)} · ${claims.length} ${claims.length == 1 ? 'claim' : 'claims'}',
+            style: TextStyle(color: AppColors.primaryFixedDim, fontSize: 12),
+          ),
           const SizedBox(height: AppDimens.md),
-          Row(children: [
-            Expanded(child: _kv(context, 'Pending', money(pending, currency))),
-            Container(
+          Row(
+            children: [
+              Expanded(
+                child: _kv(context, 'Pending', money(pending, currency)),
+              ),
+              Container(
                 width: 1,
                 height: 28,
-                color: AppColors.primaryFixedDim.withValues(alpha: 0.25)),
-            Expanded(
-                child: _kv(context, 'Approved', money(approved, currency))),
-            Container(
+                color: AppColors.primaryFixedDim.withValues(alpha: 0.25),
+              ),
+              Expanded(
+                child: _kv(context, 'Approved', money(approved, currency)),
+              ),
+              Container(
                 width: 1,
                 height: 28,
-                color: AppColors.primaryFixedDim.withValues(alpha: 0.25)),
-            Expanded(child: _kv(context, 'Paid', money(paid, currency))),
-          ]),
+                color: AppColors.primaryFixedDim.withValues(alpha: 0.25),
+              ),
+              Expanded(child: _kv(context, 'Paid', money(paid, currency))),
+            ],
+          ),
         ],
       ),
     );
@@ -264,15 +296,19 @@ class _TotalsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(k,
-              style:
-                  TextStyle(color: AppColors.primaryFixedDim, fontSize: 11)),
+          Text(
+            k,
+            style: TextStyle(color: AppColors.primaryFixedDim, fontSize: 11),
+          ),
           const SizedBox(height: 2),
-          Text(v,
-              style: TextStyle(
-                  color: AppColors.onPrimary,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600)),
+          Text(
+            v,
+            style: TextStyle(
+              color: AppColors.onPrimary,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
         ],
       ),
     );
@@ -286,53 +322,67 @@ class _ClaimRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.all(AppDimens.md),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppColors.surfaceContainer,
-              borderRadius: BorderRadius.circular(AppDimens.radiusLg),
+    return InkWell(
+      onTap: () => showClaimDetailSheet(context, claim.name),
+      child: Padding(
+        padding: const EdgeInsets.all(AppDimens.md),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: AppColors.surfaceContainer,
+                borderRadius: BorderRadius.circular(AppDimens.radiusLg),
+              ),
+              alignment: Alignment.center,
+              child: Icon(
+                Icons.receipt_long_outlined,
+                color: AppColors.onSurfaceVariant,
+                size: 20,
+              ),
             ),
-            alignment: Alignment.center,
-            child: Icon(Icons.receipt_long_outlined,
-                color: AppColors.onSurfaceVariant, size: 20),
-          ),
-          const SizedBox(width: AppDimens.md),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(money(claim.totalClaimed, currency),
+            const SizedBox(width: AppDimens.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    money(claim.totalClaimed, currency),
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: AppColors.onSurface,
-                        fontWeight: FontWeight.w700)),
-                const SizedBox(height: 2),
-                Text(
+                      color: AppColors.onSurface,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
                     '${claim.name} · ${_dateFmt.format(claim.postingDate)}',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall),
-                // The chip reads Pending across both waiting hops, so the stage
-                // tells the employee whether their approver has cleared it and
-                // it is now with HR.
-                if (claim.status == ClaimStatus.draft &&
-                    claim.stageLabel != null &&
-                    claim.stageLabel!.isNotEmpty) ...[
-                  const SizedBox(height: 2),
-                  Text(claim.stageLabel!,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  // The chip reads Pending across both waiting hops, so the stage
+                  // tells the employee whether their approver has cleared it and
+                  // it is now with HR.
+                  if (claim.status == ClaimStatus.draft &&
+                      claim.stageLabel != null &&
+                      claim.stageLabel!.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      claim.stageLabel!,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelSmall),
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
-          _ClaimStatusChip(status: claim.status),
-        ],
+            _ClaimStatusChip(status: claim.status),
+            const SizedBox(width: 4),
+            Icon(Icons.chevron_right, color: AppColors.outline),
+          ],
+        ),
       ),
     );
   }
@@ -383,9 +433,10 @@ class _ClaimStatusChip extends StatelessWidget {
         color: bg,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(label,
-          style: TextStyle(
-              color: fg, fontWeight: FontWeight.w600, fontSize: 11)),
+      child: Text(
+        label,
+        style: TextStyle(color: fg, fontWeight: FontWeight.w600, fontSize: 11),
+      ),
     );
   }
 }
@@ -404,8 +455,8 @@ class _EmptyCard extends StatelessWidget {
             Icon(icon, color: AppColors.outline),
             const SizedBox(width: AppDimens.md),
             Expanded(
-                child: Text(text,
-                    style: Theme.of(context).textTheme.bodyMedium)),
+              child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
+            ),
           ],
         ),
       ),
@@ -434,7 +485,7 @@ class _ItemDraft {
 
 class _NewClaimSheetState extends ConsumerState<_NewClaimSheet> {
   late final List<_ItemDraft> _items = [
-    _ItemDraft(widget.ctx.expenseTypes.first)
+    _ItemDraft(widget.ctx.expenseTypes.first),
   ];
   final _remark = TextEditingController();
   // Receipt / proof files to attach to the claim once it is created. Each is a
@@ -468,7 +519,9 @@ class _NewClaimSheetState extends ConsumerState<_NewClaimSheet> {
   }
 
   double get _total => _items.fold(
-      0, (sum, i) => sum + (double.tryParse(i.amount.text.trim()) ?? 0));
+    0,
+    (sum, i) => sum + (double.tryParse(i.amount.text.trim()) ?? 0),
+  );
 
   Future<void> _submit() async {
     setState(() => _error = null);
@@ -476,20 +529,25 @@ class _NewClaimSheetState extends ConsumerState<_NewClaimSheet> {
     for (final i in _items) {
       final amt = double.tryParse(i.amount.text.trim()) ?? 0;
       if (i.type == null || amt <= 0) {
-        setState(() =>
-            _error = 'Each item needs a type and an amount above zero.');
+        setState(
+          () => _error = 'Each item needs a type and an amount above zero.',
+        );
         return;
       }
-      parsed.add(ExpenseItem(
-        expenseType: i.type!,
-        amount: amt,
-        description: i.description.text.trim(),
-      ));
+      parsed.add(
+        ExpenseItem(
+          expenseType: i.type!,
+          amount: amt,
+          description: i.description.text.trim(),
+        ),
+      );
     }
 
     setState(() => _submitting = true);
     try {
-      await ref.read(expenseControllerProvider.notifier).apply(
+      await ref
+          .read(expenseControllerProvider.notifier)
+          .apply(
             parsed,
             remark: _remark.text.trim(),
             attachments: _attachments
@@ -501,7 +559,8 @@ class _NewClaimSheetState extends ConsumerState<_NewClaimSheet> {
     } on ApiException catch (e) {
       if (mounted) setState(() => _error = e.message);
     } catch (_) {
-      if (mounted) setState(() => _error = 'Could not submit. Please try again.');
+      if (mounted)
+        setState(() => _error = 'Could not submit. Please try again.');
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -512,15 +571,21 @@ class _NewClaimSheetState extends ConsumerState<_NewClaimSheet> {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     return Padding(
       padding: EdgeInsets.fromLTRB(
-          AppDimens.xl, AppDimens.xl, AppDimens.xl, AppDimens.xl + bottom),
+        AppDimens.xl,
+        AppDimens.xl,
+        AppDimens.xl,
+        AppDimens.xl + bottom,
+      ),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Center(
-              child: Text('New expense claim',
-                  style: Theme.of(context).textTheme.titleLarge),
+              child: Text(
+                'New expense claim',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
             ),
             const SizedBox(height: AppDimens.xl),
             for (var idx = 0; idx < _items.length; idx++) ...[
@@ -530,8 +595,9 @@ class _NewClaimSheetState extends ConsumerState<_NewClaimSheet> {
             Align(
               alignment: Alignment.centerLeft,
               child: TextButton.icon(
-                onPressed: () => setState(() =>
-                    _items.add(_ItemDraft(widget.ctx.expenseTypes.first))),
+                onPressed: () => setState(
+                  () => _items.add(_ItemDraft(widget.ctx.expenseTypes.first)),
+                ),
                 icon: const Icon(Icons.add),
                 label: const Text('Add item'),
               ),
@@ -542,10 +608,11 @@ class _NewClaimSheetState extends ConsumerState<_NewClaimSheet> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Total',
-                      style: Theme.of(context).textTheme.titleMedium),
-                  Text(money(_total, widget.ctx.currency),
-                      style: Theme.of(context).textTheme.titleMedium),
+                  Text('Total', style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    money(_total, widget.ctx.currency),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                 ],
               ),
             ),
@@ -558,9 +625,10 @@ class _NewClaimSheetState extends ConsumerState<_NewClaimSheet> {
             _attachmentsSection(),
             if (_error != null) ...[
               const SizedBox(height: AppDimens.md),
-              Text(_error!,
-                  style:
-                      const TextStyle(color: AppColors.error, fontSize: 13)),
+              Text(
+                _error!,
+                style: const TextStyle(color: AppColors.error, fontSize: 13),
+              ),
             ],
             const SizedBox(height: AppDimens.xl),
             BrandButton(
@@ -600,8 +668,10 @@ class _NewClaimSheetState extends ConsumerState<_NewClaimSheet> {
               ),
               if (_items.length > 1)
                 IconButton(
-                  icon: const Icon(Icons.delete_outline,
-                      color: AppColors.error),
+                  icon: const Icon(
+                    Icons.delete_outline,
+                    color: AppColors.error,
+                  ),
                   onPressed: () => setState(() {
                     _items.removeAt(idx).dispose();
                   }),
@@ -611,8 +681,7 @@ class _NewClaimSheetState extends ConsumerState<_NewClaimSheet> {
           const SizedBox(height: AppDimens.sm),
           TextField(
             controller: item.amount,
-            keyboardType:
-                const TextInputType.numberWithOptions(decimal: true),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[0-9.]')),
             ],
@@ -622,8 +691,9 @@ class _NewClaimSheetState extends ConsumerState<_NewClaimSheet> {
           const SizedBox(height: AppDimens.sm),
           TextField(
             controller: item.description,
-            decoration:
-                const InputDecoration(labelText: 'Description (optional)'),
+            decoration: const InputDecoration(
+              labelText: 'Description (optional)',
+            ),
           ),
         ],
       ),
@@ -639,10 +709,13 @@ class _NewClaimSheetState extends ConsumerState<_NewClaimSheet> {
         Row(
           children: [
             Expanded(
-              child: Text('Receipts / proof (optional)',
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: AppColors.onSurface,
-                      fontWeight: FontWeight.w600)),
+              child: Text(
+                'Receipts / proof (optional)',
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: AppColors.onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
             TextButton.icon(
               onPressed: _submitting ? null : _pickAttachments,
@@ -652,27 +725,37 @@ class _NewClaimSheetState extends ConsumerState<_NewClaimSheet> {
           ],
         ),
         if (_attachments.isEmpty)
-          Text('Attach a bill or receipt as proof for this claim.',
-              style: Theme.of(context).textTheme.bodySmall)
+          Text(
+            'Attach a bill or receipt as proof for this claim.',
+            style: Theme.of(context).textTheme.bodySmall,
+          )
         else
           for (final f in _attachments)
             Padding(
               padding: const EdgeInsets.only(bottom: AppDimens.xs),
               child: Row(
                 children: [
-                  Icon(Icons.insert_drive_file_outlined,
-                      size: 18, color: AppColors.onSurfaceVariant),
+                  Icon(
+                    Icons.insert_drive_file_outlined,
+                    size: 18,
+                    color: AppColors.onSurfaceVariant,
+                  ),
                   const SizedBox(width: AppDimens.sm),
                   Expanded(
-                    child: Text(f.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyMedium),
+                    child: Text(
+                      f.name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
                   ),
                   IconButton(
                     visualDensity: VisualDensity.compact,
-                    icon: const Icon(Icons.close,
-                        size: 18, color: AppColors.error),
+                    icon: const Icon(
+                      Icons.close,
+                      size: 18,
+                      color: AppColors.error,
+                    ),
                     onPressed: _submitting
                         ? null
                         : () => setState(() => _attachments.remove(f)),

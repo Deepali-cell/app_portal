@@ -11,7 +11,7 @@ import '../domain/models.dart';
 
 final _time = DateFormat('h:mm a');
 
-/// One conversation (Direct or Group). Bubbles: mine on the right (primary),
+/// One direct (1:1) conversation. Bubbles: mine on the right (primary),
 /// others on the left (surface) with the sender's name.
 class ChatThreadScreen extends ConsumerStatefulWidget {
   const ChatThreadScreen({super.key, required this.channel});
@@ -60,17 +60,8 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
       appBar: AppBar(
         leading: const AppBackButton(),
         backgroundColor: AppColors.surfaceContainerLowest,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(widget.channel.title,
-                style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
-            if (widget.channel.isGroup)
-              Text('${widget.channel.memberCount} members',
-                  style: TextStyle(
-                      fontSize: 11, color: AppColors.onSurfaceVariant)),
-          ],
-        ),
+        title: Text(widget.channel.title,
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
       ),
       body: Column(
         children: [
@@ -92,7 +83,7 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
                     padding: const EdgeInsets.all(AppDimens.md),
                     itemCount: msgs.length,
                     itemBuilder: (_, i) => _Bubble(
-                        msg: msgs[i], showName: widget.channel.isGroup),
+                        msg: msgs[i]),
                   ),
                 );
               },
@@ -182,9 +173,8 @@ class _ChatThreadScreenState extends ConsumerState<ChatThreadScreen> {
 }
 
 class _Bubble extends StatelessWidget {
-  const _Bubble({required this.msg, required this.showName});
+  const _Bubble({required this.msg});
   final ChatMessage msg;
-  final bool showName;
 
   @override
   Widget build(BuildContext context) {
@@ -209,15 +199,6 @@ class _Bubble extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (showName && !mine)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 2),
-                child: Text(msg.ownerName,
-                    style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primary)),
-              ),
             Text(msg.message,
                 style: TextStyle(
                     fontSize: 14.5,

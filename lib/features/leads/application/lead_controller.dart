@@ -4,21 +4,22 @@ import '../../../core/providers.dart';
 import '../data/lead_repository.dart';
 import '../domain/models.dart';
 
-final leadRepositoryProvider =
-    Provider<LeadRepository>((ref) => LeadRepository(ref.watch(dioProvider)));
+final leadRepositoryProvider = Provider<LeadRepository>(
+  (ref) => LeadRepository(ref.watch(dioProvider)),
+);
 
 final leadsControllerProvider =
     AsyncNotifierProvider<LeadsController, LeadsContext>(LeadsController.new);
 
 class LeadsController extends AsyncNotifier<LeadsContext> {
   @override
-  Future<LeadsContext> build() =>
-      ref.read(leadRepositoryProvider).getContext();
+  Future<LeadsContext> build() => ref.read(leadRepositoryProvider).getContext();
 
   Future<void> reload() async {
     state = const AsyncValue.loading();
     state = await AsyncValue.guard(
-        () => ref.read(leadRepositoryProvider).getContext());
+      () => ref.read(leadRepositoryProvider).getContext(),
+    );
   }
 
   Future<void> create(Map<String, dynamic> fields) async {
@@ -40,8 +41,9 @@ class LeadsController extends AsyncNotifier<LeadsContext> {
   /// Convert this Lead to an ERPNext Opportunity (step 1 of
   /// Lead → Opportunity → Customer). Returns the new Opportunity's name.
   Future<String> convertToOpportunity(String name) async {
-    final opportunity =
-        await ref.read(leadRepositoryProvider).convertToOpportunity(name);
+    final opportunity = await ref
+        .read(leadRepositoryProvider)
+        .convertToOpportunity(name);
     ref.invalidate(leadDetailProvider(name));
     await reload();
     return opportunity;

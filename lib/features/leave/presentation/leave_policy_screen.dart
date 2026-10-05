@@ -66,8 +66,12 @@ class LeavePolicyScreen extends ConsumerWidget {
             ),
             data: (d) => ListView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(AppDimens.screenPadding,
-                  AppDimens.md, AppDimens.screenPadding, 96),
+              padding: const EdgeInsets.fromLTRB(
+                AppDimens.screenPadding,
+                AppDimens.md,
+                AppDimens.screenPadding,
+                96,
+              ),
               children: [
                 const _Intro(),
                 const SizedBox(height: AppDimens.md),
@@ -79,8 +83,12 @@ class LeavePolicyScreen extends ConsumerWidget {
                       padding: const EdgeInsets.only(bottom: AppDimens.md),
                       child: _RuleCard(
                         rule: r,
-                        onEdit: () => _openSheet(context, ref,
-                            leaveTypes: d.leaveTypes, existing: r),
+                        onEdit: () => _openSheet(
+                          context,
+                          ref,
+                          leaveTypes: d.leaveTypes,
+                          existing: r,
+                        ),
                         onDelete: () => _confirmDelete(context, ref, r),
                       ),
                     ),
@@ -103,8 +111,9 @@ class LeavePolicyScreen extends ConsumerWidget {
       isScrollControlled: true,
       backgroundColor: AppColors.surfaceContainerLowest,
       shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(AppDimens.radiusXl)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppDimens.radiusXl),
+        ),
       ),
       builder: (_) => _RuleSheet(leaveTypes: leaveTypes, existing: existing),
     );
@@ -112,7 +121,10 @@ class LeavePolicyScreen extends ConsumerWidget {
   }
 
   Future<void> _confirmDelete(
-      BuildContext context, WidgetRef ref, LeaveNoticeRule rule) async {
+    BuildContext context,
+    WidgetRef ref,
+    LeaveNoticeRule rule,
+  ) async {
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -120,8 +132,9 @@ class LeavePolicyScreen extends ConsumerWidget {
         content: Text('"${rule.ruleName}" will no longer be enforced.'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.error),
             onPressed: () => Navigator.pop(ctx, true),
@@ -135,13 +148,15 @@ class LeavePolicyScreen extends ConsumerWidget {
       await ref.read(leaveRepositoryProvider).deleteNoticeRule(rule.name);
       ref.invalidate(leaveNoticeRulesProvider);
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text('Rule deleted.')));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Rule deleted.')));
       }
     } on ApiException catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(e.message)));
       }
     }
   }
@@ -178,8 +193,11 @@ class _Intro extends StatelessWidget {
 }
 
 class _RuleCard extends StatelessWidget {
-  const _RuleCard(
-      {required this.rule, required this.onEdit, required this.onDelete});
+  const _RuleCard({
+    required this.rule,
+    required this.onEdit,
+    required this.onDelete,
+  });
   final LeaveNoticeRule rule;
   final VoidCallback onEdit;
   final VoidCallback onDelete;
@@ -200,23 +218,31 @@ class _RuleCard extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: Text(rule.ruleName,
-                        style: theme.textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700)),
+                    child: Text(
+                      rule.ruleName,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
                   ),
                   if (!rule.isActive)
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
+                        horizontal: 8,
+                        vertical: 3,
+                      ),
                       decoration: BoxDecoration(
                         color: AppColors.surfaceContainerHigh,
                         borderRadius: BorderRadius.circular(999),
                       ),
-                      child: Text('Inactive',
-                          style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.onSurfaceVariant)),
+                      child: Text(
+                        'Inactive',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.onSurfaceVariant,
+                        ),
+                      ),
                     ),
                   IconButton(
                     tooltip: 'Delete',
@@ -230,22 +256,28 @@ class _RuleCard extends StatelessWidget {
                 'Up to ${_fmt(rule.maxLeaveDays)} day(s)  →  apply '
                 '${rule.minNoticeDays} day(s) in advance',
                 style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppColors.onSurface, fontWeight: FontWeight.w600),
+                  color: AppColors.onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
                 rule.leaveType == null || rule.leaveType!.isEmpty
                     ? 'All leave types'
                     : rule.leaveType!,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(color: AppColors.onSurfaceVariant),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppColors.onSurfaceVariant,
+                ),
               ),
               if (rule.description != null &&
                   rule.description!.trim().isNotEmpty) ...[
                 const SizedBox(height: 4),
-                Text(rule.description!.trim(),
-                    style: theme.textTheme.bodySmall
-                        ?.copyWith(color: AppColors.onSurfaceVariant)),
+                Text(
+                  rule.description!.trim(),
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.onSurfaceVariant,
+                  ),
+                ),
               ],
             ],
           ),
@@ -264,11 +296,16 @@ class _EmptyState extends StatelessWidget {
       padding: const EdgeInsets.all(AppDimens.xxxl),
       child: Column(
         children: [
-          Icon(Icons.rule_folder_outlined,
-              size: 40, color: AppColors.onSurfaceVariant),
+          Icon(
+            Icons.rule_folder_outlined,
+            size: 40,
+            color: AppColors.onSurfaceVariant,
+          ),
           const SizedBox(height: AppDimens.md),
-          Text('No notice rules yet.',
-              style: Theme.of(context).textTheme.titleSmall),
+          Text(
+            'No notice rules yet.',
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
           const SizedBox(height: 4),
           Text(
             'Add a rule to require advance notice for leave. Until then, leave '
@@ -307,9 +344,11 @@ class _RuleSheetState extends ConsumerState<_RuleSheet> {
     final e = widget.existing;
     _name = TextEditingController(text: e?.ruleName ?? '');
     _maxDays = TextEditingController(
-        text: e != null ? _fmt(e.maxLeaveDays) : '');
-    _notice =
-        TextEditingController(text: e != null ? e.minNoticeDays.toString() : '');
+      text: e != null ? _fmt(e.maxLeaveDays) : '',
+    );
+    _notice = TextEditingController(
+      text: e != null ? e.minNoticeDays.toString() : '',
+    );
     _desc = TextEditingController(text: e?.description ?? '');
     _leaveType = e?.leaveType ?? _allTypes;
     _active = e?.isActive ?? true;
@@ -343,7 +382,9 @@ class _RuleSheetState extends ConsumerState<_RuleSheet> {
     }
     setState(() => _saving = true);
     try {
-      await ref.read(leaveRepositoryProvider).saveNoticeRule(
+      await ref
+          .read(leaveRepositoryProvider)
+          .saveNoticeRule(
             name: widget.existing?.name,
             ruleName: ruleName,
             maxLeaveDays: maxDays,
@@ -368,15 +409,21 @@ class _RuleSheetState extends ConsumerState<_RuleSheet> {
     final editing = widget.existing != null;
     return Padding(
       padding: EdgeInsets.fromLTRB(
-          AppDimens.xl, AppDimens.xl, AppDimens.xl, AppDimens.xl + bottom),
+        AppDimens.xl,
+        AppDimens.xl,
+        AppDimens.xl,
+        AppDimens.xl + bottom,
+      ),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Center(
-              child: Text(editing ? 'Edit rule' : 'Add rule',
-                  style: Theme.of(context).textTheme.titleLarge),
+              child: Text(
+                editing ? 'Edit rule' : 'Add rule',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
             ),
             const SizedBox(height: AppDimens.xl),
             TextField(
@@ -390,12 +437,13 @@ class _RuleSheetState extends ConsumerState<_RuleSheet> {
               decoration: const InputDecoration(labelText: 'Leave type'),
               items: [
                 const DropdownMenuItem(
-                    value: _allTypes, child: Text('All leave types')),
+                  value: _allTypes,
+                  child: Text('All leave types'),
+                ),
                 for (final t in widget.leaveTypes)
                   DropdownMenuItem(value: t, child: Text(t)),
               ],
-              onChanged: (v) =>
-                  setState(() => _leaveType = v ?? _allTypes),
+              onChanged: (v) => setState(() => _leaveType = v ?? _allTypes),
             ),
             const SizedBox(height: AppDimens.lg),
             Row(
@@ -403,8 +451,9 @@ class _RuleSheetState extends ConsumerState<_RuleSheet> {
                 Expanded(
                   child: TextField(
                     controller: _maxDays,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
                     decoration: const InputDecoration(
                       labelText: 'Up to (days)',
                       hintText: 'e.g. 3',
@@ -444,8 +493,10 @@ class _RuleSheetState extends ConsumerState<_RuleSheet> {
             ),
             if (_error != null) ...[
               const SizedBox(height: AppDimens.md),
-              Text(_error!,
-                  style: const TextStyle(color: AppColors.error, fontSize: 13)),
+              Text(
+                _error!,
+                style: const TextStyle(color: AppColors.error, fontSize: 13),
+              ),
             ],
             const SizedBox(height: AppDimens.xl),
             BrandButton(

@@ -7,6 +7,8 @@ import '../../../core/theme/app_dimens.dart';
 import '../../../core/ui/app_message_dialog.dart';
 import '../application/admin_controller.dart';
 import '../domain/models.dart';
+import 'admin_integrations_tab.dart';
+import 'admin_screens_tab.dart';
 
 /// In-app Administrator, ERPNext Role Permission Manager style. Two tabs:
 ///
@@ -15,6 +17,9 @@ import '../domain/models.dart';
 ///    Permission Manager edits).
 ///  * Reports: pick a curated report, toggle which roles may run it (writes to
 ///    the report's own Frappe roles list).
+///  * Screens: switch app screens on/off for the whole site, inside the
+///    modules the company's TCB licence includes.
+///  * Integrations: connect WhatsApp, AI call summaries, push and email.
 ///  * Setup check: read-only health check of what this ERP is missing (apps,
 ///    approval workflows, employee links, defaults) with a fix hint for each.
 ///
@@ -25,24 +30,30 @@ class AdminScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 5,
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: AppBar(
-        leading: const AppBackButton(),
+          leading: const AppBackButton(),
           title: const Text('Administrator'),
           bottom: const TabBar(
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
             tabs: [
+              Tab(text: 'Screens'),
               Tab(text: 'Doctypes'),
               Tab(text: 'Reports'),
+              Tab(text: 'Integrations'),
               Tab(text: 'Setup check'),
             ],
           ),
         ),
         body: const TabBarView(
           children: [
+            AdminScreensTab(),
             _DoctypePermTab(),
             _ReportPermTab(),
+            AdminIntegrationsTab(),
             _SetupCheckTab(),
           ],
         ),
@@ -73,12 +84,16 @@ class _DoctypePermTabState extends ConsumerState<_DoctypePermTab> {
       error: (e, _) => Center(
         child: Padding(
           padding: const EdgeInsets.all(AppDimens.lg),
-          child: Text(friendlyMessageFor(e).message,
-              textAlign: TextAlign.center),
+          child: Text(
+            friendlyMessageFor(e).message,
+            textAlign: TextAlign.center,
+          ),
         ),
       ),
       data: (meta) {
-        final modules = meta.modules.where((m) => m.screens.isNotEmpty).toList();
+        final modules = meta.modules
+            .where((m) => m.screens.isNotEmpty)
+            .toList();
         final screensInModule = <AdminScreenRef>[
           for (final m in modules)
             if (m.module == _module) ...m.screens,
@@ -102,8 +117,12 @@ class _DoctypePermTabState extends ConsumerState<_DoctypePermTab> {
                           value: _module,
                           hint: const Text('Select a module'),
                           items: modules
-                              .map((m) => DropdownMenuItem(
-                                  value: m.module, child: Text(m.module)))
+                              .map(
+                                (m) => DropdownMenuItem(
+                                  value: m.module,
+                                  child: Text(m.module),
+                                ),
+                              )
                               .toList(),
                           onChanged: (v) => setState(() {
                             _module = v;
@@ -123,15 +142,19 @@ class _DoctypePermTabState extends ConsumerState<_DoctypePermTab> {
                         child: DropdownButton<AdminScreenRef>(
                           isExpanded: true,
                           value: _screen,
-                          hint: Text(_module == null
-                              ? 'Select a module first'
-                              : 'Select a document type'),
+                          hint: Text(
+                            _module == null
+                                ? 'Select a module first'
+                                : 'Select a document type',
+                          ),
                           items: [
                             for (final s in screensInModule)
                               DropdownMenuItem(
                                 value: s,
-                                child: Text(s.label,
-                                    overflow: TextOverflow.ellipsis),
+                                child: Text(
+                                  s.label,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                           ],
                           onChanged: _module == null
@@ -153,8 +176,10 @@ class _DoctypePermTabState extends ConsumerState<_DoctypePermTab> {
                           value: _role,
                           hint: const Text('Select a role'),
                           items: meta.roles
-                              .map((r) =>
-                                  DropdownMenuItem(value: r, child: Text(r)))
+                              .map(
+                                (r) =>
+                                    DropdownMenuItem(value: r, child: Text(r)),
+                              )
                               .toList(),
                           onChanged: (v) {
                             if (v == null) return;
@@ -197,13 +222,13 @@ class _PermEditor extends ConsumerWidget {
   final AdminScreenRef screen;
 
   List<(String, String)> _typesFor(AdminScreenRef s) => [
-        ('read', 'View'),
-        ('create', 'Create'),
-        ('write', 'Edit'),
-        if (s.submittable) ('submit', 'Submit'),
-        ('delete', 'Delete'),
-        ('if_owner', 'Own only'),
-      ];
+    ('read', 'View'),
+    ('create', 'Create'),
+    ('write', 'Edit'),
+    if (s.submittable) ('submit', 'Submit'),
+    ('delete', 'Delete'),
+    ('if_owner', 'Own only'),
+  ];
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -213,8 +238,10 @@ class _PermEditor extends ConsumerWidget {
       error: (e, _) => Center(
         child: Padding(
           padding: const EdgeInsets.all(AppDimens.lg),
-          child: Text(friendlyMessageFor(e).message,
-              textAlign: TextAlign.center),
+          child: Text(
+            friendlyMessageFor(e).message,
+            textAlign: TextAlign.center,
+          ),
         ),
       ),
       data: (matrix) {
@@ -222,15 +249,19 @@ class _PermEditor extends ConsumerWidget {
         return ListView(
           padding: const EdgeInsets.all(AppDimens.md),
           children: [
-            Text(screen.label,
-                style:
-                    const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-            Text(screen.doctype,
-                style:
-                    TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant)),
+            Text(
+              screen.label,
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+            ),
+            Text(
+              screen.doctype,
+              style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+            ),
             const SizedBox(height: AppDimens.md),
-            const Text('Allowed actions:',
-                style: TextStyle(fontWeight: FontWeight.w600)),
+            const Text(
+              'Allowed actions:',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: AppDimens.sm),
             Wrap(
               spacing: 8,
@@ -289,12 +320,16 @@ class _ReportPermTabState extends ConsumerState<_ReportPermTab> {
       error: (e, _) => Center(
         child: Padding(
           padding: const EdgeInsets.all(AppDimens.lg),
-          child: Text(friendlyMessageFor(e).message,
-              textAlign: TextAlign.center),
+          child: Text(
+            friendlyMessageFor(e).message,
+            textAlign: TextAlign.center,
+          ),
         ),
       ),
       data: (meta) {
-        final modules = meta.modules.where((m) => m.reports.isNotEmpty).toList();
+        final modules = meta.modules
+            .where((m) => m.reports.isNotEmpty)
+            .toList();
         final reportsInModule = <ReportAdminRef>[
           for (final m in modules)
             if (m.module == _module) ...m.reports,
@@ -318,8 +353,12 @@ class _ReportPermTabState extends ConsumerState<_ReportPermTab> {
                           value: _module,
                           hint: const Text('Select a module'),
                           items: modules
-                              .map((m) => DropdownMenuItem(
-                                  value: m.module, child: Text(m.module)))
+                              .map(
+                                (m) => DropdownMenuItem(
+                                  value: m.module,
+                                  child: Text(m.module),
+                                ),
+                              )
                               .toList(),
                           onChanged: (v) => setState(() {
                             _module = v;
@@ -339,15 +378,19 @@ class _ReportPermTabState extends ConsumerState<_ReportPermTab> {
                         child: DropdownButton<ReportAdminRef>(
                           isExpanded: true,
                           value: _report,
-                          hint: Text(_module == null
-                              ? 'Select a module first'
-                              : 'Select a report'),
+                          hint: Text(
+                            _module == null
+                                ? 'Select a module first'
+                                : 'Select a report',
+                          ),
                           items: [
                             for (final r in reportsInModule)
                               DropdownMenuItem(
                                 value: r,
-                                child: Text(r.label,
-                                    overflow: TextOverflow.ellipsis),
+                                child: Text(
+                                  r.label,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                               ),
                           ],
                           onChanged: _module == null
@@ -403,8 +446,10 @@ class _ReportRoleEditor extends ConsumerWidget {
       error: (e, _) => Center(
         child: Padding(
           padding: const EdgeInsets.all(AppDimens.lg),
-          child: Text(friendlyMessageFor(e).message,
-              textAlign: TextAlign.center),
+          child: Text(
+            friendlyMessageFor(e).message,
+            textAlign: TextAlign.center,
+          ),
         ),
       ),
       data: (rolesState) {
@@ -415,15 +460,19 @@ class _ReportRoleEditor extends ConsumerWidget {
         return ListView(
           padding: const EdgeInsets.all(AppDimens.md),
           children: [
-            Text(report.label,
-                style:
-                    const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
-            Text(report.report,
-                style:
-                    TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant)),
+            Text(
+              report.label,
+              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+            ),
+            Text(
+              report.report,
+              style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+            ),
             const SizedBox(height: AppDimens.md),
-            const Text('Roles that can see this report:',
-                style: TextStyle(fontWeight: FontWeight.w600)),
+            const Text(
+              'Roles that can see this report:',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
             const SizedBox(height: AppDimens.sm),
             Wrap(
               spacing: 8,
@@ -451,11 +500,11 @@ class _ReportRoleEditor extends ConsumerWidget {
             Text(
               rolesState.hasExplicitRoles
                   ? 'Only the selected roles (and Administrator / System '
-                      'Manager) can see this report. Changes save to Frappe '
-                      'instantly.'
+                        'Manager) can see this report. Changes save to Frappe '
+                        'instantly.'
                   : 'No role selected yet: the report currently follows the '
-                      'read permission of ${report.refDoctype ?? 'its document'}. '
-                      'Pick one or more roles to restrict it.',
+                        'read permission of ${report.refDoctype ?? 'its document'}. '
+                        'Pick one or more roles to restrict it.',
               style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
             ),
           ],
@@ -476,11 +525,11 @@ class _SetupCheckTab extends ConsumerWidget {
   static const _grey = Color(0xFF6B7280);
 
   (IconData, Color) _look(SetupStatus s) => switch (s) {
-        SetupStatus.ok => (Icons.check_circle, _green),
-        SetupStatus.warn => (Icons.warning_amber_rounded, _amber),
-        SetupStatus.error => (Icons.error, _red),
-        SetupStatus.info => (Icons.info_outline, _grey),
-      };
+    SetupStatus.ok => (Icons.check_circle, _green),
+    SetupStatus.warn => (Icons.warning_amber_rounded, _amber),
+    SetupStatus.error => (Icons.error, _red),
+    SetupStatus.info => (Icons.info_outline, _grey),
+  };
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -498,8 +547,10 @@ class _SetupCheckTab extends ConsumerWidget {
           children: [
             Padding(
               padding: const EdgeInsets.all(AppDimens.lg),
-              child: Text(friendlyMessageFor(e).message,
-                  textAlign: TextAlign.center),
+              child: Text(
+                friendlyMessageFor(e).message,
+                textAlign: TextAlign.center,
+              ),
             ),
           ],
         ),
@@ -512,10 +563,16 @@ class _SetupCheckTab extends ConsumerWidget {
             for (final g in r.groups) ...[
               Padding(
                 padding: const EdgeInsets.only(
-                    top: AppDimens.sm, bottom: AppDimens.xs),
-                child: Text(g.title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w800, fontSize: 14)),
+                  top: AppDimens.sm,
+                  bottom: AppDimens.xs,
+                ),
+                child: Text(
+                  g.title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w800,
+                    fontSize: 14,
+                  ),
+                ),
               ),
               Card(
                 margin: EdgeInsets.zero,
@@ -540,8 +597,8 @@ class _SetupCheckTab extends ConsumerWidget {
     final (icon, color) = r.error > 0
         ? (Icons.error, _red)
         : r.warn > 0
-            ? (Icons.warning_amber_rounded, _amber)
-            : (Icons.check_circle, _green);
+        ? (Icons.warning_amber_rounded, _amber)
+        : (Icons.check_circle, _green);
     final text = allGood
         ? 'Everything the portal needs is set up.'
         : [
@@ -559,12 +616,15 @@ class _SetupCheckTab extends ConsumerWidget {
           Icon(icon, color: color),
           const SizedBox(width: AppDimens.sm),
           Expanded(
-            child: Text(text,
-                style: TextStyle(fontWeight: FontWeight.w700, color: color)),
+            child: Text(
+              text,
+              style: TextStyle(fontWeight: FontWeight.w700, color: color),
+            ),
           ),
-          Text('${r.ok} OK',
-              style: TextStyle(
-                  fontSize: 12, color: AppColors.onSurfaceVariant)),
+          Text(
+            '${r.ok} OK',
+            style: TextStyle(fontSize: 12, color: AppColors.onSurfaceVariant),
+          ),
         ],
       ),
     );
@@ -583,14 +643,20 @@ class _SetupCheckTab extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(c.label,
-                    style: const TextStyle(fontWeight: FontWeight.w700)),
+                Text(
+                  c.label,
+                  style: const TextStyle(fontWeight: FontWeight.w700),
+                ),
                 if (c.detail.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 2),
-                    child: Text(c.detail,
-                        style: TextStyle(
-                            fontSize: 12, color: AppColors.onSurfaceVariant)),
+                    child: Text(
+                      c.detail,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppColors.onSurfaceVariant,
+                      ),
+                    ),
                   ),
                 if (c.fix.isNotEmpty &&
                     (c.status == SetupStatus.error ||
@@ -598,11 +664,14 @@ class _SetupCheckTab extends ConsumerWidget {
                         c.status == SetupStatus.info))
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
-                    child: Text('How to fix: ${c.fix}',
-                        style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: AppColors.primary)),
+                    child: Text(
+                      'How to fix: ${c.fix}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.primary,
+                      ),
+                    ),
                   ),
               ],
             ),

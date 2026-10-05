@@ -10,6 +10,8 @@ import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../application/todays_plan_controller.dart';
 import '../domain/models.dart';
+import '../../home/presentation/nav_destinations.dart';
+import '../../auth/application/auth_controller.dart';
 
 /// Salesperson's command-centre card. Rendered as the first card on the home
 /// screen for users with sales capabilities.
@@ -57,10 +59,7 @@ class _CardShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(AppDimens.md),
-        child: child,
-      ),
+      child: Padding(padding: const EdgeInsets.all(AppDimens.md), child: child),
     );
   }
 }
@@ -79,11 +78,15 @@ class _Loading extends StatelessWidget {
           width: 16,
           height: 16,
           child: CircularProgressIndicator(
-              strokeWidth: 2, color: AppColors.primary),
+            strokeWidth: 2,
+            color: AppColors.primary,
+          ),
         ),
         const SizedBox(width: AppDimens.md),
-        Text("Loading today's plan…",
-            style: Theme.of(context).textTheme.bodyMedium),
+        Text(
+          "Loading today's plan…",
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
       ],
     );
   }
@@ -127,16 +130,17 @@ class _Content extends StatelessWidget {
     if (plan.isEmpty) return _EmptyState(onReload: onReload);
     final sections = <Widget>[];
     if (plan.overdueTasks.isNotEmpty || plan.overdueCrmTasks.isNotEmpty) {
-      sections.add(_OverdueSection(
-        tasks: plan.overdueTasks,
-        crmTasks: plan.overdueCrmTasks,
-      ));
+      sections.add(
+        _OverdueSection(
+          tasks: plan.overdueTasks,
+          crmTasks: plan.overdueCrmTasks,
+        ),
+      );
     }
     if (plan.tasksToday.isNotEmpty || plan.crmTasksToday.isNotEmpty) {
-      sections.add(_DueTodaySection(
-        tasks: plan.tasksToday,
-        crmTasks: plan.crmTasksToday,
-      ));
+      sections.add(
+        _DueTodaySection(tasks: plan.tasksToday, crmTasks: plan.crmTasksToday),
+      );
     }
     if (plan.uncontactedLeads.isNotEmpty) {
       sections.add(_UncontactedSection(leads: plan.uncontactedLeads));
@@ -154,20 +158,26 @@ class _Content extends StatelessWidget {
         ],
         if (hasMissed) ...[
           const SizedBox(height: AppDimens.xs),
-          Builder(builder: (ctx) {
-            return Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: () => ctx.push(Routes.missedActivities),
-                icon: const Icon(Icons.list_alt_outlined, size: 16),
-                label: const Text('View all missed'),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  visualDensity: VisualDensity.compact,
+          Consumer(
+            builder: (ctx, ref, _) {
+              final profile = ref.watch(authControllerProvider).profile;
+              if (!screenOn(profile, 'crm.missed_activities')) {
+                return const SizedBox.shrink();
+              }
+              return Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  onPressed: () => ctx.push(Routes.missedActivities),
+                  icon: const Icon(Icons.list_alt_outlined, size: 16),
+                  label: const Text('View all missed'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    visualDensity: VisualDensity.compact,
+                  ),
                 ),
-              ),
-            );
-          }),
+              );
+            },
+          ),
         ],
       ],
     );
@@ -186,10 +196,13 @@ class _Header extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Today's Plan",
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700)),
+              Text(
+                "Today's Plan",
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(height: 2),
               Wrap(
                 spacing: AppDimens.xs,
@@ -197,7 +210,10 @@ class _Header extends StatelessWidget {
                   if (plan.overdue > 0)
                     _Pill(label: '${plan.overdue} overdue', tone: _Tone.danger),
                   if (plan.dueToday > 0)
-                    _Pill(label: '${plan.dueToday} due today', tone: _Tone.warn),
+                    _Pill(
+                      label: '${plan.dueToday} due today',
+                      tone: _Tone.warn,
+                    ),
                   if (plan.uncontactedLeadsCount > 0)
                     _Pill(
                       label: '${plan.uncontactedLeadsCount} uncontacted',
@@ -240,13 +256,18 @@ class _EmptyState extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("Today's Plan",
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppColors.primary,
-                      fontWeight: FontWeight.w700)),
+              Text(
+                "Today's Plan",
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  color: AppColors.primary,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
               const SizedBox(height: 2),
-              Text("You're all clear. No overdue items or new leads.",
-                  style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                "You're all clear. No overdue items or new leads.",
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             ],
           ),
         ),
@@ -289,10 +310,10 @@ class _SectionHeader extends StatelessWidget {
       child: Text(
         label.toUpperCase(),
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: color,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.8,
-            ),
+          color: color,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.8,
+        ),
       ),
     );
   }
@@ -343,7 +364,9 @@ class _UncontactedSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _SectionHeader(
-            label: 'Uncontacted leads · ${leads.length}', tone: _Tone.info),
+          label: 'Uncontacted leads · ${leads.length}',
+          tone: _Tone.info,
+        ),
         for (final l in leads) _LeadRow(lead: l),
       ],
     );
@@ -369,19 +392,21 @@ class _TaskRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(Icons.assignment_outlined,
-                size: 18, color: AppColors.primary),
+            Icon(Icons.assignment_outlined, size: 18, color: AppColors.primary),
             const SizedBox(width: AppDimens.sm),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(task.subject.isEmpty ? '(no subject)' : task.subject,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                          color: AppColors.onSurface,
-                          fontWeight: FontWeight.w600)),
+                  Text(
+                    task.subject.isEmpty ? '(no subject)' : task.subject,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: AppColors.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   if (task.dueLabel != null ||
                       task.daysOverdue != null ||
                       task.priority != null ||
@@ -402,8 +427,11 @@ class _TaskRow extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right,
-                size: 20, color: AppColors.onSurfaceVariant),
+            Icon(
+              Icons.chevron_right,
+              size: 20,
+              color: AppColors.onSurfaceVariant,
+            ),
           ],
         ),
       ),
@@ -431,7 +459,8 @@ class _CrmTaskRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isFollowup = task.referenceDoctype == 'Lead' ||
+    final isFollowup =
+        task.referenceDoctype == 'Lead' ||
         task.referenceDoctype == 'Opportunity';
     return InkWell(
       onTap: () => _openLinked(context),
@@ -441,19 +470,25 @@ class _CrmTaskRow extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            Icon(isFollowup ? Icons.phone_outlined : Icons.task_alt_outlined,
-                size: 18, color: AppColors.primary),
+            Icon(
+              isFollowup ? Icons.phone_outlined : Icons.task_alt_outlined,
+              size: 18,
+              color: AppColors.primary,
+            ),
             const SizedBox(width: AppDimens.sm),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(task.title.isEmpty ? '(no title)' : task.title,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                          color: AppColors.onSurface,
-                          fontWeight: FontWeight.w600)),
+                  Text(
+                    task.title.isEmpty ? '(no title)' : task.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: AppColors.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   Text(
                     [
                       if (task.daysOverdue != null && task.daysOverdue! > 0)
@@ -470,8 +505,11 @@ class _CrmTaskRow extends StatelessWidget {
                 ],
               ),
             ),
-            Icon(Icons.chevron_right,
-                size: 20, color: AppColors.onSurfaceVariant),
+            Icon(
+              Icons.chevron_right,
+              size: 20,
+              color: AppColors.onSurfaceVariant,
+            ),
           ],
         ),
       ),
@@ -514,12 +552,14 @@ class _LeadRow extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                      lead.leadName.isEmpty ? '(unnamed lead)' : lead.leadName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                          color: AppColors.onSurface,
-                          fontWeight: FontWeight.w600)),
+                    lead.leadName.isEmpty ? '(unnamed lead)' : lead.leadName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: AppColors.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   Text(
                     [
                       '${lead.daysSinceCreated} ${lead.daysSinceCreated == 1 ? "day" : "days"} old',
@@ -541,8 +581,11 @@ class _LeadRow extends StatelessWidget {
                 icon: Icon(Icons.call, size: 18, color: AppColors.primary),
                 onPressed: () => _call(context),
               ),
-            Icon(Icons.chevron_right,
-                size: 20, color: AppColors.onSurfaceVariant),
+            Icon(
+              Icons.chevron_right,
+              size: 20,
+              color: AppColors.onSurfaceVariant,
+            ),
           ],
         ),
       ),
@@ -610,4 +653,3 @@ class _Divider extends StatelessWidget {
     );
   }
 }
-

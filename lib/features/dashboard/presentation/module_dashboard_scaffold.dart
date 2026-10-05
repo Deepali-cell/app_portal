@@ -26,10 +26,7 @@ class ModuleDashboardHeader extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            AppColors.graphite,
-            AppColors.primary,
-          ],
+          colors: [AppColors.graphite, AppColors.primary],
         ),
         borderRadius: BorderRadius.circular(AppDimens.radiusXl),
         boxShadow: [
@@ -63,16 +60,16 @@ class ModuleDashboardHeader extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
-                      ),
+                    color: Colors.white,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.white.withValues(alpha: 0.85),
-                      ),
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
                 ),
               ],
             ),
@@ -117,11 +114,12 @@ class FlowLoadError extends StatelessWidget {
         color: AppColors.errorContainer,
         borderRadius: BorderRadius.circular(AppDimens.radiusXl),
       ),
-      child: Text(message,
-          style: Theme.of(context)
-              .textTheme
-              .bodyMedium
-              ?.copyWith(color: AppColors.onErrorContainer)),
+      child: Text(
+        message,
+        style: Theme.of(
+          context,
+        ).textTheme.bodyMedium?.copyWith(color: AppColors.onErrorContainer),
+      ),
     );
   }
 }
@@ -140,16 +138,18 @@ class DashboardSectionTitle extends StatelessWidget {
         Text(
           title,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w800,
-              ),
+            color: AppColors.primary,
+            fontWeight: FontWeight.w800,
+          ),
         ),
         if (subtitle != null) ...[
           const SizedBox(height: 2),
-          Text(subtitle!,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppColors.onSurfaceVariant,
-                  )),
+          Text(
+            subtitle!,
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: AppColors.onSurfaceVariant),
+          ),
         ],
       ],
     );

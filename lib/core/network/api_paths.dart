@@ -351,7 +351,11 @@ class ApiPaths {
   static const String noteUpdate = '/api/method/tcb_portal_erp.api.notes.update_note';
   static const String noteDelete = '/api/method/tcb_portal_erp.api.notes.delete_note';
 
-  // WhatsApp outreach log (click-to-chat).
+  // WhatsApp conversation (Business Cloud API, or click-to-chat fallback).
+  static const String whatsappMode =
+      '/api/method/tcb_portal_erp.api.whatsapp_log.get_mode';
+  static const String whatsappSend =
+      '/api/method/tcb_portal_erp.api.whatsapp_log.send_message';
   static const String whatsappList =
       '/api/method/tcb_portal_erp.api.whatsapp_log.list_messages';
   static const String whatsappLog =
@@ -359,13 +363,11 @@ class ApiPaths {
   static const String whatsappDelete =
       '/api/method/tcb_portal_erp.api.whatsapp_log.delete_message';
 
-  // Internal team chat (staff-to-staff DMs + groups).
+  // Internal team chat (staff-to-staff direct messages only).
   static const String chatChannels =
       '/api/method/tcb_portal_erp.api.team_chat.list_channels';
   static const String chatStartDirect =
       '/api/method/tcb_portal_erp.api.team_chat.start_direct';
-  static const String chatCreateGroup =
-      '/api/method/tcb_portal_erp.api.team_chat.create_group';
   static const String chatMessages =
       '/api/method/tcb_portal_erp.api.team_chat.list_messages';
   static const String chatSend =
@@ -448,6 +450,22 @@ class ApiPaths {
   // Read-only health check of the site's set-up (apps, workflows, employees...).
   static const String adminSetupCheck =
       '/api/method/tcb_portal_erp.api.setup_check.get_setup_check';
+  // Module licence (TCB) + per-site screen switches (Admin > Screens).
+  static const String adminScreenConfig =
+      '/api/method/tcb_portal_erp.api.portal_modules.get_config';
+  static const String adminSetDisabledScreens =
+      '/api/method/tcb_portal_erp.api.portal_modules.set_disabled_screens';
+  // In-app integrations (WhatsApp, AI, push) — Admin > Integrations.
+  static const String adminIntegrations =
+      '/api/method/tcb_portal_erp.api.integrations.get_integrations';
+  static const String adminSaveIntegration =
+      '/api/method/tcb_portal_erp.api.integrations.save_integration';
+  static const String adminTestIntegration =
+      '/api/method/tcb_portal_erp.api.integrations.test_integration';
+  static const String adminClearIntegration =
+      '/api/method/tcb_portal_erp.api.integrations.clear_integration';
+  static const String adminUploadPushAccount =
+      '/api/method/tcb_portal_erp.api.integrations.upload_push_service_account';
   static const String adminReportMeta =
       '/api/method/tcb_portal_erp.api.admin.get_report_admin_meta';
   static const String adminReportRoles =

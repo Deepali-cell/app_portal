@@ -16,6 +16,7 @@ import '../domain/module_flow.dart';
 import 'flow_diagram.dart';
 import 'module_dashboard_scaffold.dart';
 import 'sales_dashboard_section.dart';
+import '../../home/presentation/nav_destinations.dart';
 
 /// CRM module dashboard. The headline is the live pipeline flow —
 /// Leads → Opportunities → Converted — followed by the full sales workspace
@@ -43,8 +44,12 @@ class CrmDashboardScreen extends ConsumerWidget {
           },
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(AppDimens.screenPadding,
-                AppDimens.md, AppDimens.screenPadding, AppDimens.xl),
+            padding: const EdgeInsets.fromLTRB(
+              AppDimens.screenPadding,
+              AppDimens.md,
+              AppDimens.screenPadding,
+              AppDimens.xl,
+            ),
             children: [
               const ModuleDashboardHeader(
                 title: 'CRM',
@@ -77,8 +82,7 @@ class CrmDashboardScreen extends ConsumerWidget {
   }
 
   List<FlowStage> _crmStages(SalesDashboard d) {
-    int sum(List<StatusBucket> b) =>
-        b.fold(0, (acc, e) => acc + e.count);
+    int sum(List<StatusBucket> b) => b.fold(0, (acc, e) => acc + e.count);
     final leads = sum(d.leadStatuses);
     final opps = sum(d.dealStatuses);
     final won = d.dealStatuses
@@ -127,18 +131,19 @@ class _SalesToolsSection extends ConsumerWidget {
     final isAndroid = !kIsWeb && Platform.isAndroid;
 
     final tools = <_ToolChip>[
-      const _ToolChip(
-        icon: Icons.view_kanban_outlined,
-        label: 'Kanban board',
-        route: Routes.leadKanban,
-      ),
-      if (isManager)
+      if (screenOn(profile, 'crm.kanban'))
+        const _ToolChip(
+          icon: Icons.view_kanban_outlined,
+          label: 'Kanban board',
+          route: Routes.leadKanban,
+        ),
+      if (isManager && screenOn(profile, 'crm.leaderboard'))
         const _ToolChip(
           icon: Icons.emoji_events_outlined,
           label: 'Leaderboard',
           route: Routes.leaderboard,
         ),
-      if (isManager && isAndroid)
+      if (isManager && isAndroid && screenOn(profile, 'crm.field_team'))
         const _ToolChip(
           icon: Icons.map_outlined,
           label: 'Field team',
@@ -150,16 +155,9 @@ class _SalesToolsSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const DashboardSectionTitle(
-          'Sales tools',
-          subtitle: 'More CRM views',
-        ),
+        const DashboardSectionTitle('Sales tools', subtitle: 'More CRM views'),
         const SizedBox(height: AppDimens.md),
-        Wrap(
-          spacing: AppDimens.sm,
-          runSpacing: AppDimens.sm,
-          children: tools,
-        ),
+        Wrap(spacing: AppDimens.sm, runSpacing: AppDimens.sm, children: tools),
       ],
     );
   }
@@ -185,7 +183,9 @@ class _ToolChip extends StatelessWidget {
         onTap: () => context.push(route),
         child: Container(
           padding: const EdgeInsets.symmetric(
-              horizontal: AppDimens.md, vertical: AppDimens.sm),
+            horizontal: AppDimens.md,
+            vertical: AppDimens.sm,
+          ),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
             border: Border.all(color: AppColors.outlineVariant),
@@ -198,9 +198,9 @@ class _ToolChip extends StatelessWidget {
               Text(
                 label,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: AppColors.onSurface,
-                      fontWeight: FontWeight.w600,
-                    ),
+                  color: AppColors.onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),

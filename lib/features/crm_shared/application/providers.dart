@@ -13,6 +13,11 @@ final notesProvider = FutureProvider.family<List<CrmNote>, CrmRef>(
   (ref, key) => ref.read(crmCollabRepositoryProvider).listNotes(key),
 );
 
+/// Whether WhatsApp goes through the company Business API (vs click-to-chat).
+final whatsAppCloudProvider = FutureProvider<bool>(
+  (ref) => ref.read(crmCollabRepositoryProvider).whatsAppCloudEnabled(),
+);
+
 final whatsAppProvider = FutureProvider.family<List<WhatsAppMessage>, CrmRef>(
   (ref, key) => ref.read(crmCollabRepositoryProvider).listWhatsApp(key),
 );

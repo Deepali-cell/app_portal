@@ -44,8 +44,12 @@ class HomeScreen extends ConsumerWidget {
           },
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(AppDimens.screenPadding,
-                AppDimens.md, AppDimens.screenPadding, AppDimens.lg),
+            padding: const EdgeInsets.fromLTRB(
+              AppDimens.screenPadding,
+              AppDimens.md,
+              AppDimens.screenPadding,
+              AppDimens.lg,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -94,11 +98,14 @@ class _HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
               child: CircleAvatar(
                 radius: 18,
                 backgroundColor: AppColors.primary,
-                child: Text(profile.initials,
-                    style: TextStyle(
-                        color: AppColors.onPrimary,
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13)),
+                child: Text(
+                  profile.initials,
+                  style: TextStyle(
+                    color: AppColors.onPrimary,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
+                ),
               ),
             ),
           ),
@@ -112,47 +119,54 @@ class _HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
           tooltip: 'Refresh',
           icon: Icon(Icons.refresh, color: AppColors.primary),
         ),
-        Consumer(builder: (context, ref, _) {
-          final unread = ref.watch(unreadCountProvider).value ?? 0;
-          return IconButton(
-            onPressed: () => context.push(Routes.notifications),
-            tooltip: 'Notifications',
-            icon: Stack(
-              clipBehavior: Clip.none,
-              children: [
-                Icon(Icons.notifications_outlined, color: AppColors.primary),
-                if (unread > 0)
-                  Positioned(
-                    right: -4,
-                    top: -3,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 4, vertical: 1),
-                      constraints:
-                          const BoxConstraints(minWidth: 16, minHeight: 16),
-                      decoration: BoxDecoration(
-                        color: AppColors.error,
-                        borderRadius: BorderRadius.circular(999),
-                        border: Border.all(
+        Consumer(
+          builder: (context, ref, _) {
+            final unread = ref.watch(unreadCountProvider).value ?? 0;
+            return IconButton(
+              onPressed: () => context.push(Routes.notifications),
+              tooltip: 'Notifications',
+              icon: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  Icon(Icons.notifications_outlined, color: AppColors.primary),
+                  if (unread > 0)
+                    Positioned(
+                      right: -4,
+                      top: -3,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 4,
+                          vertical: 1,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.error,
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
                             color: AppColors.surfaceContainerLowest,
-                            width: 1.5),
-                      ),
-                      alignment: Alignment.center,
-                      child: Text(
-                        unread > 99 ? '99+' : '$unread',
-                        style: TextStyle(
-                          color: AppColors.onPrimary,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700,
-                          height: 1.0,
+                            width: 1.5,
+                          ),
+                        ),
+                        alignment: Alignment.center,
+                        child: Text(
+                          unread > 99 ? '99+' : '$unread',
+                          style: TextStyle(
+                            color: AppColors.onPrimary,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                            height: 1.0,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-              ],
-            ),
-          );
-        }),
+                ],
+              ),
+            );
+          },
+        ),
         IconButton(
           onPressed: () => _confirmSignOut(context, ref),
           tooltip: 'Sign out',
@@ -168,15 +182,18 @@ class _HomeAppBar extends ConsumerWidget implements PreferredSizeWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Sign out?'),
-        content:
-            const Text('You will need to sign in again to access the portal.'),
+        content: const Text(
+          'You will need to sign in again to access the portal.',
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Sign out')),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Sign out'),
+          ),
         ],
       ),
     );
@@ -206,10 +223,7 @@ class _WelcomeHero extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            AppColors.graphiteHigh,
-            AppColors.graphite,
-          ],
+          colors: [AppColors.graphiteHigh, AppColors.graphite],
         ),
         borderRadius: BorderRadius.circular(AppDimens.radiusXl),
         border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
@@ -241,24 +255,24 @@ class _WelcomeHero extends StatelessWidget {
               Text(
                 '${_greeting()},',
                 style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.80),
-                    ),
+                  color: Colors.white.withValues(alpha: 0.80),
+                ),
               ),
               Text(
                 firstName,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                    ),
+                  color: Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(height: 4),
               Text(
                 'Welcome to Your workspace',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.72),
-                    ),
+                  color: Colors.white.withValues(alpha: 0.72),
+                ),
               ),
               const SizedBox(height: AppDimens.md),
               Row(
@@ -270,8 +284,7 @@ class _WelcomeHero extends StatelessWidget {
                   const SizedBox(width: AppDimens.sm),
                   _HeroInfoChip(
                     icon: Icons.grid_view_rounded,
-                    label:
-                        '${homeModuleCards(profile).length} modules',
+                    label: '${homeModuleCards(profile).length} modules',
                   ),
                 ],
               ),
@@ -307,9 +320,9 @@ class _HeroInfoChip extends StatelessWidget {
           Text(
             label,
             style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -333,9 +346,9 @@ class _ModulesSection extends StatelessWidget {
           child: Text(
             'Your modules',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w800,
-                ),
+              color: AppColors.primary,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ),
         GridView.builder(
@@ -439,8 +452,9 @@ class _ModuleCardState extends State<_ModuleCard> {
                       height: 96,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: Colors.white
-                            .withValues(alpha: _hover ? 0.06 : 0.035),
+                        color: Colors.white.withValues(
+                          alpha: _hover ? 0.06 : 0.035,
+                        ),
                       ),
                     ),
                   ),
@@ -467,12 +481,15 @@ class _ModuleCardState extends State<_ModuleCard> {
                                 ),
                                 borderRadius: BorderRadius.circular(14),
                                 border: Border.all(
-                                    color:
-                                        Colors.white.withValues(alpha: 0.16)),
+                                  color: Colors.white.withValues(alpha: 0.16),
+                                ),
                               ),
                               alignment: Alignment.center,
-                              child:
-                                  Icon(card.icon, color: Colors.white, size: 24),
+                              child: Icon(
+                                card.icon,
+                                color: Colors.white,
+                                size: 24,
+                              ),
                             ),
                             const Spacer(),
                             AnimatedContainer(
@@ -486,10 +503,11 @@ class _ModuleCardState extends State<_ModuleCard> {
                                     : Colors.white.withValues(alpha: 0.10),
                               ),
                               alignment: Alignment.center,
-                              child: Icon(Icons.arrow_outward,
-                                  size: 15,
-                                  color:
-                                      Colors.white.withValues(alpha: 0.85)),
+                              child: Icon(
+                                Icons.arrow_outward,
+                                size: 15,
+                                color: Colors.white.withValues(alpha: 0.85),
+                              ),
                             ),
                           ],
                         ),
@@ -501,9 +519,7 @@ class _ModuleCardState extends State<_ModuleCard> {
                               card.label,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium
+                              style: Theme.of(context).textTheme.titleMedium
                                   ?.copyWith(
                                     color: Colors.white,
                                     fontWeight: FontWeight.w800,
@@ -515,12 +531,9 @@ class _ModuleCardState extends State<_ModuleCard> {
                               card.tagline,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodySmall
+                              style: Theme.of(context).textTheme.bodySmall
                                   ?.copyWith(
-                                    color:
-                                        Colors.white.withValues(alpha: 0.62),
+                                    color: Colors.white.withValues(alpha: 0.62),
                                     height: 1.25,
                                   ),
                             ),
@@ -550,31 +563,35 @@ class _RecentActivity extends ConsumerWidget {
 
     attendance.whenData((s) {
       for (final log in s.context.todaysLogs.reversed) {
-        items.add(_ActivityItem(
-          icon: log.logType == LogType.inn
-              ? Icons.login_rounded
-              : Icons.logout_rounded,
-          color: AppColors.secondary,
-          tone: AppColors.secondaryFixed,
-          title: log.logType == LogType.inn ? 'Checked in' : 'Checked out',
-          subtitle: DateFormat('h:mm a').format(log.time.toLocal()),
-          when: log.time,
-        ));
+        items.add(
+          _ActivityItem(
+            icon: log.logType == LogType.inn
+                ? Icons.login_rounded
+                : Icons.logout_rounded,
+            color: AppColors.secondary,
+            tone: AppColors.secondaryFixed,
+            title: log.logType == LogType.inn ? 'Checked in' : 'Checked out',
+            subtitle: DateFormat('h:mm a').format(log.time.toLocal()),
+            when: log.time,
+          ),
+        );
       }
     });
 
     leave.whenData((ctx) {
       for (final a in ctx.applications.take(3)) {
-        items.add(_ActivityItem(
-          icon: Icons.calendar_month,
-          color: AppColors.primary,
-          tone: AppColors.secondaryFixed,
-          title: 'Leave ${_statusVerb(a.status)}',
-          subtitle:
-              '${a.leaveType} · ${DateFormat('d MMM').format(a.fromDate)}'
-              '${a.fromDate == a.toDate ? "" : " – ${DateFormat('d MMM').format(a.toDate)}"}',
-          when: a.fromDate,
-        ));
+        items.add(
+          _ActivityItem(
+            icon: Icons.calendar_month,
+            color: AppColors.primary,
+            tone: AppColors.secondaryFixed,
+            title: 'Leave ${_statusVerb(a.status)}',
+            subtitle:
+                '${a.leaveType} · ${DateFormat('d MMM').format(a.fromDate)}'
+                '${a.fromDate == a.toDate ? "" : " – ${DateFormat('d MMM').format(a.toDate)}"}',
+            when: a.fromDate,
+          ),
+        );
       }
     });
 
@@ -587,17 +604,31 @@ class _RecentActivity extends ConsumerWidget {
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(
-                AppDimens.md, AppDimens.md, AppDimens.md, AppDimens.sm),
-            child: Text('Recent Activity',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppColors.primary, fontWeight: FontWeight.w700)),
+              AppDimens.md,
+              AppDimens.md,
+              AppDimens.md,
+              AppDimens.sm,
+            ),
+            child: Text(
+              'Recent Activity',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
           if (top.isEmpty)
             Padding(
               padding: const EdgeInsets.fromLTRB(
-                  AppDimens.md, 0, AppDimens.md, AppDimens.md),
-              child: Text('Nothing here yet.',
-                  style: Theme.of(context).textTheme.bodyMedium),
+                AppDimens.md,
+                0,
+                AppDimens.md,
+                AppDimens.md,
+              ),
+              child: Text(
+                'Nothing here yet.',
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
             )
           else
             ...top.map((it) => _ActivityRow(item: it)),
@@ -645,7 +676,8 @@ class _ActivityRow extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         border: Border(
-            top: BorderSide(color: AppColors.outlineVariant, width: 0.4)),
+          top: BorderSide(color: AppColors.outlineVariant, width: 0.4),
+        ),
       ),
       padding: const EdgeInsets.all(AppDimens.md),
       child: Row(
@@ -662,19 +694,26 @@ class _ActivityRow extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(item.title,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppColors.onSurface,
-                        fontWeight: FontWeight.w500)),
-                Text(item.subtitle,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.bodySmall),
+                Text(
+                  item.title,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.onSurface,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Text(
+                  item.subtitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
               ],
             ),
           ),
-          Text(_relative(item.when),
-              style: Theme.of(context).textTheme.labelSmall),
+          Text(
+            _relative(item.when),
+            style: Theme.of(context).textTheme.labelSmall,
+          ),
         ],
       ),
     );

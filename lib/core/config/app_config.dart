@@ -17,7 +17,7 @@ class AppConfig {
   static const String middlewareBaseUrl = String.fromEnvironment(
     'TCB_MIDDLEWARE_URL',
     // defaultValue: 'https://office.tcbinfotech.com',
-    defaultValue: 'https://tcb-portal.mukeshcoder.site',
+    defaultValue: 'https://swab-writing-upload.ngrok-free.dev',
   );
 
   /// Optional fallback server URL when no tenant is cached.

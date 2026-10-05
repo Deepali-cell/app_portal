@@ -53,7 +53,7 @@ class Tenant {
       serverUrl: (json['server_url'] as String).trim(),
       colorP1: _parseHex(json['color_p1'] as String?, fallback: 0xFFFFFFFF),
       colorP2: _parseHex(json['color_p2'] as String?, fallback: 0xFF022B60),
-      colorP3: _parseHex(json['color_p3'] as String?, fallback: 0xFF67B7E5),
+      colorP3: _parseHex(json['color_p3'] as String?, fallback: 0xFF1F4FD8),
       logoUrl: (json['logo_url'] as String?)?.trim().isEmpty == true
           ? null
           : json['logo_url'] as String?,
@@ -81,7 +81,7 @@ class Tenant {
     serverUrl: '',
     colorP1: Color(0xFFFFFFFF),
     colorP2: Color(0xFF022B60),
-    colorP3: Color(0xFF67B7E5),
+    colorP3: Color(0xFF1F4FD8),
   );
 }
 

@@ -108,7 +108,7 @@ class AppPalette {
   /// Mapping:
   ///  - P1 (e.g. white)       -> surface/background stack + on-primary inks
   ///  - P2 (e.g. dark navy)   -> primary + navy aliases + inverse surface
-  ///  - P3 (e.g. light blue)  -> secondary + accents + fixed/dim variants
+  ///  - P3 (e.g. royal blue)  -> secondary + accents + fixed/dim variants
   /// Everything else is derived by tinting or lightness adjustments.
   factory AppPalette.fromTenant(Tenant t) {
     final p1 = t.colorP1;
@@ -137,7 +137,9 @@ class AppPalette {
     final surfaceVariant = mix(p1, p3, 0.18);
     final surfaceBright = p1;
     final surfaceDim = mix(p1, p3, 0.20);
-    final background = p1;
+    // Page background sits a hair off-white (#FAFAFA on a white P1) so white
+    // cards lift off it, matching tcbinfotech.com.
+    final background = mix(p1, Colors.black, 0.02);
 
     // Inks — derived from P2 (the primary brand).
     final onSurface = mix(p2, Colors.black, 0.0);
@@ -161,7 +163,8 @@ class AppPalette {
       secondary: p3,
       onSecondary: p1,
       secondaryContainer: lighten(p3, 0.05),
-      onSecondaryContainer: darken(p2, 0.05),
+      // White ink on the bright-blue boxes (Apply for Leave, Add, Save…).
+      onSecondaryContainer: Colors.white,
       secondaryFixed: mix(p3, Colors.white, 0.55),
       secondaryFixedDim: mix(p3, Colors.white, 0.35),
       onSecondaryFixed: darken(p2, 0.10),
@@ -210,7 +213,7 @@ class AppPalette {
   /// reads [AppColors], so applying this flips the whole app to dark at once.
   factory AppPalette.darkFromTenant(Tenant t) {
     final p2 = t.colorP2; // brand (navy)
-    final p3 = t.colorP3; // brand accent (light blue)
+    final p3 = t.colorP3; // brand accent (royal blue)
 
     Color lighten(Color c, double amount) =>
         HSLColor.fromColor(c).withLightness(
@@ -372,11 +375,12 @@ class AppColors {
   static const Color onErrorContainer = Color(0xFF93000A);
   static const Color warning = Color(0xFFB54708);
 
-  // Professional "graphite" inks — a near-black used as the dark anchor of the
-  // hero / header gradients and the mobile bottom nav, so the UI reads black
-  // and premium while the tenant's navy still carries the brand.
-  static const Color graphite = Color(0xFF11151C);
-  static const Color graphiteHigh = Color(0xFF222C3A);
+  // TCB navy inks — the dark anchor of the hero / header gradients and the
+  // mobile bottom nav. `graphiteHigh` is TCB's brand navy (#022B60) and
+  // `graphite` a deeper shade of it, so headers carry the brand instead of
+  // reading black.
+  static const Color graphite = Color(0xFF011A3A);
+  static const Color graphiteHigh = Color(0xFF022B60);
 
   // Card shadow (tinted by primary)
   static Color cardShadow = AppPalette.tcbDefault.cardShadow;

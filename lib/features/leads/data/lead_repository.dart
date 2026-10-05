@@ -21,9 +21,13 @@ class LeadRepository {
 
   Future<Lead> getDetail(String name) async {
     try {
-      final resp = await _dio.get(ApiPaths.leadDetail,
-          queryParameters: {'name': name});
-      return Lead.fromJson((resp.data['message'] as Map).cast<String, dynamic>());
+      final resp = await _dio.get(
+        ApiPaths.leadDetail,
+        queryParameters: {'name': name},
+      );
+      return Lead.fromJson(
+        (resp.data['message'] as Map).cast<String, dynamic>(),
+      );
     } on DioException catch (e) {
       throw _err(e);
     }
@@ -60,6 +64,7 @@ class LeadRepository {
   /// Backwards-compat alias — older code paths still call convertToDeal.
   Future<String> convertToDeal(String name) => convertToOpportunity(name);
 
-  ApiException _err(DioException e) =>
-      e.error is ApiException ? e.error as ApiException : ApiException.fromDio(e);
+  ApiException _err(DioException e) => e.error is ApiException
+      ? e.error as ApiException
+      : ApiException.fromDio(e);
 }

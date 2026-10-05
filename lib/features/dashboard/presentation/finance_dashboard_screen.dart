@@ -42,8 +42,12 @@ class FinanceDashboardScreen extends ConsumerWidget {
           },
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(AppDimens.screenPadding,
-                AppDimens.md, AppDimens.screenPadding, AppDimens.xl),
+            padding: const EdgeInsets.fromLTRB(
+              AppDimens.screenPadding,
+              AppDimens.md,
+              AppDimens.screenPadding,
+              AppDimens.xl,
+            ),
             children: [
               const ModuleDashboardHeader(
                 title: 'Finance',
@@ -56,9 +60,10 @@ class FinanceDashboardScreen extends ConsumerWidget {
               async.when(
                 loading: () => const FlowSkeleton(rows: 4),
                 error: (e, _) => FlowLoadError(
-                    message: e is ApiException
-                        ? e.message
-                        : "Couldn't load finance. Try again."),
+                  message: e is ApiException
+                      ? e.message
+                      : "Couldn't load finance. Try again.",
+                ),
                 data: (s) => _Body(summary: s),
               ),
             ],
@@ -79,8 +84,7 @@ class _PeriodChips extends ConsumerWidget {
         for (final p in RolePeriod.values) ...[
           Expanded(
             child: GestureDetector(
-              onTap: () =>
-                  ref.read(accountsPeriodProvider.notifier).set(p),
+              onTap: () => ref.read(accountsPeriodProvider.notifier).set(p),
               child: Container(
                 margin: const EdgeInsets.only(right: 6),
                 padding: const EdgeInsets.symmetric(vertical: 9),
@@ -91,13 +95,16 @@ class _PeriodChips extends ConsumerWidget {
                       : AppColors.surfaceContainer,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Text(p.label,
-                    style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w700,
-                        color: p == active
-                            ? AppColors.onPrimary
-                            : AppColors.onSurfaceVariant)),
+                child: Text(
+                  p.label,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w700,
+                    color: p == active
+                        ? AppColors.onPrimary
+                        : AppColors.onSurfaceVariant,
+                  ),
+                ),
               ),
             ),
           ),
@@ -127,18 +134,20 @@ class _Body extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(profit >= 0 ? 'Net profit' : 'Net loss',
-                    style: TextStyle(
-                        color: AppColors.onPrimary.withValues(alpha: 0.85),
-                        fontWeight: FontWeight.w600)),
+                Text(
+                  profit >= 0 ? 'Net profit' : 'Net loss',
+                  style: TextStyle(
+                    color: AppColors.onPrimary.withValues(alpha: 0.85),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
                 const SizedBox(height: 4),
                 Row(
                   children: [
                     Icon(
-                        profit >= 0
-                            ? Icons.trending_up
-                            : Icons.trending_down,
-                        color: AppColors.onPrimary),
+                      profit >= 0 ? Icons.trending_up : Icons.trending_down,
+                      color: AppColors.onPrimary,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
@@ -146,9 +155,10 @@ class _Body extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            color: AppColors.onPrimary,
-                            fontSize: 26,
-                            fontWeight: FontWeight.w800),
+                          color: AppColors.onPrimary,
+                          fontSize: 26,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                     ),
                   ],
@@ -158,17 +168,23 @@ class _Body extends StatelessWidget {
                   children: [
                     Expanded(
                       child: _InlineStat(
-                          label: 'Income',
-                          value: moneyShort(summary.incomeInPeriod,
-                              currencyCode: cur),
-                          onDark: true),
+                        label: 'Income',
+                        value: moneyShort(
+                          summary.incomeInPeriod,
+                          currencyCode: cur,
+                        ),
+                        onDark: true,
+                      ),
                     ),
                     Expanded(
                       child: _InlineStat(
-                          label: 'Expense',
-                          value: moneyShort(summary.expenseInPeriod,
-                              currencyCode: cur),
-                          onDark: true),
+                        label: 'Expense',
+                        value: moneyShort(
+                          summary.expenseInPeriod,
+                          currencyCode: cur,
+                        ),
+                        onDark: true,
+                      ),
                     ),
                   ],
                 ),
@@ -177,68 +193,82 @@ class _Body extends StatelessWidget {
           ),
         ),
         const SizedBox(height: AppDimens.lg),
-        const DashboardSectionTitle('Cash flow',
-            subtitle: 'Actual money moved this period'),
+        const DashboardSectionTitle(
+          'Cash flow',
+          subtitle: 'Actual money moved this period',
+        ),
         const SizedBox(height: AppDimens.sm),
         Row(
           children: [
             Expanded(
               child: _MoneyCard(
-                  label: 'Money in',
-                  value: moneyShort(summary.receiptsInPeriod, currencyCode: cur),
-                  icon: Icons.south_west,
-                  color: FinanceDashboardScreen._green),
+                label: 'Money in',
+                value: moneyShort(summary.receiptsInPeriod, currencyCode: cur),
+                icon: Icons.south_west,
+                color: FinanceDashboardScreen._green,
+              ),
             ),
             const SizedBox(width: AppDimens.sm),
             Expanded(
               child: _MoneyCard(
-                  label: 'Money out',
-                  value: moneyShort(summary.paymentsInPeriod, currencyCode: cur),
-                  icon: Icons.north_east,
-                  color: FinanceDashboardScreen._red),
+                label: 'Money out',
+                value: moneyShort(summary.paymentsInPeriod, currencyCode: cur),
+                icon: Icons.north_east,
+                color: FinanceDashboardScreen._red,
+              ),
             ),
             const SizedBox(width: AppDimens.sm),
             Expanded(
               child: _MoneyCard(
-                  label: 'Net cash',
-                  value: moneyShort(summary.netCash, currencyCode: cur),
-                  icon: Icons.account_balance,
-                  color: summary.netCash >= 0
-                      ? FinanceDashboardScreen._green
-                      : FinanceDashboardScreen._red),
+                label: 'Net cash',
+                value: moneyShort(summary.netCash, currencyCode: cur),
+                icon: Icons.account_balance,
+                color: summary.netCash >= 0
+                    ? FinanceDashboardScreen._green
+                    : FinanceDashboardScreen._red,
+              ),
             ),
           ],
         ),
         const SizedBox(height: AppDimens.lg),
-        const DashboardSectionTitle('Outstanding',
-            subtitle: 'What is owed to and by the company'),
+        const DashboardSectionTitle(
+          'Outstanding',
+          subtitle: 'What is owed to and by the company',
+        ),
         const SizedBox(height: AppDimens.sm),
         Row(
           children: [
             Expanded(
               child: _MoneyCard(
-                  label: 'Receivable',
-                  value: moneyShort(summary.receivableOutstanding,
-                      currencyCode: cur),
-                  icon: Icons.call_received,
-                  color: FinanceDashboardScreen._blue),
+                label: 'Receivable',
+                value: moneyShort(
+                  summary.receivableOutstanding,
+                  currencyCode: cur,
+                ),
+                icon: Icons.call_received,
+                color: FinanceDashboardScreen._blue,
+              ),
             ),
             const SizedBox(width: AppDimens.sm),
             Expanded(
               child: _MoneyCard(
-                  label: 'Payable',
-                  value: moneyShort(summary.payableOutstanding,
-                      currencyCode: cur),
-                  icon: Icons.call_made,
-                  color: FinanceDashboardScreen._amber),
+                label: 'Payable',
+                value: moneyShort(
+                  summary.payableOutstanding,
+                  currencyCode: cur,
+                ),
+                icon: Icons.call_made,
+                color: FinanceDashboardScreen._amber,
+              ),
             ),
             const SizedBox(width: AppDimens.sm),
             Expanded(
               child: _MoneyCard(
-                  label: 'Overdue',
-                  value: '${summary.overdueInvoices}',
-                  icon: Icons.warning_amber_rounded,
-                  color: FinanceDashboardScreen._red),
+                label: 'Overdue',
+                value: '${summary.overdueInvoices}',
+                icon: Icons.warning_amber_rounded,
+                color: FinanceDashboardScreen._red,
+              ),
             ),
           ],
         ),
@@ -255,8 +285,11 @@ class _Body extends StatelessWidget {
 }
 
 class _InlineStat extends StatelessWidget {
-  const _InlineStat(
-      {required this.label, required this.value, this.onDark = false});
+  const _InlineStat({
+    required this.label,
+    required this.value,
+    this.onDark = false,
+  });
   final String label;
   final String value;
   final bool onDark;
@@ -266,17 +299,25 @@ class _InlineStat extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(value,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-                color: fg, fontSize: 17, fontWeight: FontWeight.w800)),
-        Text(label,
-            style: TextStyle(
-                fontSize: 12,
-                color: onDark
-                    ? AppColors.onPrimary.withValues(alpha: 0.8)
-                    : AppColors.onSurfaceVariant)),
+        Text(
+          value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: fg,
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: onDark
+                ? AppColors.onPrimary.withValues(alpha: 0.8)
+                : AppColors.onSurfaceVariant,
+          ),
+        ),
       ],
     );
   }
@@ -315,17 +356,21 @@ class _MoneyCard extends StatelessWidget {
             child: Icon(icon, size: 18, color: color),
           ),
           const SizedBox(height: 10),
-          Text(value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                  color: AppColors.onSurface)),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.w800,
+              color: AppColors.onSurface,
+            ),
+          ),
           const SizedBox(height: 2),
-          Text(label,
-              style: TextStyle(
-                  fontSize: 11, color: AppColors.onSurfaceVariant)),
+          Text(
+            label,
+            style: TextStyle(fontSize: 11, color: AppColors.onSurfaceVariant),
+          ),
         ],
       ),
     );
@@ -338,8 +383,9 @@ class _OverdueRow extends StatelessWidget {
   final String currency;
   @override
   Widget build(BuildContext context) {
-    final tint =
-        item.isSales ? FinanceDashboardScreen._blue : FinanceDashboardScreen._amber;
+    final tint = item.isSales
+        ? FinanceDashboardScreen._blue
+        : FinanceDashboardScreen._amber;
     return Card(
       margin: const EdgeInsets.only(bottom: AppDimens.sm),
       child: Padding(
@@ -350,30 +396,40 @@ class _OverdueRow extends StatelessWidget {
               radius: 18,
               backgroundColor: tint.withValues(alpha: 0.12),
               child: Icon(
-                  item.isSales ? Icons.person_outline : Icons.store_outlined,
-                  size: 18,
-                  color: tint),
+                item.isSales ? Icons.person_outline : Icons.store_outlined,
+                size: 18,
+                color: tint,
+              ),
             ),
             const SizedBox(width: AppDimens.sm),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(item.party.isEmpty ? item.name : item.party,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(fontWeight: FontWeight.w700)),
-                  Text('${item.isSales ? "Receivable" : "Payable"} · '
-                      '${item.daysOverdue}d overdue',
-                      style: TextStyle(
-                          fontSize: 12, color: AppColors.onSurfaceVariant)),
+                  Text(
+                    item.party.isEmpty ? item.name : item.party,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  Text(
+                    '${item.isSales ? "Receivable" : "Payable"} · '
+                    '${item.daysOverdue}d overdue',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.onSurfaceVariant,
+                    ),
+                  ),
                 ],
               ),
             ),
-            Text(moneyShort(item.outstanding, currencyCode: currency),
-                style: TextStyle(
-                    fontWeight: FontWeight.w800,
-                    color: FinanceDashboardScreen._red)),
+            Text(
+              moneyShort(item.outstanding, currencyCode: currency),
+              style: TextStyle(
+                fontWeight: FontWeight.w800,
+                color: FinanceDashboardScreen._red,
+              ),
+            ),
           ],
         ),
       ),

@@ -39,8 +39,12 @@ class PurchaseDashboardScreen extends ConsumerWidget {
           },
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.fromLTRB(AppDimens.screenPadding,
-                AppDimens.md, AppDimens.screenPadding, AppDimens.xl),
+            padding: const EdgeInsets.fromLTRB(
+              AppDimens.screenPadding,
+              AppDimens.md,
+              AppDimens.screenPadding,
+              AppDimens.xl,
+            ),
             children: [
               const ModuleDashboardHeader(
                 title: 'Purchase',
@@ -69,15 +73,17 @@ class PurchaseDashboardScreen extends ConsumerWidget {
     final out = <FlowStage>[];
     for (var i = 0; i < flow.stages.length; i++) {
       final s = flow.stages[i];
-      out.add(FlowStage(
-        label: s.label,
-        count: s.count,
-        value: s.value,
-        icon: flowIconFor(s.icon),
-        color: flowColorFor(s.color),
-        route: s.route,
-        hint: i < _hints.length ? _hints[i] : null,
-      ));
+      out.add(
+        FlowStage(
+          label: s.label,
+          count: s.count,
+          value: s.value,
+          icon: flowIconFor(s.icon),
+          color: flowColorFor(s.color),
+          route: s.route,
+          hint: i < _hints.length ? _hints[i] : null,
+        ),
+      );
     }
     return out;
   }

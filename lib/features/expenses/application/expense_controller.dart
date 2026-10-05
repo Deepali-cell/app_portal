@@ -5,11 +5,13 @@ import '../data/expense_repository.dart';
 import '../domain/models.dart';
 
 final expenseRepositoryProvider = Provider<ExpenseRepository>(
-    (ref) => ExpenseRepository(ref.watch(dioProvider)));
+  (ref) => ExpenseRepository(ref.watch(dioProvider)),
+);
 
 final expenseControllerProvider =
     AsyncNotifierProvider<ExpenseController, ExpenseContext>(
-        ExpenseController.new);
+      ExpenseController.new,
+    );
 
 class ExpenseController extends AsyncNotifier<ExpenseContext> {
   DateTime? _from;
@@ -64,11 +66,9 @@ class ExpenseController extends AsyncNotifier<ExpenseContext> {
     required String action,
     String? reason,
   }) async {
-    await ref.read(expenseRepositoryProvider).actOnClaim(
-          name: name,
-          action: action,
-          reason: reason,
-        );
+    await ref
+        .read(expenseRepositoryProvider)
+        .actOnClaim(name: name, action: action, reason: reason);
     ref.invalidate(pendingExpenseApprovalsProvider);
     await reload();
   }
@@ -77,7 +77,8 @@ class ExpenseController extends AsyncNotifier<ExpenseContext> {
 /// Claims waiting on the signed in user, as approver or as HR.
 final pendingExpenseApprovalsProvider =
     FutureProvider<List<PendingExpenseApproval>>(
-        (ref) => ref.read(expenseRepositoryProvider).getPendingApprovals());
+      (ref) => ref.read(expenseRepositoryProvider).getPendingApprovals(),
+    );
 
 /// Date window for the HR "all claims" listing. Equality on the record lets it
 /// key a family provider so changing the range refetches.
@@ -87,11 +88,14 @@ typedef ExpenseClaimsRange = ({DateTime from, DateTime to});
 /// Drives the HR module's Expense Claims screen; separate from
 /// [expenseControllerProvider] so the employee self-service screen is untouched.
 final allExpenseClaimsProvider = FutureProvider.autoDispose
-    .family<List<ExpenseClaim>, ExpenseClaimsRange>((ref, r) => ref
-        .read(expenseRepositoryProvider)
-        .getAllClaims(from: r.from, to: r.to));
+    .family<List<ExpenseClaim>, ExpenseClaimsRange>(
+      (ref, r) => ref
+          .read(expenseRepositoryProvider)
+          .getAllClaims(from: r.from, to: r.to),
+    );
 
 /// On-demand detail (with line items) for a single Expense Claim.
 final expenseClaimDetailProvider =
-    FutureProvider.family<ExpenseClaimDetail, String>((ref, name) =>
-        ref.read(expenseRepositoryProvider).getClaimDetail(name));
+    FutureProvider.family<ExpenseClaimDetail, String>(
+      (ref, name) => ref.read(expenseRepositoryProvider).getClaimDetail(name),
+    );

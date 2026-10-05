@@ -43,8 +43,10 @@ class LeaveRepository {
       );
       final msg = (resp.data['message'] as Map).cast<String, dynamic>();
       return ((msg['applications'] as List?) ?? [])
-          .map((e) =>
-              LeaveApplication.fromJson((e as Map).cast<String, dynamic>()))
+          .map(
+            (e) =>
+                LeaveApplication.fromJson((e as Map).cast<String, dynamic>()),
+          )
           .toList();
     } on DioException catch (e) {
       throw _asApiException(e);
@@ -68,8 +70,10 @@ class LeaveRepository {
       );
       final msg = (resp.data['message'] as Map).cast<String, dynamic>();
       return ((msg['requests'] as List?) ?? [])
-          .map((e) =>
-              CompOffApplication.fromJson((e as Map).cast<String, dynamic>()))
+          .map(
+            (e) =>
+                CompOffApplication.fromJson((e as Map).cast<String, dynamic>()),
+          )
           .toList();
     } on DioException catch (e) {
       throw _asApiException(e);
@@ -113,16 +117,19 @@ class LeaveRepository {
   /// overlapping leave) for the UI to surface.
   Future<void> apply(LeaveRequest req) async {
     try {
-      await _dio.post(ApiPaths.leaveApply, data: {
-        'leave_type': req.leaveType,
-        'from_date': _ymd(req.fromDate),
-        'to_date': _ymd(req.toDate),
-        'half_day': req.halfDay ? 1 : 0,
-        if (req.halfDay && req.halfDayDate != null)
-          'half_day_date': _ymd(req.halfDayDate!),
-        if (req.description != null && req.description!.isNotEmpty)
-          'description': req.description,
-      });
+      await _dio.post(
+        ApiPaths.leaveApply,
+        data: {
+          'leave_type': req.leaveType,
+          'from_date': _ymd(req.fromDate),
+          'to_date': _ymd(req.toDate),
+          'half_day': req.halfDay ? 1 : 0,
+          if (req.halfDay && req.halfDayDate != null)
+            'half_day_date': _ymd(req.halfDayDate!),
+          if (req.description != null && req.description!.isNotEmpty)
+            'description': req.description,
+        },
+      );
     } on DioException catch (e) {
       throw _asApiException(e);
     }
@@ -157,8 +164,11 @@ class LeaveRepository {
       final resp = await _dio.get(ApiPaths.leavePendingApprovals);
       final msg = (resp.data['message'] as Map).cast<String, dynamic>();
       return ((msg['applications'] as List?) ?? [])
-          .map((e) =>
-              PendingLeaveApproval.fromJson((e as Map).cast<String, dynamic>()))
+          .map(
+            (e) => PendingLeaveApproval.fromJson(
+              (e as Map).cast<String, dynamic>(),
+            ),
+          )
           .toList();
     } on DioException catch (e) {
       throw _asApiException(e);
@@ -173,11 +183,14 @@ class LeaveRepository {
     String? reason,
   }) async {
     try {
-      await _dio.post(ApiPaths.leaveActOnApplication, data: {
-        'name': name,
-        'action': action,
-        if (reason != null && reason.isNotEmpty) 'reason': reason,
-      });
+      await _dio.post(
+        ApiPaths.leaveActOnApplication,
+        data: {
+          'name': name,
+          'action': action,
+          if (reason != null && reason.isNotEmpty) 'reason': reason,
+        },
+      );
     } on DioException catch (e) {
       throw _asApiException(e);
     }
@@ -190,8 +203,11 @@ class LeaveRepository {
       final resp = await _dio.get(ApiPaths.compOffPendingApprovals);
       final msg = (resp.data['message'] as Map).cast<String, dynamic>();
       return ((msg['requests'] as List?) ?? [])
-          .map((e) =>
-              PendingCompOffApproval.fromJson((e as Map).cast<String, dynamic>()))
+          .map(
+            (e) => PendingCompOffApproval.fromJson(
+              (e as Map).cast<String, dynamic>(),
+            ),
+          )
           .toList();
     } on DioException catch (e) {
       throw _asApiException(e);
@@ -205,11 +221,14 @@ class LeaveRepository {
     String? reason,
   }) async {
     try {
-      await _dio.post(ApiPaths.compOffActOnRequest, data: {
-        'name': name,
-        'action': action,
-        if (reason != null && reason.isNotEmpty) 'reason': reason,
-      });
+      await _dio.post(
+        ApiPaths.compOffActOnRequest,
+        data: {
+          'name': name,
+          'action': action,
+          if (reason != null && reason.isNotEmpty) 'reason': reason,
+        },
+      );
     } on DioException catch (e) {
       throw _asApiException(e);
     }
@@ -218,13 +237,14 @@ class LeaveRepository {
   /// Lists the HR-configurable leave notice-period rules, plus the available
   /// leave types for the picker. HR/admin only (server-enforced).
   Future<({List<LeaveNoticeRule> rules, List<String> leaveTypes})>
-      listNoticeRules() async {
+  listNoticeRules() async {
     try {
       final resp = await _dio.get(ApiPaths.leaveNoticeRulesList);
       final msg = (resp.data['message'] as Map).cast<String, dynamic>();
       final rules = ((msg['rules'] as List?) ?? [])
-          .map((e) =>
-              LeaveNoticeRule.fromJson((e as Map).cast<String, dynamic>()))
+          .map(
+            (e) => LeaveNoticeRule.fromJson((e as Map).cast<String, dynamic>()),
+          )
           .toList();
       final types = ((msg['leave_types'] as List?) ?? [])
           .map((e) => e.toString())
@@ -247,17 +267,21 @@ class LeaveRepository {
     String? description,
   }) async {
     try {
-      await _dio.post(ApiPaths.leaveNoticeRuleSave, data: {
-        if (name != null && name.isNotEmpty) 'name': name,
-        'rule_name': ruleName,
-        'max_leave_days': maxLeaveDays,
-        'min_notice_days': minNoticeDays,
-        'is_active': isActive ? 1 : 0,
-        if (leaveType != null && leaveType.isNotEmpty) 'leave_type': leaveType,
-        if (company != null && company.isNotEmpty) 'company': company,
-        if (description != null && description.isNotEmpty)
-          'description': description,
-      });
+      await _dio.post(
+        ApiPaths.leaveNoticeRuleSave,
+        data: {
+          if (name != null && name.isNotEmpty) 'name': name,
+          'rule_name': ruleName,
+          'max_leave_days': maxLeaveDays,
+          'min_notice_days': minNoticeDays,
+          'is_active': isActive ? 1 : 0,
+          if (leaveType != null && leaveType.isNotEmpty)
+            'leave_type': leaveType,
+          if (company != null && company.isNotEmpty) 'company': company,
+          if (description != null && description.isNotEmpty)
+            'description': description,
+        },
+      );
     } on DioException catch (e) {
       throw _asApiException(e);
     }
@@ -312,8 +336,10 @@ class LeaveRepository {
       final resp = await _dio.get(ApiPaths.wfhPendingApprovals);
       final msg = (resp.data['message'] as Map).cast<String, dynamic>();
       return ((msg['requests'] as List?) ?? [])
-          .map((e) =>
-              PendingWfhApproval.fromJson((e as Map).cast<String, dynamic>()))
+          .map(
+            (e) =>
+                PendingWfhApproval.fromJson((e as Map).cast<String, dynamic>()),
+          )
           .toList();
     } on DioException catch (e) {
       throw _asApiException(e);
@@ -327,11 +353,14 @@ class LeaveRepository {
     String? reason,
   }) async {
     try {
-      await _dio.post(ApiPaths.wfhActOnRequest, data: {
-        'name': name,
-        'action': action,
-        if (reason != null && reason.isNotEmpty) 'reason': reason,
-      });
+      await _dio.post(
+        ApiPaths.wfhActOnRequest,
+        data: {
+          'name': name,
+          'action': action,
+          if (reason != null && reason.isNotEmpty) 'reason': reason,
+        },
+      );
     } on DioException catch (e) {
       throw _asApiException(e);
     }
@@ -342,6 +371,7 @@ class LeaveRepository {
       '${d.month.toString().padLeft(2, '0')}-'
       '${d.day.toString().padLeft(2, '0')}';
 
-  ApiException _asApiException(DioException e) =>
-      e.error is ApiException ? e.error as ApiException : ApiException.fromDio(e);
+  ApiException _asApiException(DioException e) => e.error is ApiException
+      ? e.error as ApiException
+      : ApiException.fromDio(e);
 }

@@ -4,8 +4,9 @@ import '../../../core/providers.dart';
 import '../data/leave_repository.dart';
 import '../domain/models.dart';
 
-final leaveRepositoryProvider =
-    Provider<LeaveRepository>((ref) => LeaveRepository(ref.watch(dioProvider)));
+final leaveRepositoryProvider = Provider<LeaveRepository>(
+  (ref) => LeaveRepository(ref.watch(dioProvider)),
+);
 
 final leaveControllerProvider =
     AsyncNotifierProvider<LeaveController, LeaveContext>(LeaveController.new);
@@ -42,11 +43,9 @@ class LeaveController extends AsyncNotifier<LeaveContext> {
     required String action,
     String? reason,
   }) async {
-    await ref.read(leaveRepositoryProvider).actOnApplication(
-          name: name,
-          action: action,
-          reason: reason,
-        );
+    await ref
+        .read(leaveRepositoryProvider)
+        .actOnApplication(name: name, action: action, reason: reason);
     ref.invalidate(pendingLeaveApprovalsProvider);
     await reload();
   }
@@ -58,11 +57,9 @@ class LeaveController extends AsyncNotifier<LeaveContext> {
     required String action,
     String? reason,
   }) async {
-    await ref.read(leaveRepositoryProvider).actOnCompOff(
-          name: name,
-          action: action,
-          reason: reason,
-        );
+    await ref
+        .read(leaveRepositoryProvider)
+        .actOnCompOff(name: name, action: action, reason: reason);
     ref.invalidate(pendingCompOffApprovalsProvider);
     await reload();
   }
@@ -80,11 +77,9 @@ class LeaveController extends AsyncNotifier<LeaveContext> {
     required String action,
     String? reason,
   }) async {
-    await ref.read(leaveRepositoryProvider).actOnWfh(
-          name: name,
-          action: action,
-          reason: reason,
-        );
+    await ref
+        .read(leaveRepositoryProvider)
+        .actOnWfh(name: name, action: action, reason: reason);
     ref.invalidate(pendingWfhApprovalsProvider);
   }
 }
@@ -97,44 +92,53 @@ typedef LeaveApplicationsRange = ({DateTime from, DateTime to});
 /// others their own). Drives the HR module's Leaves screen; separate from
 /// [leaveControllerProvider] so the employee self-service screen is untouched.
 final allLeaveApplicationsProvider = FutureProvider.autoDispose
-    .family<List<LeaveApplication>, LeaveApplicationsRange>((ref, r) => ref
-        .read(leaveRepositoryProvider)
-        .getAllApplications(from: r.from, to: r.to));
+    .family<List<LeaveApplication>, LeaveApplicationsRange>(
+      (ref, r) => ref
+          .read(leaveRepositoryProvider)
+          .getAllApplications(from: r.from, to: r.to),
+    );
 
 /// Every comp-off request overlapping a window (HR/admin see everyone's, others
 /// their own). Drives the Compensatory tab's management list.
 final allCompOffProvider = FutureProvider.autoDispose
-    .family<List<CompOffApplication>, LeaveApplicationsRange>((ref, r) => ref
-        .read(leaveRepositoryProvider)
-        .getAllCompOff(from: r.from, to: r.to));
+    .family<List<CompOffApplication>, LeaveApplicationsRange>(
+      (ref, r) => ref
+          .read(leaveRepositoryProvider)
+          .getAllCompOff(from: r.from, to: r.to),
+    );
 
 /// On-demand detail for a single Leave Application.
 final leaveApplicationDetailProvider =
     FutureProvider.family<LeaveApplicationDetail, String>(
-        (ref, name) => ref
-            .read(leaveRepositoryProvider)
-            .getApplicationDetail(name));
+      (ref, name) =>
+          ref.read(leaveRepositoryProvider).getApplicationDetail(name),
+    );
 
 /// Requests waiting on the signed in user, as manager or as HR.
 final pendingLeaveApprovalsProvider =
     FutureProvider<List<PendingLeaveApproval>>(
-        (ref) => ref.read(leaveRepositoryProvider).getPendingApprovals());
+      (ref) => ref.read(leaveRepositoryProvider).getPendingApprovals(),
+    );
 
 /// Comp-off requests waiting on the signed in user, as manager or as HR.
 final pendingCompOffApprovalsProvider =
     FutureProvider<List<PendingCompOffApproval>>(
-        (ref) => ref.read(leaveRepositoryProvider).getCompOffPendingApprovals());
+      (ref) => ref.read(leaveRepositoryProvider).getCompOffPendingApprovals(),
+    );
 
 /// The signed-in user's own Work From Home requests (self-service history).
 final myWfhProvider = FutureProvider<List<WfhSummary>>(
-    (ref) => ref.read(leaveRepositoryProvider).getMyWfh());
+  (ref) => ref.read(leaveRepositoryProvider).getMyWfh(),
+);
 
 /// WFH requests waiting on the signed in user, as manager or as HR.
 final pendingWfhApprovalsProvider = FutureProvider<List<PendingWfhApproval>>(
-    (ref) => ref.read(leaveRepositoryProvider).getWfhPendingApprovals());
+  (ref) => ref.read(leaveRepositoryProvider).getWfhPendingApprovals(),
+);
 
 /// HR-configurable leave notice-period rules (with the leave types for the
 /// picker). HR/admin only; drives the Leave Policy configuration screen.
-final leaveNoticeRulesProvider = FutureProvider.autoDispose<
-    ({List<LeaveNoticeRule> rules, List<String> leaveTypes})>(
-    (ref) => ref.read(leaveRepositoryProvider).listNoticeRules());
+final leaveNoticeRulesProvider =
+    FutureProvider.autoDispose<
+      ({List<LeaveNoticeRule> rules, List<String> leaveTypes})
+    >((ref) => ref.read(leaveRepositoryProvider).listNoticeRules());

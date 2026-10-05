@@ -18,7 +18,8 @@ class DashboardRepository {
         queryParameters: {'scope': scope},
       );
       return SalesDashboard.fromJson(
-          (resp.data['message'] as Map).cast<String, dynamic>());
+        (resp.data['message'] as Map).cast<String, dynamic>(),
+      );
     } on DioException catch (e) {
       throw e.error is ApiException
           ? e.error as ApiException
@@ -28,7 +29,8 @@ class DashboardRepository {
 }
 
 final dashboardRepositoryProvider = Provider<DashboardRepository>(
-    (ref) => DashboardRepository(ref.watch(dioProvider)));
+  (ref) => DashboardRepository(ref.watch(dioProvider)),
+);
 
 /// Mutable scope (My / Team) — managers can flip; non-managers locked to
 /// 'mine'. Managers default to 'team' so they immediately see meaningful
@@ -47,10 +49,12 @@ class DashboardScopeController extends Notifier<String> {
 
 final dashboardScopeProvider =
     NotifierProvider<DashboardScopeController, String>(
-        DashboardScopeController.new);
+      DashboardScopeController.new,
+    );
 
-final salesDashboardProvider =
-    FutureProvider.autoDispose<SalesDashboard>((ref) {
+final salesDashboardProvider = FutureProvider.autoDispose<SalesDashboard>((
+  ref,
+) {
   final scope = ref.watch(dashboardScopeProvider);
   return ref.read(dashboardRepositoryProvider).fetch(scope: scope);
 });

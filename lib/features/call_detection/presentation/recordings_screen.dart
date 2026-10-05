@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/providers.dart';
+import '../../../core/router/nav_history.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/theme/app_dimens.dart';
 import '../data/recording_repository.dart';
@@ -121,7 +122,15 @@ class _RecordingsScreenState extends ConsumerState<RecordingsScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.navy,
         foregroundColor: AppColors.canvas,
+        leading: AppBackButton(color: AppColors.canvas),
         title: const Text('Recordings'),
+        actions: [
+          IconButton(
+            tooltip: 'Refresh',
+            icon: const Icon(Icons.refresh),
+            onPressed: _refresh,
+          ),
+        ],
       ),
       body: RefreshIndicator(
         onRefresh: _refresh,

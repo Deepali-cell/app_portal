@@ -11,19 +11,20 @@ enum LeadSort { latestActivity, mostStale, newest, oldest, nameAZ }
 
 extension LeadSortX on LeadSort {
   String get label => switch (this) {
-        LeadSort.latestActivity => 'Latest activity',
-        LeadSort.mostStale => 'Most stale',
-        LeadSort.newest => 'Newest',
-        LeadSort.oldest => 'Oldest',
-        LeadSort.nameAZ => 'Name A-Z',
-      };
+    LeadSort.latestActivity => 'Latest activity',
+    LeadSort.mostStale => 'Most stale',
+    LeadSort.newest => 'Newest',
+    LeadSort.oldest => 'Oldest',
+    LeadSort.nameAZ => 'Name A-Z',
+  };
 
   String get storageKey => name;
 }
 
-LeadSort _sortFromKey(String? k) =>
-    LeadSort.values.firstWhere((v) => v.name == k,
-        orElse: () => LeadSort.latestActivity);
+LeadSort _sortFromKey(String? k) => LeadSort.values.firstWhere(
+  (v) => v.name == k,
+  orElse: () => LeadSort.latestActivity,
+);
 
 /// Row density on the Leads list. Compact mode hides the organisation hint
 /// and shrinks vertical padding so more rows fit on screen.
@@ -31,14 +32,15 @@ enum LeadDensity { comfortable, compact }
 
 extension LeadDensityX on LeadDensity {
   String get label => switch (this) {
-        LeadDensity.comfortable => 'Comfortable',
-        LeadDensity.compact => 'Compact',
-      };
+    LeadDensity.comfortable => 'Comfortable',
+    LeadDensity.compact => 'Compact',
+  };
 }
 
-LeadDensity _densityFromKey(String? k) =>
-    LeadDensity.values.firstWhere((v) => v.name == k,
-        orElse: () => LeadDensity.comfortable);
+LeadDensity _densityFromKey(String? k) => LeadDensity.values.firstWhere(
+  (v) => v.name == k,
+  orElse: () => LeadDensity.comfortable,
+);
 
 @immutable
 class LeadsViewPrefs {
@@ -50,20 +52,19 @@ class LeadsViewPrefs {
   final LeadDensity density;
 
   LeadsViewPrefs copyWith({LeadSort? sort, LeadDensity? density}) =>
-      LeadsViewPrefs(
-          sort: sort ?? this.sort, density: density ?? this.density);
+      LeadsViewPrefs(sort: sort ?? this.sort, density: density ?? this.density);
 
-  Map<String, dynamic> toJson() =>
-      {'sort': sort.name, 'density': density.name};
+  Map<String, dynamic> toJson() => {'sort': sort.name, 'density': density.name};
   factory LeadsViewPrefs.fromJson(Map<String, dynamic> j) => LeadsViewPrefs(
-        sort: _sortFromKey(j['sort'] as String?),
-        density: _densityFromKey(j['density'] as String?),
-      );
+    sort: _sortFromKey(j['sort'] as String?),
+    density: _densityFromKey(j['density'] as String?),
+  );
 }
 
 final leadsViewPrefsProvider =
     NotifierProvider<LeadsViewPrefsController, LeadsViewPrefs>(
-        LeadsViewPrefsController.new);
+      LeadsViewPrefsController.new,
+    );
 
 /// Pending status pre-filter — set by the dashboard when the user taps a
 /// bucket (`"New"`, `"Contacted"`, `"Junk"`, etc.), then read + cleared by
@@ -78,7 +79,8 @@ class LeadStatusFilterController extends Notifier<String?> {
 
 final pendingLeadStatusFilterProvider =
     NotifierProvider<LeadStatusFilterController, String?>(
-        LeadStatusFilterController.new);
+      LeadStatusFilterController.new,
+    );
 
 class LeadsViewPrefsController extends Notifier<LeadsViewPrefs> {
   @override
@@ -89,7 +91,8 @@ class LeadsViewPrefsController extends Notifier<LeadsViewPrefs> {
       if (raw == null || raw.isEmpty) return;
       try {
         state = LeadsViewPrefs.fromJson(
-            (jsonDecode(raw) as Map).cast<String, dynamic>());
+          (jsonDecode(raw) as Map).cast<String, dynamic>(),
+        );
       } catch (_) {
         // Corrupted JSON — fall back silently to defaults.
       }
@@ -120,8 +123,9 @@ List<Lead> applyLeadSort(List<Lead> rows, LeadSort sort) {
   final list = List<Lead>.of(rows);
   switch (sort) {
     case LeadSort.latestActivity:
-      list.sort((a, b) =>
-          _compareNullableDate(b.lastContactAt, a.lastContactAt));
+      list.sort(
+        (a, b) => _compareNullableDate(b.lastContactAt, a.lastContactAt),
+      );
     case LeadSort.mostStale:
       list.sort((a, b) {
         // NULL days bubble to the top with a "—" hint (oldest / never).
@@ -134,11 +138,12 @@ List<Lead> applyLeadSort(List<Lead> rows, LeadSort sort) {
       break;
     case LeadSort.oldest:
       list.sort((a, b) => a.name.compareTo(b.name));
-      // Lead.name encodes creation order in Frappe's autoname (CRM-LEAD-YYYY-####)
-      // so name ASC ≈ creation ASC. Cheap, deterministic, no extra field.
+    // Lead.name encodes creation order in Frappe's autoname (CRM-LEAD-YYYY-####)
+    // so name ASC ≈ creation ASC. Cheap, deterministic, no extra field.
     case LeadSort.nameAZ:
-      list.sort((a, b) =>
-          a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+      list.sort(
+        (a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()),
+      );
   }
   return list;
 }

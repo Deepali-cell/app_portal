@@ -97,6 +97,8 @@ class Profile {
     this.roles = const [],
     this.capabilities = const {},
     this.screenPerms = const {},
+    this.modules,
+    this.disabledScreens = const {},
     this.employee,
   });
 
@@ -110,11 +112,30 @@ class Profile {
   /// {'stock_item': {'view','create','write'}}. Powers ERP-native
   /// enable/disable of create/edit/submit/delete buttons inside a screen.
   final Map<String, Set<String>> screenPerms;
+
+  /// Modules this company is licensed for (TCB middleware), e.g. {'hr','crm'}.
+  /// Null when the server predates module licensing — treat as all enabled.
+  final Set<String>? modules;
+
+  /// Screen ids the site admin switched off, e.g. {'crm.recordings'}.
+  final Set<String> disabledScreens;
+
   final Employee? employee;
 
   bool get hasEmployee => employee != null;
 
   bool can(String feature) => capabilities.contains(feature);
+
+  /// Module layer: is [module] (e.g. 'crm') part of this company's licence?
+  bool hasModule(String module) => modules?.contains(module) ?? true;
+
+  /// Module + screen layers for a screen id like 'crm.recordings'. `core.*`
+  /// screens (Home, Admin) are always on. The role layer is [can].
+  bool screenEnabled(String screenId) {
+    final module = screenId.split('.').first;
+    if (module == 'core') return true;
+    return hasModule(module) && !disabledScreens.contains(screenId);
+  }
 
   /// True if the user may perform [action] (view/create/write/submit/delete)
   /// on [screen]. Falls back to the coarse [can] flag when no per-screen data.
@@ -128,6 +149,8 @@ class Profile {
         roles: roles,
         capabilities: capabilities,
         screenPerms: screenPerms,
+        modules: modules,
+        disabledScreens: disabledScreens,
         employee: employee,
       );
 
@@ -151,6 +174,10 @@ class Profile {
             const [],
         capabilities: _capsFromJson(json['capabilities']),
         screenPerms: _screenPermsFromJson(json['screen_perms']),
+        modules: (json['modules'] as List?)?.map((e) => e.toString()).toSet(),
+        disabledScreens: ((json['disabled_screens'] as List?) ?? const [])
+            .map((e) => e.toString())
+            .toSet(),
         employee: json['employee'] is Map<String, dynamic>
             ? Employee.fromJson(json['employee'] as Map<String, dynamic>)
             : null,
@@ -193,6 +220,8 @@ class Profile {
           for (final e in screenPerms.entries)
             e.key: {for (final a in e.value) a: true}
         },
+        'modules': modules?.toList(),
+        'disabled_screens': disabledScreens.toList(),
         'employee': employee?.toJson(),
       };
 }

@@ -271,7 +271,7 @@ class _ServerDialogState extends State<_ServerDialog> {
             autocorrect: false,
             decoration: InputDecoration(
               labelText: 'Control server URL',
-              hintText: 'https://tcb-portal.mukeshcoder.site',
+              hintText: 'https://swab-writing-upload.ngrok-free.dev',
               errorText: _error,
             ),
           ),

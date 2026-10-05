@@ -88,16 +88,15 @@ class _DashboardBody extends ConsumerWidget {
           ),
           const SizedBox(height: 6),
           _StatusGrid(
-              buckets: snapshot.leadStatuses,
-              onTap: (s) {
-                // Drill-in — set the pending status filter, then push
-                // Leads. LeadsScreen reads + clears this on first build
-                // so the list opens pre-filtered to the bucket's status.
-                ref
-                    .read(pendingLeadStatusFilterProvider.notifier)
-                    .set(s.status);
-                AppNav.go(context, Routes.leads);
-              }),
+            buckets: snapshot.leadStatuses,
+            onTap: (s) {
+              // Drill-in — set the pending status filter, then push
+              // Leads. LeadsScreen reads + clears this on first build
+              // so the list opens pre-filtered to the bucket's status.
+              ref.read(pendingLeadStatusFilterProvider.notifier).set(s.status);
+              AppNav.go(context, Routes.leads);
+            },
+          ),
           const SizedBox(height: AppDimens.lg),
         ],
         if (snapshot.canDeal && snapshot.dealStatuses.isNotEmpty) ...[
@@ -108,15 +107,15 @@ class _DashboardBody extends ConsumerWidget {
           ),
           const SizedBox(height: 6),
           _StatusGrid(
-              buckets: snapshot.dealStatuses,
-              onTap: (s) => AppNav.go(context, Routes.deals)),
+            buckets: snapshot.dealStatuses,
+            onTap: (s) => AppNav.go(context, Routes.deals),
+          ),
           const SizedBox(height: AppDimens.lg),
         ],
         if (!isTeam && snapshot.perRep.isNotEmpty) ...[
           _SectionHeader(
             title: 'Sales team today',
-            subtitle:
-                "${snapshot.perRep.length} reps · sorted by activity",
+            subtitle: "${snapshot.perRep.length} reps · sorted by activity",
           ),
           const SizedBox(height: 6),
           for (final rep in snapshot.perRep) ...[
@@ -152,9 +151,13 @@ class _SectionHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title,
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppColors.primary, fontWeight: FontWeight.w800)),
+          Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
           if (subtitle != null)
             Text(subtitle!, style: Theme.of(context).textTheme.bodySmall),
         ],
@@ -194,24 +197,28 @@ class _TodayStrip extends StatelessWidget {
           _KpiTile(label: 'Calls', value: '${today.calls}', icon: Icons.call),
           const SizedBox(width: 8),
           _KpiTile(
-              label: 'Connected',
-              value: '${today.callsConnected}',
-              icon: Icons.call_made),
+            label: 'Connected',
+            value: '${today.callsConnected}',
+            icon: Icons.call_made,
+          ),
           const SizedBox(width: 8),
           _KpiTile(
-              label: 'New leads',
-              value: '${today.leadsAdded}',
-              icon: Icons.person_add_alt),
+            label: 'New leads',
+            value: '${today.leadsAdded}',
+            icon: Icons.person_add_alt,
+          ),
           const SizedBox(width: 8),
           _KpiTile(
-              label: 'Tasks due',
-              value: '${today.tasksDue}',
-              icon: Icons.task_alt),
+            label: 'Tasks due',
+            value: '${today.tasksDue}',
+            icon: Icons.task_alt,
+          ),
           const SizedBox(width: 8),
           _KpiTile(
-              label: 'Won this month',
-              value: moneyShort(today.monthWonValue),
-              icon: Icons.emoji_events_outlined),
+            label: 'Won this month',
+            value: moneyShort(today.monthWonValue),
+            icon: Icons.emoji_events_outlined,
+          ),
         ],
       ),
     );
@@ -219,8 +226,11 @@ class _TodayStrip extends StatelessWidget {
 }
 
 class _KpiTile extends StatelessWidget {
-  const _KpiTile(
-      {required this.label, required this.value, required this.icon});
+  const _KpiTile({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
   final String label;
   final String value;
   final IconData icon;
@@ -239,9 +249,13 @@ class _KpiTile extends StatelessWidget {
         children: [
           Icon(icon, color: AppColors.primary, size: 18),
           const SizedBox(height: 8),
-          Text(value,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: AppColors.primary, fontWeight: FontWeight.w800)),
+          Text(
+            value,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
           const SizedBox(height: 2),
           Text(label, style: Theme.of(context).textTheme.bodySmall),
         ],
@@ -282,25 +296,35 @@ class _FollowupsCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            Icon(total == 0 ? Icons.check_circle_outline : Icons.event_repeat,
-                color: accent, size: 22),
+            Icon(
+              total == 0 ? Icons.check_circle_outline : Icons.event_repeat,
+              color: accent,
+              size: 22,
+            ),
             const SizedBox(width: AppDimens.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    total == 0 ? 'No follow-ups pending' : '$total follow-up${total == 1 ? '' : 's'}',
+                    total == 0
+                        ? 'No follow-ups pending'
+                        : '$total follow-up${total == 1 ? '' : 's'}',
                     style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: accent, fontWeight: FontWeight.w800),
+                      color: accent,
+                      fontWeight: FontWeight.w800,
+                    ),
                   ),
                   const SizedBox(height: 2),
                   Text(summary, style: Theme.of(context).textTheme.bodySmall),
                 ],
               ),
             ),
-            Icon(Icons.chevron_right,
-                size: 20, color: AppColors.onSurfaceVariant),
+            Icon(
+              Icons.chevron_right,
+              size: 20,
+              color: AppColors.onSurfaceVariant,
+            ),
           ],
         ),
       ),
@@ -314,7 +338,9 @@ Future<void> _showFollowupsSheet(BuildContext context, FollowupsBucket bucket) {
     isScrollControlled: true,
     backgroundColor: AppColors.surface,
     shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(AppDimens.radiusXl)),
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(AppDimens.radiusXl),
+      ),
     ),
     builder: (_) => _FollowupsSheet(bucket: bucket),
   );
@@ -327,7 +353,9 @@ class _FollowupsSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final overdue = bucket.items.where((i) => i.bucket == 'overdue').toList();
-    final dueToday = bucket.items.where((i) => i.bucket == 'due_today').toList();
+    final dueToday = bucket.items
+        .where((i) => i.bucket == 'due_today')
+        .toList();
     final upcoming = bucket.items.where((i) => i.bucket == 'upcoming').toList();
     return DraggableScrollableSheet(
       initialChildSize: 0.6,
@@ -337,7 +365,11 @@ class _FollowupsSheet extends StatelessWidget {
       builder: (_, controller) => ListView(
         controller: controller,
         padding: const EdgeInsets.fromLTRB(
-            AppDimens.lg, AppDimens.md, AppDimens.lg, AppDimens.lg),
+          AppDimens.lg,
+          AppDimens.md,
+          AppDimens.lg,
+          AppDimens.lg,
+        ),
         children: [
           Center(
             child: Container(
@@ -350,31 +382,40 @@ class _FollowupsSheet extends StatelessWidget {
               ),
             ),
           ),
-          Text('Follow-ups',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: AppColors.primary, fontWeight: FontWeight.w800)),
+          Text(
+            'Follow-ups',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: AppColors.primary,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
           const SizedBox(height: AppDimens.md),
           if (overdue.isNotEmpty)
             _FollowupGroup(
-                label: 'Overdue',
-                color: const Color(0xFFB23A48),
-                items: overdue),
+              label: 'Overdue',
+              color: const Color(0xFFB23A48),
+              items: overdue,
+            ),
           if (dueToday.isNotEmpty)
             _FollowupGroup(
-                label: 'Due today',
-                color: AppColors.primary,
-                items: dueToday),
+              label: 'Due today',
+              color: AppColors.primary,
+              items: dueToday,
+            ),
           if (upcoming.isNotEmpty)
             _FollowupGroup(
-                label: 'Next 7 days',
-                color: const Color(0xFFB87800),
-                items: upcoming),
+              label: 'Next 7 days',
+              color: const Color(0xFFB87800),
+              items: upcoming,
+            ),
           if (bucket.items.isEmpty)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: AppDimens.xl),
               child: Center(
-                child: Text('All caught up. Nothing pending.',
-                    style: Theme.of(context).textTheme.bodyMedium),
+                child: Text(
+                  'All caught up. Nothing pending.',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
               ),
             ),
         ],
@@ -384,8 +425,11 @@ class _FollowupsSheet extends StatelessWidget {
 }
 
 class _FollowupGroup extends StatelessWidget {
-  const _FollowupGroup(
-      {required this.label, required this.color, required this.items});
+  const _FollowupGroup({
+    required this.label,
+    required this.color,
+    required this.items,
+  });
   final String label;
   final Color color;
   final List<FollowupItem> items;
@@ -397,9 +441,13 @@ class _FollowupGroup extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('$label (${items.length})',
-              style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: color, fontWeight: FontWeight.w700)),
+          Text(
+            '$label (${items.length})',
+            style: Theme.of(context).textTheme.labelLarge?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
           const SizedBox(height: 6),
           for (final item in items) _FollowupItemRow(item: item, color: color),
         ],
@@ -415,8 +463,10 @@ class _FollowupItemRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final canOpen = item.referenceDocname != null &&
-        (item.referenceDoctype == 'Lead' || item.referenceDoctype == 'Opportunity');
+    final canOpen =
+        item.referenceDocname != null &&
+        (item.referenceDoctype == 'Lead' ||
+            item.referenceDoctype == 'Opportunity');
     return InkWell(
       borderRadius: BorderRadius.circular(AppDimens.radiusMd),
       onTap: !canOpen
@@ -442,7 +492,9 @@ class _FollowupItemRow extends StatelessWidget {
       child: Container(
         margin: const EdgeInsets.only(bottom: 6),
         padding: const EdgeInsets.symmetric(
-            horizontal: AppDimens.md, vertical: 10),
+          horizontal: AppDimens.md,
+          vertical: 10,
+        ),
         decoration: BoxDecoration(
           color: AppColors.surfaceContainerLowest,
           borderRadius: BorderRadius.circular(AppDimens.radiusMd),
@@ -461,7 +513,8 @@ class _FollowupItemRow extends StatelessWidget {
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w700),
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   if (item.dueDate != null)
                     Text(
@@ -472,8 +525,11 @@ class _FollowupItemRow extends StatelessWidget {
               ),
             ),
             if (canOpen)
-              Icon(Icons.chevron_right,
-                  size: 18, color: AppColors.onSurfaceVariant),
+              Icon(
+                Icons.chevron_right,
+                size: 18,
+                color: AppColors.onSurfaceVariant,
+              ),
           ],
         ),
       ),
@@ -579,8 +635,7 @@ class _StatusCardState extends State<_StatusCard> {
                       vertical: 1,
                     ),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFB23A48)
-                          .withValues(alpha: 0.15),
+                      color: const Color(0xFFB23A48).withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Text(
@@ -646,10 +701,13 @@ class _PerRepCard extends StatelessWidget {
                 ? null
                 : NetworkImage(rep.image!),
             child: (rep.image == null || rep.image!.isEmpty)
-                ? Text(rep.initials,
+                ? Text(
+                    rep.initials,
                     style: TextStyle(
-                        color: AppColors.onSecondaryFixed,
-                        fontWeight: FontWeight.w800))
+                      color: AppColors.onSecondaryFixed,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  )
                 : null,
           ),
           const SizedBox(width: AppDimens.md),
@@ -657,38 +715,55 @@ class _PerRepCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(rep.fullName,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: AppColors.onSurface,
-                        fontWeight: FontWeight.w700)),
+                Text(
+                  rep.fullName,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    color: AppColors.onSurface,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
                 const SizedBox(height: 4),
                 Wrap(
                   spacing: 8,
                   runSpacing: 4,
                   children: [
-                    _RepStat(icon: Icons.person_search_outlined,
-                        value: '${rep.leadsOwned}', label: 'leads'),
+                    _RepStat(
+                      icon: Icons.person_search_outlined,
+                      value: '${rep.leadsOwned}',
+                      label: 'leads',
+                    ),
                     if (rep.leadsStale > 0)
                       _RepStat(
-                          icon: Icons.error_outline,
-                          value: '${rep.leadsStale}',
-                          label: 'stale',
-                          color: const Color(0xFFB23A48)),
-                    _RepStat(icon: Icons.call,
-                        value: '${rep.callsToday}', label: 'calls today'),
+                        icon: Icons.error_outline,
+                        value: '${rep.leadsStale}',
+                        label: 'stale',
+                        color: const Color(0xFFB23A48),
+                      ),
+                    _RepStat(
+                      icon: Icons.call,
+                      value: '${rep.callsToday}',
+                      label: 'calls today',
+                    ),
                     if (rep.tasksDue > 0)
-                      _RepStat(icon: Icons.event_available,
-                          value: '${rep.tasksDue}', label: 'due today'),
+                      _RepStat(
+                        icon: Icons.event_available,
+                        value: '${rep.tasksDue}',
+                        label: 'due today',
+                      ),
                     if (rep.tasksOverdue > 0)
-                      _RepStat(icon: Icons.warning_amber,
-                          value: '${rep.tasksOverdue}',
-                          label: 'overdue',
-                          color: const Color(0xFFB87800)),
+                      _RepStat(
+                        icon: Icons.warning_amber,
+                        value: '${rep.tasksOverdue}',
+                        label: 'overdue',
+                        color: const Color(0xFFB87800),
+                      ),
                     if (rep.dealsWonMonth > 0)
-                      _RepStat(icon: Icons.emoji_events_outlined,
-                          value: '${rep.dealsWonMonth}',
-                          label: 'won this month',
-                          color: const Color(0xFF1B7F4D)),
+                      _RepStat(
+                        icon: Icons.emoji_events_outlined,
+                        value: '${rep.dealsWonMonth}',
+                        label: 'won this month',
+                        color: const Color(0xFF1B7F4D),
+                      ),
                   ],
                 ),
               ],
@@ -714,15 +789,18 @@ class _RepStat extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final c = color ?? AppColors.onSurfaceVariant;
-    return Row(mainAxisSize: MainAxisSize.min, children: [
-      Icon(icon, size: 12, color: c),
-      const SizedBox(width: 3),
-      Text('$value ',
-          style: TextStyle(
-              color: c, fontWeight: FontWeight.w800, fontSize: 12)),
-      Text(label,
-          style: TextStyle(color: c, fontSize: 11)),
-    ]);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 12, color: c),
+        const SizedBox(width: 3),
+        Text(
+          '$value ',
+          style: TextStyle(color: c, fontWeight: FontWeight.w800, fontSize: 12),
+        ),
+        Text(label, style: TextStyle(color: c, fontSize: 11)),
+      ],
+    );
   }
 }
 
@@ -754,37 +832,49 @@ class _SummaryCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [
-              Icon(Icons.auto_awesome, size: 16, color: AppColors.primary),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(summary.displayName,
+            Row(
+              children: [
+                Icon(Icons.auto_awesome, size: 16, color: AppColors.primary),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    summary.displayName,
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w700)),
-              ),
-              if (summary.suggestedStatus != null &&
-                  summary.suggestedStatus!.isNotEmpty)
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(999),
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                  child: Text('→ ${summary.suggestedStatus}',
-                      style: TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w700)),
                 ),
-            ]),
+                if (summary.suggestedStatus != null &&
+                    summary.suggestedStatus!.isNotEmpty)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      '→ ${summary.suggestedStatus}',
+                      style: TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
             if (summary.summary != null && summary.summary!.isNotEmpty) ...[
               const SizedBox(height: 6),
-              Text(summary.summary!,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                summary.summary!,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             ],
           ],
         ),
@@ -805,14 +895,19 @@ class _DashboardError extends StatelessWidget {
         color: AppColors.errorContainer,
         borderRadius: BorderRadius.circular(AppDimens.radiusLg),
       ),
-      child: Row(children: [
-        Icon(Icons.error_outline, color: AppColors.onErrorContainer),
-        const SizedBox(width: AppDimens.md),
-        Expanded(
-            child: Text(msg,
-                style: TextStyle(color: AppColors.onErrorContainer))),
-        TextButton(onPressed: onRetry, child: const Text('Retry')),
-      ]),
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, color: AppColors.onErrorContainer),
+          const SizedBox(width: AppDimens.md),
+          Expanded(
+            child: Text(
+              msg,
+              style: TextStyle(color: AppColors.onErrorContainer),
+            ),
+          ),
+          TextButton(onPressed: onRetry, child: const Text('Retry')),
+        ],
+      ),
     );
   }
 }

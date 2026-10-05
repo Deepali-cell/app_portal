@@ -30,9 +30,24 @@ class CrmCollabRepository {
   Future<void> deleteNote(String name) =>
       _post(ApiPaths.noteDelete, {'name': name});
 
-  // ---- WhatsApp outreach log (click-to-chat) ----
+  // ---- WhatsApp conversation ----
+  /// True when the server sends through the WhatsApp Business Cloud API;
+  /// false means click-to-chat (open wa.me and just log the text).
+  Future<bool> whatsAppCloudEnabled() async {
+    try {
+      final resp = await _dio.get(ApiPaths.whatsappMode);
+      return (resp.data['message'] as Map?)?['mode'] == 'cloud';
+    } on DioException catch (e) {
+      throw _err(e);
+    }
+  }
+
   Future<List<WhatsAppMessage>> listWhatsApp(CrmRef ref) async =>
       _getList(ApiPaths.whatsappList, ref, WhatsAppMessage.fromJson);
+
+  /// Send from the company WhatsApp number (cloud mode only).
+  Future<void> sendWhatsApp(CrmRef ref, {required String message}) =>
+      _post(ApiPaths.whatsappSend, {...ref.bodyFields, 'message': message});
 
   Future<void> logWhatsApp(CrmRef ref,
           {required String message, String? toNumber}) =>

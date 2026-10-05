@@ -13,8 +13,8 @@ import '../../home/presentation/app_shell.dart';
 import '../application/providers.dart';
 import '../domain/models.dart';
 
-/// Internal team chat home: the list of the current user's channels (DMs +
-/// groups) with a FAB to start a new direct message or create a group.
+/// Internal team chat home: the current user's 1:1 conversations with a FAB to
+/// start a new direct message. Team chat is direct-only (no groups).
 class TeamChatScreen extends ConsumerWidget {
   const TeamChatScreen({super.key});
 
@@ -37,7 +37,7 @@ class TeamChatScreen extends ConsumerWidget {
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: AppColors.primary,
-        onPressed: () => _showNewMenu(context, ref),
+        onPressed: () => _startDirect(context, ref),
         child: Icon(Icons.chat, color: AppColors.onPrimary),
       ),
       body: RefreshIndicator(
@@ -91,35 +91,6 @@ class TeamChatScreen extends ConsumerWidget {
         ],
       );
 
-  void _showNewMenu(BuildContext context, WidgetRef ref) {
-    showModalBottomSheet<void>(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: Icon(Icons.person_add_alt_1, color: AppColors.primary),
-              title: const Text('New direct message'),
-              onTap: () {
-                Navigator.pop(ctx);
-                _startDirect(context, ref);
-              },
-            ),
-            ListTile(
-              leading: Icon(Icons.group_add, color: AppColors.primary),
-              title: const Text('New group'),
-              onTap: () {
-                Navigator.pop(ctx);
-                _newGroup(context, ref);
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Future<void> _startDirect(BuildContext context, WidgetRef ref) async {
     final user = await showModalBottomSheet<UserOption>(
       context: context,
@@ -143,19 +114,6 @@ class TeamChatScreen extends ConsumerWidget {
       }
     }
   }
-
-  Future<void> _newGroup(BuildContext context, WidgetRef ref) async {
-    // The sheet creates the group itself and returns the new channel, so no
-    // record types cross the modal boundary.
-    final channel = await showModalBottomSheet<ChatChannel>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => const _NewGroupSheet(),
-    );
-    if (channel == null || !context.mounted) return;
-    ref.invalidate(chatChannelsProvider);
-    context.push(Routes.chatThread, extra: channel);
-  }
 }
 
 class _ChannelTile extends StatelessWidget {
@@ -169,16 +127,14 @@ class _ChannelTile extends StatelessWidget {
       leading: CircleAvatar(
         radius: 24,
         backgroundColor: AppColors.primary.withValues(alpha: 0.12),
-        child: Icon(channel.isGroup ? Icons.groups : Icons.person,
-            color: AppColors.primary),
+        child: Icon(Icons.person, color: AppColors.primary),
       ),
       title: Text(channel.title,
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontWeight: FontWeight.w700)),
       subtitle: Text(
-        channel.lastMessage ??
-            (channel.isGroup ? '${channel.memberCount} members' : 'Tap to chat'),
+        channel.lastMessage ?? 'Tap to chat',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
         style: TextStyle(color: AppColors.onSurfaceVariant),
@@ -290,190 +246,6 @@ class _UserSearchSheetState extends ConsumerState<_UserSearchSheet> {
                     subtitle: Text(u.name,
                         maxLines: 1, overflow: TextOverflow.ellipsis),
                     onTap: () => Navigator.pop(context, u),
-                  );
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// Sheet to name a group and multi-select its members.
-class _NewGroupSheet extends ConsumerStatefulWidget {
-  const _NewGroupSheet();
-  @override
-  ConsumerState<_NewGroupSheet> createState() => _NewGroupSheetState();
-}
-
-class _NewGroupSheetState extends ConsumerState<_NewGroupSheet> {
-  final _name = TextEditingController();
-  final _q = TextEditingController();
-  final _selected = <String, UserOption>{};
-  List<UserOption> _results = const [];
-  bool _loading = false;
-  bool _creating = false;
-
-  Future<void> _search(String txt) async {
-    setState(() => _loading = true);
-    try {
-      final r = await ref.read(teamChatRepositoryProvider).searchUsers(txt);
-      if (mounted) setState(() => _results = r);
-    } catch (_) {
-      if (mounted) setState(() => _results = const []);
-    } finally {
-      if (mounted) setState(() => _loading = false);
-    }
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _search('');
-  }
-
-  @override
-  void dispose() {
-    _name.dispose();
-    _q.dispose();
-    super.dispose();
-  }
-
-  Future<void> _done() async {
-    final title = _name.text.trim();
-    if (title.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Give the group a name.')));
-      return;
-    }
-    if (_selected.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Add at least one member.')));
-      return;
-    }
-    if (_creating) return;
-    setState(() => _creating = true);
-    try {
-      final id = await ref
-          .read(teamChatRepositoryProvider)
-          .createGroup(title, _selected.keys.toList());
-      if (!mounted) return;
-      Navigator.pop(
-        context,
-        ChatChannel(
-          name: id,
-          channelType: 'Group',
-          title: title,
-          memberCount: _selected.length + 1,
-        ),
-      );
-    } on ApiException catch (e) {
-      if (mounted) {
-        setState(() => _creating = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(e.message)));
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding:
-          EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-      child: DraggableScrollableSheet(
-        expand: false,
-        initialChildSize: 0.75,
-        maxChildSize: 0.95,
-        builder: (_, scroll) => Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(AppDimens.md),
-              child: Column(
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text('New group',
-                            style: Theme.of(context).textTheme.titleMedium),
-                      ),
-                      FilledButton(
-                        onPressed: _creating ? null : _done,
-                        child: _creating
-                            ? const SizedBox(
-                                width: 18,
-                                height: 18,
-                                child: CircularProgressIndicator(strokeWidth: 2))
-                            : const Text('Create'),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: AppDimens.sm),
-                  TextField(
-                    controller: _name,
-                    textCapitalization: TextCapitalization.words,
-                    decoration: InputDecoration(
-                      hintText: 'Group name',
-                      prefixIcon: const Icon(Icons.groups),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                  const SizedBox(height: AppDimens.sm),
-                  TextField(
-                    controller: _q,
-                    onChanged: _search,
-                    decoration: InputDecoration(
-                      hintText: 'Add people',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (_selected.isNotEmpty)
-              SizedBox(
-                height: 40,
-                child: ListView(
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.symmetric(horizontal: AppDimens.md),
-                  children: [
-                    for (final u in _selected.values)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 6),
-                        child: Chip(
-                          label: Text(u.fullName),
-                          onDeleted: () =>
-                              setState(() => _selected.remove(u.name)),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            if (_loading) const LinearProgressIndicator(),
-            Expanded(
-              child: ListView.builder(
-                controller: scroll,
-                itemCount: _results.length,
-                itemBuilder: (_, i) {
-                  final u = _results[i];
-                  final on = _selected.containsKey(u.name);
-                  return CheckboxListTile(
-                    value: on,
-                    title: Text(u.fullName),
-                    subtitle: Text(u.name,
-                        maxLines: 1, overflow: TextOverflow.ellipsis),
-                    onChanged: (_) => setState(() {
-                      if (on) {
-                        _selected.remove(u.name);
-                      } else {
-                        _selected[u.name] = u;
-                      }
-                    }),
                   );
                 },
               ),

@@ -37,10 +37,13 @@ class ExpenseRepository {
   /// receipts to it afterwards). Throws [ApiException] on rejection.
   Future<String> apply(List<ExpenseItem> items, {String? remark}) async {
     try {
-      final resp = await _dio.post(ApiPaths.expenseApply, data: {
-        'items': jsonEncode(items.map((e) => e.toJson()).toList()),
-        if (remark != null && remark.isNotEmpty) 'remark': remark,
-      });
+      final resp = await _dio.post(
+        ApiPaths.expenseApply,
+        data: {
+          'items': jsonEncode(items.map((e) => e.toJson()).toList()),
+          if (remark != null && remark.isNotEmpty) 'remark': remark,
+        },
+      );
       return (resp.data['message'] as Map)['name'] as String;
     } on DioException catch (e) {
       throw _asApiException(e);
@@ -53,8 +56,10 @@ class ExpenseRepository {
     try {
       final form = FormData.fromMap({
         'claim': claim,
-        'file': await MultipartFile.fromFile(filePath,
-            filename: filePath.split('/').last),
+        'file': await MultipartFile.fromFile(
+          filePath,
+          filename: filePath.split('/').last,
+        ),
       });
       await _dio.post(ApiPaths.expenseAddAttachment, data: form);
     } on DioException catch (e) {
@@ -68,8 +73,11 @@ class ExpenseRepository {
       final resp = await _dio.get(ApiPaths.expensePendingApprovals);
       final msg = (resp.data['message'] as Map).cast<String, dynamic>();
       return ((msg['claims'] as List?) ?? [])
-          .map((e) =>
-              PendingExpenseApproval.fromJson((e as Map).cast<String, dynamic>()))
+          .map(
+            (e) => PendingExpenseApproval.fromJson(
+              (e as Map).cast<String, dynamic>(),
+            ),
+          )
           .toList();
     } on DioException catch (e) {
       throw _asApiException(e);
@@ -78,7 +86,10 @@ class ExpenseRepository {
 
   /// All expense claims in a window for HR/admin (own claims for others).
   /// Powers the HR module's Expense Claims screen; distinct from [getContext].
-  Future<List<ExpenseClaim>> getAllClaims({DateTime? from, DateTime? to}) async {
+  Future<List<ExpenseClaim>> getAllClaims({
+    DateTime? from,
+    DateTime? to,
+  }) async {
     String fmt(DateTime d) =>
         '${d.year.toString().padLeft(4, '0')}-'
         '${d.month.toString().padLeft(2, '0')}-'
@@ -145,16 +156,20 @@ class ExpenseRepository {
     String? reason,
   }) async {
     try {
-      await _dio.post(ApiPaths.expenseActOnClaim, data: {
-        'name': name,
-        'action': action,
-        if (reason != null && reason.isNotEmpty) 'reason': reason,
-      });
+      await _dio.post(
+        ApiPaths.expenseActOnClaim,
+        data: {
+          'name': name,
+          'action': action,
+          if (reason != null && reason.isNotEmpty) 'reason': reason,
+        },
+      );
     } on DioException catch (e) {
       throw _asApiException(e);
     }
   }
 
-  ApiException _asApiException(DioException e) =>
-      e.error is ApiException ? e.error as ApiException : ApiException.fromDio(e);
+  ApiException _asApiException(DioException e) => e.error is ApiException
+      ? e.error as ApiException
+      : ApiException.fromDio(e);
 }

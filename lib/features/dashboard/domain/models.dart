@@ -18,12 +18,12 @@ class TodaySnapshot {
   final double monthWonValue;
 
   factory TodaySnapshot.fromJson(Map<String, dynamic> j) => TodaySnapshot(
-        calls: (j['calls'] as num?)?.toInt() ?? 0,
-        callsConnected: (j['calls_connected'] as num?)?.toInt() ?? 0,
-        leadsAdded: (j['leads_added'] as num?)?.toInt() ?? 0,
-        tasksDue: (j['tasks_due'] as num?)?.toInt() ?? 0,
-        monthWonValue: (j['month_won_value'] as num?)?.toDouble() ?? 0,
-      );
+    calls: (j['calls'] as num?)?.toInt() ?? 0,
+    callsConnected: (j['calls_connected'] as num?)?.toInt() ?? 0,
+    leadsAdded: (j['leads_added'] as num?)?.toInt() ?? 0,
+    tasksDue: (j['tasks_due'] as num?)?.toInt() ?? 0,
+    monthWonValue: (j['month_won_value'] as num?)?.toDouble() ?? 0,
+  );
 }
 
 @immutable
@@ -39,6 +39,7 @@ class FollowupItem {
     this.referenceDocname,
   });
   final String name;
+
   /// One of 'overdue', 'due_today', 'upcoming'.
   final String bucket;
   final String? title;
@@ -49,15 +50,15 @@ class FollowupItem {
   final String? referenceDocname;
 
   factory FollowupItem.fromJson(Map<String, dynamic> j) => FollowupItem(
-        name: (j['name'] ?? '').toString(),
-        bucket: (j['bucket'] ?? '').toString(),
-        title: j['title'] as String?,
-        dueDate: _parseDate(j['due_date']),
-        status: j['status'] as String?,
-        priority: j['priority'] as String?,
-        referenceDoctype: j['reference_doctype'] as String?,
-        referenceDocname: j['reference_docname'] as String?,
-      );
+    name: (j['name'] ?? '').toString(),
+    bucket: (j['bucket'] ?? '').toString(),
+    title: j['title'] as String?,
+    dueDate: _parseDate(j['due_date']),
+    status: j['status'] as String?,
+    priority: j['priority'] as String?,
+    referenceDoctype: j['reference_doctype'] as String?,
+    referenceDocname: j['reference_docname'] as String?,
+  );
 }
 
 @immutable
@@ -74,13 +75,13 @@ class FollowupsBucket {
   final List<FollowupItem> items;
 
   factory FollowupsBucket.fromJson(Map<String, dynamic> j) => FollowupsBucket(
-        dueToday: (j['due_today'] as num?)?.toInt() ?? 0,
-        overdue: (j['overdue'] as num?)?.toInt() ?? 0,
-        upcomingWeek: (j['upcoming_week'] as num?)?.toInt() ?? 0,
-        items: ((j['items'] as List?) ?? [])
-            .map((e) => FollowupItem.fromJson((e as Map).cast<String, dynamic>()))
-            .toList(),
-      );
+    dueToday: (j['due_today'] as num?)?.toInt() ?? 0,
+    overdue: (j['overdue'] as num?)?.toInt() ?? 0,
+    upcomingWeek: (j['upcoming_week'] as num?)?.toInt() ?? 0,
+    items: ((j['items'] as List?) ?? [])
+        .map((e) => FollowupItem.fromJson((e as Map).cast<String, dynamic>()))
+        .toList(),
+  );
 }
 
 @immutable
@@ -99,12 +100,12 @@ class StatusBucket {
   final Color color;
 
   factory StatusBucket.fromJson(Map<String, dynamic> j) => StatusBucket(
-        status: (j['status'] ?? '').toString(),
-        count: (j['count'] as num?)?.toInt() ?? 0,
-        value: (j['value'] as num?)?.toDouble() ?? 0,
-        staleCount: (j['stale_count'] as num?)?.toInt() ?? 0,
-        color: _parseColor(j['color'] as String?),
-      );
+    status: (j['status'] ?? '').toString(),
+    count: (j['count'] as num?)?.toInt() ?? 0,
+    value: (j['value'] as num?)?.toDouble() ?? 0,
+    staleCount: (j['stale_count'] as num?)?.toInt() ?? 0,
+    color: _parseColor(j['color'] as String?),
+  );
 }
 
 @immutable
@@ -129,15 +130,15 @@ class RecentSummary {
   final String? referenceDocname;
 
   factory RecentSummary.fromJson(Map<String, dynamic> j) => RecentSummary(
-        name: (j['name'] ?? '').toString(),
-        displayName: (j['display_name'] ?? j['phone_number'] ?? 'call').toString(),
-        summary: j['summary'] as String?,
-        suggestedStatus: j['suggested_status'] as String?,
-        sentiment: j['sentiment'] as String?,
-        aiProcessedAt: _parseDate(j['ai_processed_at']),
-        referenceDoctype: j['reference_doctype'] as String?,
-        referenceDocname: j['reference_docname'] as String?,
-      );
+    name: (j['name'] ?? '').toString(),
+    displayName: (j['display_name'] ?? j['phone_number'] ?? 'call').toString(),
+    summary: j['summary'] as String?,
+    suggestedStatus: j['suggested_status'] as String?,
+    sentiment: j['sentiment'] as String?,
+    aiProcessedAt: _parseDate(j['ai_processed_at']),
+    referenceDoctype: j['reference_doctype'] as String?,
+    referenceDocname: j['reference_docname'] as String?,
+  );
 }
 
 @immutable
@@ -146,9 +147,9 @@ class QuickCounts {
   final int uncontactedLeads;
   final int openDeals;
   factory QuickCounts.fromJson(Map<String, dynamic> j) => QuickCounts(
-        uncontactedLeads: (j['uncontacted_leads'] as num?)?.toInt() ?? 0,
-        openDeals: (j['open_deals'] as num?)?.toInt() ?? 0,
-      );
+    uncontactedLeads: (j['uncontacted_leads'] as num?)?.toInt() ?? 0,
+    openDeals: (j['open_deals'] as num?)?.toInt() ?? 0,
+  );
 }
 
 @immutable
@@ -175,16 +176,16 @@ class PerRepCard {
   final int dealsWonMonth;
 
   factory PerRepCard.fromJson(Map<String, dynamic> j) => PerRepCard(
-        user: (j['user'] ?? '').toString(),
-        fullName: (j['full_name'] ?? '').toString(),
-        image: j['image'] as String?,
-        leadsOwned: (j['leads_owned'] as num?)?.toInt() ?? 0,
-        leadsStale: (j['leads_stale'] as num?)?.toInt() ?? 0,
-        callsToday: (j['calls_today'] as num?)?.toInt() ?? 0,
-        tasksDue: (j['tasks_due'] as num?)?.toInt() ?? 0,
-        tasksOverdue: (j['tasks_overdue'] as num?)?.toInt() ?? 0,
-        dealsWonMonth: (j['deals_won_month'] as num?)?.toInt() ?? 0,
-      );
+    user: (j['user'] ?? '').toString(),
+    fullName: (j['full_name'] ?? '').toString(),
+    image: j['image'] as String?,
+    leadsOwned: (j['leads_owned'] as num?)?.toInt() ?? 0,
+    leadsStale: (j['leads_stale'] as num?)?.toInt() ?? 0,
+    callsToday: (j['calls_today'] as num?)?.toInt() ?? 0,
+    tasksDue: (j['tasks_due'] as num?)?.toInt() ?? 0,
+    tasksOverdue: (j['tasks_overdue'] as num?)?.toInt() ?? 0,
+    dealsWonMonth: (j['deals_won_month'] as num?)?.toInt() ?? 0,
+  );
 
   String get initials {
     final parts = fullName.split(RegExp(r'\s+')).where((s) => s.isNotEmpty);
@@ -224,30 +225,33 @@ class SalesDashboard {
   final DateTime? asOf;
 
   factory SalesDashboard.fromJson(Map<String, dynamic> j) => SalesDashboard(
-        scope: (j['scope'] ?? 'mine').toString(),
-        isManagerView: j['is_manager_view'] == true,
-        canLead: j['can_lead'] == true,
-        canDeal: j['can_deal'] == true,
-        today: TodaySnapshot.fromJson(
-            (j['today_snapshot'] as Map?)?.cast<String, dynamic>() ?? {}),
-        followups: FollowupsBucket.fromJson(
-            (j['followups'] as Map?)?.cast<String, dynamic>() ?? {}),
-        leadStatuses: ((j['lead_statuses'] as List?) ?? [])
-            .map((e) => StatusBucket.fromJson((e as Map).cast<String, dynamic>()))
-            .toList(),
-        dealStatuses: ((j['deal_statuses'] as List?) ?? [])
-            .map((e) => StatusBucket.fromJson((e as Map).cast<String, dynamic>()))
-            .toList(),
-        recentSummaries: ((j['recent_summaries'] as List?) ?? [])
-            .map((e) => RecentSummary.fromJson((e as Map).cast<String, dynamic>()))
-            .toList(),
-        quickCounts: QuickCounts.fromJson(
-            (j['quick_counts'] as Map?)?.cast<String, dynamic>() ?? {}),
-        perRep: ((j['per_rep'] as List?) ?? [])
-            .map((e) => PerRepCard.fromJson((e as Map).cast<String, dynamic>()))
-            .toList(),
-        asOf: _parseDate(j['as_of']),
-      );
+    scope: (j['scope'] ?? 'mine').toString(),
+    isManagerView: j['is_manager_view'] == true,
+    canLead: j['can_lead'] == true,
+    canDeal: j['can_deal'] == true,
+    today: TodaySnapshot.fromJson(
+      (j['today_snapshot'] as Map?)?.cast<String, dynamic>() ?? {},
+    ),
+    followups: FollowupsBucket.fromJson(
+      (j['followups'] as Map?)?.cast<String, dynamic>() ?? {},
+    ),
+    leadStatuses: ((j['lead_statuses'] as List?) ?? [])
+        .map((e) => StatusBucket.fromJson((e as Map).cast<String, dynamic>()))
+        .toList(),
+    dealStatuses: ((j['deal_statuses'] as List?) ?? [])
+        .map((e) => StatusBucket.fromJson((e as Map).cast<String, dynamic>()))
+        .toList(),
+    recentSummaries: ((j['recent_summaries'] as List?) ?? [])
+        .map((e) => RecentSummary.fromJson((e as Map).cast<String, dynamic>()))
+        .toList(),
+    quickCounts: QuickCounts.fromJson(
+      (j['quick_counts'] as Map?)?.cast<String, dynamic>() ?? {},
+    ),
+    perRep: ((j['per_rep'] as List?) ?? [])
+        .map((e) => PerRepCard.fromJson((e as Map).cast<String, dynamic>()))
+        .toList(),
+    asOf: _parseDate(j['as_of']),
+  );
 }
 
 DateTime? _parseDate(dynamic v) {

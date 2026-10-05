@@ -38,15 +38,18 @@ class _LeaveApprovalsScreenState extends ConsumerState<LeaveApprovalsScreen> {
         builder: (ctx) => AlertDialog(
           title: const Text('Approve this request?'),
           content: Text(
-              '${item.employeeName} has asked for ${_days(item.totalLeaveDays)} '
-              'of ${item.leaveType}.'),
+            '${item.employeeName} has asked for ${_days(item.totalLeaveDays)} '
+            'of ${item.leaveType}.',
+          ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Cancel'),
+            ),
             FilledButton(
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Approve')),
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Approve'),
+            ),
           ],
         ),
       );
@@ -55,24 +58,29 @@ class _LeaveApprovalsScreenState extends ConsumerState<LeaveApprovalsScreen> {
 
     setState(() => _busyOn = item.name);
     try {
-      await ref.read(leaveControllerProvider.notifier).actOnApplication(
-            name: item.name,
-            action: action,
-            reason: reason,
-          );
+      await ref
+          .read(leaveControllerProvider.notifier)
+          .actOnApplication(name: item.name, action: action, reason: reason);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(action == 'Approve'
-              ? 'Approved. ${item.asHr ? "The request is now closed." : "Sent to HR."}'
-              : 'Rejected.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            action == 'Approve'
+                ? 'Approved. ${item.asHr ? "The request is now closed." : "Sent to HR."}'
+                : 'Rejected.',
+          ),
+        ),
+      );
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(e.message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Could not update the request.')));
+        const SnackBar(content: Text('Could not update the request.')),
+      );
     } finally {
       if (mounted) setState(() => _busyOn = null);
     }
@@ -90,8 +98,10 @@ class _LeaveApprovalsScreenState extends ConsumerState<LeaveApprovalsScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('${item.employeeName} will see this reason.',
-                  style: Theme.of(ctx).textTheme.bodySmall),
+              Text(
+                '${item.employeeName} will see this reason.',
+                style: Theme.of(ctx).textTheme.bodySmall,
+              ),
               const SizedBox(height: AppDimens.md),
               TextField(
                 controller: ctrl,
@@ -108,8 +118,9 @@ class _LeaveApprovalsScreenState extends ConsumerState<LeaveApprovalsScreen> {
           ),
           actions: [
             TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: const Text('Cancel')),
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Cancel'),
+            ),
             TextButton(
               onPressed: () {
                 final v = ctrl.text.trim();
@@ -177,11 +188,16 @@ class _LeaveApprovalsScreenState extends ConsumerState<LeaveApprovalsScreen> {
                     padding: const EdgeInsets.all(AppDimens.xxxl),
                     child: Column(
                       children: [
-                        Icon(Icons.inbox_outlined,
-                            size: 40, color: AppColors.onSurfaceVariant),
+                        Icon(
+                          Icons.inbox_outlined,
+                          size: 40,
+                          color: AppColors.onSurfaceVariant,
+                        ),
                         const SizedBox(height: AppDimens.md),
-                        Text('Nothing waiting on you.',
-                            style: Theme.of(context).textTheme.bodyMedium),
+                        Text(
+                          'Nothing waiting on you.',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
                       ],
                     ),
                   ),
@@ -190,11 +206,14 @@ class _LeaveApprovalsScreenState extends ConsumerState<LeaveApprovalsScreen> {
             }
             return ListView.separated(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(AppDimens.screenPadding,
-                  AppDimens.md, AppDimens.screenPadding, AppDimens.xl),
+              padding: const EdgeInsets.fromLTRB(
+                AppDimens.screenPadding,
+                AppDimens.md,
+                AppDimens.screenPadding,
+                AppDimens.xl,
+              ),
               itemCount: items.length,
-              separatorBuilder: (_, _) =>
-                  const SizedBox(height: AppDimens.md),
+              separatorBuilder: (_, _) => const SizedBox(height: AppDimens.md),
               itemBuilder: (_, i) => _ApprovalCard(
                 item: items[i],
                 busy: _busyOn == items[i].name,
@@ -237,36 +256,49 @@ class _ApprovalCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Expanded(
-                  child: Text(item.employeeName,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w700)),
+                  child: Text(
+                    item.employeeName,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
                 ),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.secondaryFixed,
                     borderRadius: BorderRadius.circular(AppDimens.radiusSm),
                   ),
-                  child: Text(item.asHr ? 'As HR' : 'Your team',
-                      style: TextStyle(
-                          color: AppColors.onSecondaryFixedVariant,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 10)),
+                  child: Text(
+                    item.asHr ? 'As HR' : 'Your team',
+                    style: TextStyle(
+                      color: AppColors.onSecondaryFixedVariant,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 10,
+                    ),
+                  ),
                 ),
               ],
             ),
             const SizedBox(height: 2),
-            Text('${item.leaveType} · ${_LeaveApprovalsScreenState._days(item.totalLeaveDays)}'
-                '${item.halfDay ? " · half day" : ""}',
-                style: Theme.of(context).textTheme.bodySmall),
+            Text(
+              '${item.leaveType} · ${_LeaveApprovalsScreenState._days(item.totalLeaveDays)}'
+              '${item.halfDay ? " · half day" : ""}',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
             const SizedBox(height: 2),
             Text(range, style: Theme.of(context).textTheme.labelLarge),
-            if (item.description != null && item.description!.trim().isNotEmpty) ...[
+            if (item.description != null &&
+                item.description!.trim().isNotEmpty) ...[
               const SizedBox(height: AppDimens.sm),
-              Text(item.description!.trim(),
-                  style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                item.description!.trim(),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
             ],
             const SizedBox(height: AppDimens.md),
             Row(
@@ -279,8 +311,7 @@ class _ApprovalCard extends StatelessWidget {
                       side: BorderSide(color: AppColors.error),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppDimens.radiusLg),
+                        borderRadius: BorderRadius.circular(AppDimens.radiusLg),
                       ),
                     ),
                     child: const Text('Reject'),
@@ -295,7 +326,10 @@ class _ApprovalCard extends StatelessWidget {
                             width: 16,
                             height: 16,
                             child: CircularProgressIndicator(
-                                strokeWidth: 2, color: Colors.white))
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
                         : const Icon(Icons.check, size: 18),
                     label: const Text('Approve'),
                     style: FilledButton.styleFrom(
@@ -303,8 +337,7 @@ class _ApprovalCard extends StatelessWidget {
                       foregroundColor: AppColors.onSecondaryContainer,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
-                        borderRadius:
-                            BorderRadius.circular(AppDimens.radiusLg),
+                        borderRadius: BorderRadius.circular(AppDimens.radiusLg),
                       ),
                     ),
                   ),

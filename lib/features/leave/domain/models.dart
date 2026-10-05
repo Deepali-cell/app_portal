@@ -22,13 +22,13 @@ class LeaveBalance {
   final bool isLwp;
 
   factory LeaveBalance.fromJson(Map<String, dynamic> j) => LeaveBalance(
-        leaveType: j['leave_type'] as String,
-        total: (j['total'] as num?)?.toDouble() ?? 0,
-        taken: (j['taken'] as num?)?.toDouble() ?? 0,
-        pending: (j['pending'] as num?)?.toDouble() ?? 0,
-        remaining: (j['remaining'] as num?)?.toDouble() ?? 0,
-        isLwp: ((j['is_lwp'] as num?)?.toInt() ?? 0) == 1,
-      );
+    leaveType: j['leave_type'] as String,
+    total: (j['total'] as num?)?.toDouble() ?? 0,
+    taken: (j['taken'] as num?)?.toDouble() ?? 0,
+    pending: (j['pending'] as num?)?.toDouble() ?? 0,
+    remaining: (j['remaining'] as num?)?.toDouble() ?? 0,
+    isLwp: ((j['is_lwp'] as num?)?.toInt() ?? 0) == 1,
+  );
 }
 
 /// One leave request waiting on the signed in user, at either approval hop.
@@ -86,28 +86,37 @@ class CompOffSummary {
     required this.workFromDate,
     required this.workEndDate,
     required this.stageLabel,
+    this.stage = 'Open',
     this.halfDay = false,
     this.reason,
+    this.postingDate,
   });
 
   final String name;
   final String leaveType;
   final DateTime workFromDate;
   final DateTime workEndDate;
+  final String stage;
   final String stageLabel;
   final bool halfDay;
   final String? reason;
+  final DateTime? postingDate;
+
+  LeaveStatus get status => _workflowStatus(stage);
 
   factory CompOffSummary.fromJson(Map<String, dynamic> j) => CompOffSummary(
-        name: j['name'] as String,
-        leaveType: (j['leave_type'] ?? '') as String,
-        workFromDate: DateTime.parse(j['work_from_date'] as String),
-        workEndDate: DateTime.parse(
-            (j['work_end_date'] ?? j['work_from_date']) as String),
-        stageLabel: (j['stage_label'] ?? '') as String,
-        halfDay: (j['half_day'] as num?)?.toInt() == 1,
-        reason: j['reason'] as String?,
-      );
+    name: j['name'] as String,
+    leaveType: (j['leave_type'] ?? '') as String,
+    workFromDate: DateTime.parse(j['work_from_date'] as String),
+    workEndDate: DateTime.parse(
+      (j['work_end_date'] ?? j['work_from_date']) as String,
+    ),
+    stage: (j['stage'] ?? 'Open') as String,
+    stageLabel: (j['stage_label'] ?? '') as String,
+    halfDay: (j['half_day'] as num?)?.toInt() == 1,
+    reason: j['reason'] as String?,
+    postingDate: DateTime.tryParse((j['posting_date'] ?? '') as String),
+  );
 }
 
 /// One comp-off request in the management list (HR/admin see everyone's, others
@@ -140,10 +149,10 @@ class CompOffApplication {
   /// Maps the workflow stage onto the shared leave-status buckets so the UI can
   /// reuse the same chip colours. "Open"/"Pending HR Approval" are both pending.
   LeaveStatus get status => switch (stage) {
-        'Approved' => LeaveStatus.approved,
-        'Rejected' => LeaveStatus.rejected,
-        _ => LeaveStatus.open,
-      };
+    'Approved' => LeaveStatus.approved,
+    'Rejected' => LeaveStatus.rejected,
+    _ => LeaveStatus.open,
+  };
 
   factory CompOffApplication.fromJson(Map<String, dynamic> j) =>
       CompOffApplication(
@@ -152,7 +161,8 @@ class CompOffApplication {
         leaveType: (j['leave_type'] ?? '') as String,
         workFromDate: DateTime.parse(j['work_from_date'] as String),
         workEndDate: DateTime.parse(
-            (j['work_end_date'] ?? j['work_from_date']) as String),
+          (j['work_end_date'] ?? j['work_from_date']) as String,
+        ),
         stage: (j['stage'] ?? 'Open') as String,
         stageLabel: (j['stage_label'] ?? '') as String,
         halfDay: (j['half_day'] as num?)?.toInt() == 1,
@@ -192,7 +202,8 @@ class PendingCompOffApproval {
         leaveType: (j['leave_type'] ?? '') as String,
         workFromDate: DateTime.parse(j['work_from_date'] as String),
         workEndDate: DateTime.parse(
-            (j['work_end_date'] ?? j['work_from_date']) as String),
+          (j['work_end_date'] ?? j['work_from_date']) as String,
+        ),
         stageLabel: (j['stage_label'] ?? '') as String,
         asHr: (j['as_hr'] ?? false) as bool,
         halfDay: (j['half_day'] as num?)?.toInt() == 1,
@@ -201,6 +212,15 @@ class PendingCompOffApproval {
 }
 
 enum LeaveStatus { open, approved, rejected, cancelled }
+
+/// Comp-off and WFH carry a workflow stage instead of a status; "Open" and
+/// "Pending HR Approval" both read as pending.
+LeaveStatus _workflowStatus(String stage) => switch (stage) {
+  'Approved' => LeaveStatus.approved,
+  'Rejected' => LeaveStatus.rejected,
+  'Cancelled' => LeaveStatus.cancelled,
+  _ => LeaveStatus.open,
+};
 
 LeaveStatus leaveStatusFrom(String? s) {
   switch ((s ?? '').toLowerCase()) {
@@ -249,17 +269,17 @@ class LeaveApplication {
   final String? stageLabel;
 
   factory LeaveApplication.fromJson(Map<String, dynamic> j) => LeaveApplication(
-        name: j['name'] as String,
-        leaveType: (j['leave_type'] ?? '') as String,
-        fromDate: DateTime.parse(j['from_date'] as String),
-        toDate: DateTime.parse(j['to_date'] as String),
-        totalLeaveDays: (j['total_leave_days'] as num?)?.toDouble() ?? 0,
-        status: leaveStatusFrom(j['status'] as String?),
-        employeeName: j['employee_name'] as String?,
-        description: j['description'] as String?,
-        halfDay: (j['half_day'] as num?)?.toInt() == 1,
-        stageLabel: j['stage_label'] as String?,
-      );
+    name: j['name'] as String,
+    leaveType: (j['leave_type'] ?? '') as String,
+    fromDate: DateTime.parse(j['from_date'] as String),
+    toDate: DateTime.parse(j['to_date'] as String),
+    totalLeaveDays: (j['total_leave_days'] as num?)?.toDouble() ?? 0,
+    status: leaveStatusFrom(j['status'] as String?),
+    employeeName: j['employee_name'] as String?,
+    description: j['description'] as String?,
+    halfDay: (j['half_day'] as num?)?.toInt() == 1,
+    stageLabel: j['stage_label'] as String?,
+  );
 }
 
 /// A file attached to a leave application (e.g. a medical certificate for sick
@@ -281,12 +301,12 @@ class LeaveAttachment {
   final bool isPrivate;
 
   factory LeaveAttachment.fromJson(Map<String, dynamic> j) => LeaveAttachment(
-        name: (j['name'] ?? '') as String,
-        fileName: (j['file_name'] ?? j['file_url'] ?? '') as String,
-        absoluteUrl: (j['absolute_url'] ?? j['file_url'] ?? '') as String,
-        fileSize: (j['file_size'] as num?)?.toInt() ?? 0,
-        isPrivate: (j['is_private'] as num?)?.toInt() == 1,
-      );
+    name: (j['name'] ?? '') as String,
+    fileName: (j['file_name'] ?? j['file_url'] ?? '') as String,
+    absoluteUrl: (j['absolute_url'] ?? j['file_url'] ?? '') as String,
+    fileSize: (j['file_size'] as num?)?.toInt() ?? 0,
+    isPrivate: (j['is_private'] as num?)?.toInt() == 1,
+  );
 }
 
 @immutable
@@ -355,7 +375,10 @@ class LeaveApplicationDetail {
             ? DateTime.tryParse(j['posting_date'].toString())
             : null,
         attachments: ((j['attachments'] as List?) ?? [])
-            .map((e) => LeaveAttachment.fromJson((e as Map).cast<String, dynamic>()))
+            .map(
+              (e) =>
+                  LeaveAttachment.fromJson((e as Map).cast<String, dynamic>()),
+            )
             .toList(),
       );
 }
@@ -400,10 +423,11 @@ class LeaveContext {
   final int compOffPendingCount;
   final bool isHr;
 
-  bool isHoliday(DateTime d) =>
-      holidays.contains('${d.year.toString().padLeft(4, '0')}'
-          '-${d.month.toString().padLeft(2, '0')}'
-          '-${d.day.toString().padLeft(2, '0')}');
+  bool isHoliday(DateTime d) => holidays.contains(
+    '${d.year.toString().padLeft(4, '0')}'
+    '-${d.month.toString().padLeft(2, '0')}'
+    '-${d.day.toString().padLeft(2, '0')}',
+  );
 
   /// Balance for one leave type, or null when the type carries none.
   LeaveBalance? balanceFor(String leaveType) {
@@ -420,34 +444,29 @@ class LeaveContext {
   bool get supportsCompOff => compensatoryLeaveTypes.isNotEmpty;
 
   factory LeaveContext.fromJson(Map<String, dynamic> j) => LeaveContext(
-        employee: j['employee'] as String,
-        leaveApprover: j['leave_approver'] as String?,
-        leaveApproverName: j['leave_approver_name'] as String?,
-        holidays: ((j['holidays'] as List?) ?? [])
-            .map((e) => e.toString())
-            .toSet(),
-        pendingApprovalCount:
-            (j['pending_approval_count'] as num?)?.toInt() ?? 0,
-        compOffPendingCount:
-            (j['comp_off_pending_count'] as num?)?.toInt() ?? 0,
-        isHr: (j['is_hr'] ?? false) as bool,
-        balances: ((j['balances'] as List?) ?? [])
-            .map((e) => LeaveBalance.fromJson(e as Map<String, dynamic>))
-            .toList(),
-        applications: ((j['applications'] as List?) ?? [])
-            .map((e) => LeaveApplication.fromJson(e as Map<String, dynamic>))
-            .toList(),
-        compOffRequests: ((j['comp_off_requests'] as List?) ?? [])
-            .map((e) => CompOffSummary.fromJson(e as Map<String, dynamic>))
-            .toList(),
-        leaveTypes: ((j['leave_types'] as List?) ?? [])
-            .map((e) => e.toString())
-            .toList(),
-        compensatoryLeaveTypes:
-            ((j['compensatory_leave_types'] as List?) ?? [])
-                .map((e) => e.toString())
-                .toList(),
-      );
+    employee: j['employee'] as String,
+    leaveApprover: j['leave_approver'] as String?,
+    leaveApproverName: j['leave_approver_name'] as String?,
+    holidays: ((j['holidays'] as List?) ?? []).map((e) => e.toString()).toSet(),
+    pendingApprovalCount: (j['pending_approval_count'] as num?)?.toInt() ?? 0,
+    compOffPendingCount: (j['comp_off_pending_count'] as num?)?.toInt() ?? 0,
+    isHr: (j['is_hr'] ?? false) as bool,
+    balances: ((j['balances'] as List?) ?? [])
+        .map((e) => LeaveBalance.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    applications: ((j['applications'] as List?) ?? [])
+        .map((e) => LeaveApplication.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    compOffRequests: ((j['comp_off_requests'] as List?) ?? [])
+        .map((e) => CompOffSummary.fromJson(e as Map<String, dynamic>))
+        .toList(),
+    leaveTypes: ((j['leave_types'] as List?) ?? [])
+        .map((e) => e.toString())
+        .toList(),
+    compensatoryLeaveTypes: ((j['compensatory_leave_types'] as List?) ?? [])
+        .map((e) => e.toString())
+        .toList(),
+  );
 }
 
 /// Form payload for an Apply-for-Comp-Off request.
@@ -491,19 +510,19 @@ class LeaveNoticeRule {
   final String? description;
 
   factory LeaveNoticeRule.fromJson(Map<String, dynamic> j) => LeaveNoticeRule(
-        name: (j['name'] ?? '') as String,
-        ruleName: (j['rule_name'] ?? '') as String,
-        maxLeaveDays: (j['max_leave_days'] as num?)?.toDouble() ?? 0,
-        minNoticeDays: (j['min_notice_days'] as num?)?.toInt() ?? 0,
-        isActive: (j['is_active'] as num?)?.toInt() != 0,
-        leaveType: (j['leave_type'] as String?)?.isEmpty ?? true
-            ? null
-            : j['leave_type'] as String?,
-        company: (j['company'] as String?)?.isEmpty ?? true
-            ? null
-            : j['company'] as String?,
-        description: j['description'] as String?,
-      );
+    name: (j['name'] ?? '') as String,
+    ruleName: (j['rule_name'] ?? '') as String,
+    maxLeaveDays: (j['max_leave_days'] as num?)?.toDouble() ?? 0,
+    minNoticeDays: (j['min_notice_days'] as num?)?.toInt() ?? 0,
+    isActive: (j['is_active'] as num?)?.toInt() != 0,
+    leaveType: (j['leave_type'] as String?)?.isEmpty ?? true
+        ? null
+        : j['leave_type'] as String?,
+    company: (j['company'] as String?)?.isEmpty ?? true
+        ? null
+        : j['company'] as String?,
+    description: j['description'] as String?,
+  );
 }
 
 /// One of the signed-in user's own Work From Home requests, with its stage.
@@ -514,25 +533,36 @@ class WfhSummary {
     required this.fromDate,
     required this.toDate,
     required this.stageLabel,
+    this.stage = 'Open',
     this.halfDay = false,
+    this.halfDayDate,
     this.explanation,
+    this.postingDate,
   });
 
   final String name;
   final DateTime fromDate;
   final DateTime toDate;
+  final String stage;
   final String stageLabel;
   final bool halfDay;
+  final DateTime? halfDayDate;
   final String? explanation;
+  final DateTime? postingDate;
+
+  LeaveStatus get status => _workflowStatus(stage);
 
   factory WfhSummary.fromJson(Map<String, dynamic> j) => WfhSummary(
-        name: j['name'] as String,
-        fromDate: DateTime.parse(j['from_date'] as String),
-        toDate: DateTime.parse((j['to_date'] ?? j['from_date']) as String),
-        stageLabel: (j['stage_label'] ?? '') as String,
-        halfDay: (j['half_day'] as num?)?.toInt() == 1,
-        explanation: j['explanation'] as String?,
-      );
+    name: j['name'] as String,
+    fromDate: DateTime.parse(j['from_date'] as String),
+    toDate: DateTime.parse((j['to_date'] ?? j['from_date']) as String),
+    stage: (j['stage'] ?? 'Open') as String,
+    stageLabel: (j['stage_label'] ?? '') as String,
+    halfDay: (j['half_day'] as num?)?.toInt() == 1,
+    halfDayDate: DateTime.tryParse((j['half_day_date'] ?? '') as String),
+    explanation: j['explanation'] as String?,
+    postingDate: DateTime.tryParse((j['posting_date'] ?? '') as String),
+  );
 }
 
 /// One WFH request waiting on the signed in user, at either approval hop.

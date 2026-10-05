@@ -14,6 +14,8 @@ import '../../phone_lookup/presentation/phone_lookup_sheet.dart';
 import '../application/lead_controller.dart';
 import '../application/leads_view_prefs.dart';
 import '../domain/models.dart';
+import '../../home/presentation/nav_destinations.dart';
+import '../../auth/application/auth_controller.dart';
 
 class LeadsScreen extends ConsumerWidget {
   const LeadsScreen({super.key});
@@ -29,11 +31,12 @@ class LeadsScreen extends ConsumerWidget {
         backgroundColor: AppColors.surfaceContainerLowest,
         title: const Text('Leads'),
         actions: [
-          IconButton(
-            tooltip: 'Board view',
-            icon: Icon(Icons.view_kanban_outlined, color: AppColors.primary),
-            onPressed: () => context.push(Routes.leadKanban),
-          ),
+          if (screenOn(ref.watch(authControllerProvider).profile, 'crm.kanban'))
+            IconButton(
+              tooltip: 'Board view',
+              icon: Icon(Icons.view_kanban_outlined, color: AppColors.primary),
+              onPressed: () => context.push(Routes.leadKanban),
+            ),
           IconButton(
             tooltip: 'Refresh',
             icon: Icon(Icons.refresh, color: AppColors.primary),
@@ -52,7 +55,9 @@ class LeadsScreen extends ConsumerWidget {
       body: async.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => _Err(
-          msg: e is ApiException ? e.message : 'Something unexpected happened. Please try again.',
+          msg: e is ApiException
+              ? e.message
+              : 'Something unexpected happened. Please try again.',
           onRetry: () => ref.read(leadsControllerProvider.notifier).reload(),
         ),
         data: (ctx) {
@@ -63,18 +68,21 @@ class LeadsScreen extends ConsumerWidget {
           final filteredLeads = pendingStatus == null
               ? ctx.leads
               : ctx.leads
-                  .where((l) => l.status.toLowerCase() ==
-                      pendingStatus.toLowerCase())
-                  .toList();
+                    .where(
+                      (l) =>
+                          l.status.toLowerCase() == pendingStatus.toLowerCase(),
+                    )
+                    .toList();
           return RefreshIndicator(
             onRefresh: () =>
                 ref.read(leadsControllerProvider.notifier).reload(),
             child: ListView(
               padding: const EdgeInsets.fromLTRB(
-                  AppDimens.screenPadding,
-                  AppDimens.md,
-                  AppDimens.screenPadding,
-                  AppDimens.xl),
+                AppDimens.screenPadding,
+                AppDimens.md,
+                AppDimens.screenPadding,
+                AppDimens.xl,
+              ),
               children: [
                 _Header(
                   title: 'Leads',
@@ -102,35 +110,43 @@ class LeadsScreen extends ConsumerWidget {
                         : 'No leads in status "$pendingStatus".',
                   )
                 else
-                  Builder(builder: (context) {
-                    final sortedLeads =
-                        applyLeadSort(filteredLeads, prefs.sort);
-                    return Card(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _LeadsToolbar(
-                              count: sortedLeads.length, prefs: prefs),
-                          for (var i = 0; i < sortedLeads.length; i++) ...[
-                            if (i > 0)
-                              Divider(
+                  Builder(
+                    builder: (context) {
+                      final sortedLeads = applyLeadSort(
+                        filteredLeads,
+                        prefs.sort,
+                      );
+                      return Card(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _LeadsToolbar(
+                              count: sortedLeads.length,
+                              prefs: prefs,
+                            ),
+                            for (var i = 0; i < sortedLeads.length; i++) ...[
+                              if (i > 0)
+                                Divider(
                                   height: 1,
-                                  indent: prefs.density ==
-                                          LeadDensity.compact
+                                  indent: prefs.density == LeadDensity.compact
                                       ? 56
                                       : 64,
-                                  color: AppColors.outlineVariant),
-                            _LeadRow(
-                              lead: sortedLeads[i],
-                              density: prefs.density,
-                              onTap: () => context.push(Routes.leadDetail,
-                                  extra: sortedLeads[i].name),
-                            ),
+                                  color: AppColors.outlineVariant,
+                                ),
+                              _LeadRow(
+                                lead: sortedLeads[i],
+                                density: prefs.density,
+                                onTap: () => context.push(
+                                  Routes.leadDetail,
+                                  extra: sortedLeads[i].name,
+                                ),
+                              ),
+                            ],
                           ],
-                        ],
-                      ),
-                    );
-                  }),
+                        ),
+                      );
+                    },
+                  ),
               ],
             ),
           );
@@ -145,14 +161,16 @@ class LeadsScreen extends ConsumerWidget {
       isScrollControlled: true,
       backgroundColor: AppColors.surfaceContainerLowest,
       shape: const RoundedRectangleBorder(
-        borderRadius:
-            BorderRadius.vertical(top: Radius.circular(AppDimens.radiusXl)),
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(AppDimens.radiusXl),
+        ),
       ),
       builder: (_) => _NewLeadSheet(statuses: ctx.statuses),
     );
     if (ok == true && context.mounted) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Lead created.')));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Lead created.')));
     }
   }
 }
@@ -209,17 +227,28 @@ class _LeadsToolbar extends ConsumerWidget {
     final compact = prefs.density == LeadDensity.compact;
     return Padding(
       padding: const EdgeInsets.fromLTRB(
-          AppDimens.md, AppDimens.md, AppDimens.sm, AppDimens.sm),
+        AppDimens.md,
+        AppDimens.md,
+        AppDimens.sm,
+        AppDimens.sm,
+      ),
       child: Row(
         children: [
           Expanded(
-            child: Text('My Leads',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: AppColors.primary, fontWeight: FontWeight.w600)),
+            child: Text(
+              'My Leads',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
-          Text('$count',
-              style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                  color: AppColors.onSurfaceVariant)),
+          Text(
+            '$count',
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: AppColors.onSurfaceVariant,
+            ),
+          ),
           const SizedBox(width: AppDimens.sm),
           PopupMenuButton<LeadSort>(
             tooltip: 'Sort',
@@ -230,20 +259,22 @@ class _LeadsToolbar extends ConsumerWidget {
               for (final s in LeadSort.values)
                 PopupMenuItem(
                   value: s,
-                  child: Row(children: [
-                    Icon(
-                      s == prefs.sort
-                          ? Icons.check_circle
-                          : Icons.circle_outlined,
-                      size: 16,
-                      color: s == prefs.sort
-                          ? AppColors.primary
-                          : AppColors.outline,
-                    ),
-                    const SizedBox(width: 10),
-                    Text(s.label),
-                  ]),
-                )
+                  child: Row(
+                    children: [
+                      Icon(
+                        s == prefs.sort
+                            ? Icons.check_circle
+                            : Icons.circle_outlined,
+                        size: 16,
+                        color: s == prefs.sort
+                            ? AppColors.primary
+                            : AppColors.outline,
+                      ),
+                      const SizedBox(width: 10),
+                      Text(s.label),
+                    ],
+                  ),
+                ),
             ],
             icon: Icon(Icons.sort, size: 20, color: AppColors.primary),
           ),
@@ -255,7 +286,8 @@ class _LeadsToolbar extends ConsumerWidget {
               color: AppColors.primary,
             ),
             onPressed: () => notifier.setDensity(
-                compact ? LeadDensity.comfortable : LeadDensity.compact),
+              compact ? LeadDensity.comfortable : LeadDensity.compact,
+            ),
             visualDensity: VisualDensity.compact,
           ),
         ],
@@ -293,31 +325,39 @@ class _LeadRow extends StatelessWidget {
                 borderRadius: BorderRadius.circular(AppDimens.radiusLg),
               ),
               alignment: Alignment.center,
-              child: Text(lead.initials,
-                  style: TextStyle(
-                      color: AppColors.onSecondaryFixed,
-                      fontWeight: FontWeight.w700,
-                      fontSize: _compact ? 11 : 13)),
+              child: Text(
+                lead.initials,
+                style: TextStyle(
+                  color: AppColors.onSecondaryFixed,
+                  fontWeight: FontWeight.w700,
+                  fontSize: _compact ? 11 : 13,
+                ),
+              ),
             ),
             const SizedBox(width: AppDimens.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(lead.title,
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          color: AppColors.onSurface,
-                          fontWeight: FontWeight.w600),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis),
+                  Text(
+                    lead.title,
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      color: AppColors.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                   if (!_compact &&
                       lead.organization != null &&
                       lead.organization!.isNotEmpty &&
                       lead.organization != lead.title)
-                    Text(lead.organization!,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall),
+                    Text(
+                      lead.organization!,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
                   if (!_compact &&
                       lead.daysSinceContact != null &&
                       lead.daysSinceContact! >= 1) ...[
@@ -375,9 +415,10 @@ class _LeadStatusChip extends StatelessWidget {
         color: bg,
         borderRadius: BorderRadius.circular(999),
       ),
-      child: Text(status,
-          style: TextStyle(
-              color: fg, fontWeight: FontWeight.w600, fontSize: 11)),
+      child: Text(
+        status,
+        style: TextStyle(color: fg, fontWeight: FontWeight.w600, fontSize: 11),
+      ),
     );
   }
 }
@@ -385,8 +426,11 @@ class _LeadStatusChip extends StatelessWidget {
 /// Header chip shown when the user landed on Leads via a dashboard
 /// bucket tap. Tap the "x" to clear the filter and show the full list.
 class _FilterChip extends StatelessWidget {
-  const _FilterChip(
-      {required this.status, required this.total, required this.onClear});
+  const _FilterChip({
+    required this.status,
+    required this.total,
+    required this.onClear,
+  });
   final String status;
   final int total;
   final VoidCallback onClear;
@@ -394,7 +438,9 @@ class _FilterChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(
-          horizontal: AppDimens.md, vertical: 8),
+        horizontal: AppDimens.md,
+        vertical: 8,
+      ),
       decoration: BoxDecoration(
         color: AppColors.primary.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(999),
@@ -408,7 +454,9 @@ class _FilterChip extends StatelessWidget {
             child: Text(
               'Status: $status  ·  $total ${total == 1 ? "lead" : "leads"}',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppColors.primary, fontWeight: FontWeight.w700),
+                color: AppColors.primary,
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ),
           InkWell(
@@ -439,8 +487,8 @@ class _EmptyCard extends StatelessWidget {
             Icon(icon, color: AppColors.outline),
             const SizedBox(width: AppDimens.md),
             Expanded(
-                child: Text(text,
-                    style: Theme.of(context).textTheme.bodyMedium)),
+              child: Text(text, style: Theme.of(context).textTheme.bodyMedium),
+            ),
           ],
         ),
       ),
@@ -461,8 +509,9 @@ class _NewLeadSheetState extends ConsumerState<_NewLeadSheet> {
   final _org = TextEditingController();
   final _email = TextEditingController();
   final _mobile = TextEditingController();
-  late String? _status =
-      widget.statuses.isNotEmpty ? widget.statuses.first : null;
+  late String? _status = widget.statuses.isNotEmpty
+      ? widget.statuses.first
+      : null;
   bool _submitting = false;
   String? _error;
 
@@ -480,8 +529,10 @@ class _NewLeadSheetState extends ConsumerState<_NewLeadSheet> {
       return;
     }
     if (_mobile.text.trim().isEmpty) {
-      setState(() => _error =
-          'Mobile number is required. Every lead must be reachable.');
+      setState(
+        () =>
+            _error = 'Mobile number is required. Every lead must be reachable.',
+      );
       return;
     }
     setState(() {
@@ -510,44 +561,59 @@ class _NewLeadSheetState extends ConsumerState<_NewLeadSheet> {
     final bottom = MediaQuery.of(context).viewInsets.bottom;
     return Padding(
       padding: EdgeInsets.fromLTRB(
-          AppDimens.xl, AppDimens.xl, AppDimens.xl, AppDimens.xl + bottom),
+        AppDimens.xl,
+        AppDimens.xl,
+        AppDimens.xl,
+        AppDimens.xl + bottom,
+      ),
       child: SingleChildScrollView(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Center(
-                child: Text('New lead',
-                    style: Theme.of(context).textTheme.titleLarge)),
+              child: Text(
+                'New lead',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
             const SizedBox(height: AppDimens.xl),
-            Row(children: [
-              Expanded(
+            Row(
+              children: [
+                Expanded(
                   child: TextField(
-                      controller: _first,
-                      decoration:
-                          const InputDecoration(labelText: 'First name *'))),
-              const SizedBox(width: AppDimens.md),
-              Expanded(
+                    controller: _first,
+                    decoration: const InputDecoration(
+                      labelText: 'First name *',
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AppDimens.md),
+                Expanded(
                   child: TextField(
-                      controller: _last,
-                      decoration:
-                          const InputDecoration(labelText: 'Last name'))),
-            ]),
+                    controller: _last,
+                    decoration: const InputDecoration(labelText: 'Last name'),
+                  ),
+                ),
+              ],
+            ),
             const SizedBox(height: AppDimens.lg),
             TextField(
-                controller: _org,
-                decoration:
-                    const InputDecoration(labelText: 'Organization')),
+              controller: _org,
+              decoration: const InputDecoration(labelText: 'Organization'),
+            ),
             const SizedBox(height: AppDimens.lg),
             TextField(
-                controller: _email,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(labelText: 'Email')),
+              controller: _email,
+              keyboardType: TextInputType.emailAddress,
+              decoration: const InputDecoration(labelText: 'Email'),
+            ),
             const SizedBox(height: AppDimens.lg),
             TextField(
-                controller: _mobile,
-                keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(labelText: 'Mobile *')),
+              controller: _mobile,
+              keyboardType: TextInputType.phone,
+              decoration: const InputDecoration(labelText: 'Mobile *'),
+            ),
             const SizedBox(height: AppDimens.lg),
             DropdownButtonFormField<String>(
               initialValue: _status,
@@ -560,15 +626,17 @@ class _NewLeadSheetState extends ConsumerState<_NewLeadSheet> {
             ),
             if (_error != null) ...[
               const SizedBox(height: AppDimens.md),
-              Text(_error!,
-                  style:
-                      const TextStyle(color: AppColors.error, fontSize: 13)),
+              Text(
+                _error!,
+                style: const TextStyle(color: AppColors.error, fontSize: 13),
+              ),
             ],
             const SizedBox(height: AppDimens.xl),
             BrandButton(
-                label: 'Create lead',
-                loading: _submitting,
-                onPressed: _submit),
+              label: 'Create lead',
+              loading: _submitting,
+              onPressed: _submit,
+            ),
           ],
         ),
       ),
@@ -582,15 +650,18 @@ class _Err extends StatelessWidget {
   final VoidCallback onRetry;
   @override
   Widget build(BuildContext context) => Center(
-        child: Padding(
-          padding: const EdgeInsets.all(AppDimens.xl),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            const Icon(Icons.error_outline, size: 40, color: AppColors.error),
-            const SizedBox(height: AppDimens.md),
-            Text(msg, textAlign: TextAlign.center),
-            const SizedBox(height: AppDimens.lg),
-            OutlinedButton(onPressed: onRetry, child: const Text('Retry')),
-          ]),
-        ),
-      );
+    child: Padding(
+      padding: const EdgeInsets.all(AppDimens.xl),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.error_outline, size: 40, color: AppColors.error),
+          const SizedBox(height: AppDimens.md),
+          Text(msg, textAlign: TextAlign.center),
+          const SizedBox(height: AppDimens.lg),
+          OutlinedButton(onPressed: onRetry, child: const Text('Retry')),
+        ],
+      ),
+    ),
+  );
 }
